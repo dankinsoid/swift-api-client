@@ -3,21 +3,30 @@
 
 import PackageDescription
 
-let package = Package(
-    name: "${NAME}",
-    platforms: [
-        .iOS(.v13),
-    ],
-    products: [
-        .library(name: "${NAME}", targets: ["${NAME}"]),
-    ],
-    dependencies: [
-    ],
-    targets: [
-        .target(
-            name: "${NAME}",
-            dependencies: [
-            ]
-        )
-    ]
+var package = Package(
+	name: "swift-networking-core",
+	platforms: [
+		.macOS(.v10_15),
+		.iOS(.v13),
+		.watchOS(.v5),
+		.tvOS(.v13),
+	],
+	products: [
+		.library(name: "SwiftNetworkingCore", targets: ["SwiftNetworkingCore"]),
+	],
+	dependencies: [
+		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
+	],
+	targets: [
+		.target(
+			name: "SwiftNetworkingCore",
+			dependencies: [
+				.product(name: "Logging", package: "swift-log"),
+			]
+		),
+		.testTarget(
+			name: "SwiftNetworkingCoreTests",
+			dependencies: [.target(name: "SwiftNetworkingCore")]
+		),
+	]
 )
