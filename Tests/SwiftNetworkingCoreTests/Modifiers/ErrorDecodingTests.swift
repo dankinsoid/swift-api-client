@@ -8,7 +8,7 @@ import XCTest
 final class ErrorDecodingTests: XCTestCase {
 
 	func testErrorDecoding() throws {
-        let errorJSON = Data(#"{"error": "test_error"}"#.utf8)
+		let errorJSON = Data(#"{"error": "test_error"}"#.utf8)
 		do {
 			let _ = try NetworkClient(baseURL: URL(string: "https://example.com")!)
 				.errorDecoder(.decodable(ErrorResponse.self))

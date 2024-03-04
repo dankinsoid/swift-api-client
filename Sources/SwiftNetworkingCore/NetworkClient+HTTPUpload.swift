@@ -1,6 +1,3 @@
-// /// A struct representing an HTTP client capable of performing network requests.
-// public struct HTTPUploadClient {
-
 // 	/// A closure that asynchronously retrieves data and an HTTP response for a given URLRequest and network configurations.
 // 	public var upload: (URLRequest, UploadTask, NetworkClient.Configs) async throws -> (Data, HTTPURLResponse)
 

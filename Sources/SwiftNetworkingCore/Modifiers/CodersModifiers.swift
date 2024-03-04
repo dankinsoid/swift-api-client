@@ -22,15 +22,6 @@ public extension NetworkClient {
 	func bodyDecoder(_ decoder: some DataDecoder) -> NetworkClient {
 		configs(\.bodyDecoder, decoder)
 	}
-
-//	/// Sets a request query encoder.
-//	///
-//	/// - Parameter encoder: A request query encoder.
-//	///
-//	/// - Returns: A new network client with the request query encoder.
-//	func queryEncoder(_ encoder: some QueryEncoder) -> NetworkClient {
-//		configs(\.queryEncoder, encoder)
-//	}
 }
 
 public extension NetworkClient.Configs {
@@ -46,10 +37,4 @@ public extension NetworkClient.Configs {
 		get { self[\.bodyDecoder] ?? JSONDecoder() }
 		set { self[\.bodyDecoder] = newValue }
 	}
-
-//	/// A request query encoder.
-//	var queryEncoder: any QueryEncoder {
-//		get { self[\.queryEncoder] ?? URLQueryEncoder() }
-//		set { self[\.queryEncoder] = newValue }
-//	}
 }
