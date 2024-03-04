@@ -13,7 +13,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.2.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.3.0")
   ],
   targets: [
     .target(
