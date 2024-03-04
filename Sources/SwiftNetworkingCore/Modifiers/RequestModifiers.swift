@@ -42,8 +42,8 @@ public extension NetworkClient {
 		}
 	}
 
-    /// Sets the HTTP `GET` method for the request.
-    var `get`: NetworkClient { method(.get) }
+	/// Sets the HTTP `GET` method for the request.
+	var get: NetworkClient { method(.get) }
 	/// Sets the HTTP `POST` method for the request.
 	var post: NetworkClient { method(.post) }
 	/// Sets the HTTP `PUT` method for the request.
