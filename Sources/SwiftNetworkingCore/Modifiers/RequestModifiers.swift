@@ -8,8 +8,8 @@ public extension NetworkClient {
 	/// Appends path components to the URL of the request.
 	/// - Parameter path: A variadic list of components that conform to `CustomStringConvertible`.
 	/// - Returns: An instance of `NetworkClient` with updated path.
-    func callAsFunction(_ path: CustomStringConvertible, _ suffix: any CustomStringConvertible...) -> NetworkClient {
-        self.path([path] + suffix)
+	func callAsFunction(_ path: CustomStringConvertible, _ suffix: any CustomStringConvertible...) -> NetworkClient {
+		self.path([path] + suffix)
 	}
 
 	/// Appends path components to the URL of the request.
@@ -42,14 +42,14 @@ public extension NetworkClient {
 		}
 	}
 
-    /// Sets the HTTP `POST` method for the request.
-    var post: NetworkClient { method(.post) }
-    /// Sets the HTTP `PUT` method for the request.
-    var put: NetworkClient { method(.put) }
-    /// Sets the HTTP `DELETE` method for the request.
-    var delete: NetworkClient { method(.delete) }
-    /// Sets the HTTP `PATCH` method for the request.
-    var patch: NetworkClient { method(.patch) }
+	/// Sets the HTTP `POST` method for the request.
+	var post: NetworkClient { method(.post) }
+	/// Sets the HTTP `PUT` method for the request.
+	var put: NetworkClient { method(.put) }
+	/// Sets the HTTP `DELETE` method for the request.
+	var delete: NetworkClient { method(.delete) }
+	/// Sets the HTTP `PATCH` method for the request.
+	var patch: NetworkClient { method(.patch) }
 }
 
 public extension NetworkClient {

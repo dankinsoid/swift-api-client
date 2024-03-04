@@ -101,6 +101,18 @@ public extension NetworkClient {
 		try await call(caller, as: serializer, fileID: fileID, line: line)()
 	}
 
+	/// Asynchronously performs a network call using the http caller and decodable serializer.
+	/// - Returns: The result of the network call.
+	func callAsFunction<Result: Decodable>() async throws -> Result {
+		try await call(.http, as: .decodable)
+	}
+
+	/// Asynchronously performs a network call using the http caller and void serializer.
+	/// - Returns: The result of the network call.
+	func callAsFunction() async throws {
+		try await call(.http, as: .void)
+	}
+
 	/// Performs a synchronous network call using the provided caller and serializer.
 	/// - Parameters:
 	///   - caller: A `NetworkClientCaller` instance.
