@@ -39,7 +39,7 @@ public extension NetworkClient.Configs {
 	/// - Parameter type: The type for which to retrieve a mock response.
 	/// - Returns: The mock response of the specified type, if it exists.
 	func mock<T>(for type: T.Type) -> T? {
-		mocks[ObjectIdentifier(type)] as? T
+        (mocks[ObjectIdentifier(type)] as? T) ?? (type as? Mockable.Type)?.mock as? T
 	}
 
 	/// Returns a new configuration set with a specified mock response.

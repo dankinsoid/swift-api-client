@@ -1,6 +1,7 @@
 import Foundation
 @testable import SwiftNetworkingCore
 import XCTest
+import Logging
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -53,4 +54,40 @@ final class NetworkClientTests: XCTestCase {
 
 		XCTAssertFalse(disabled)
 	}
+
+    func testLogging() async throws {
+//        LoggingSystem.bootstrap { _ in
+//            PrintLogger()
+//        }
+        let client = NetworkClient(baseURL: URL(string: "https://example.com/petstore")!)
+            .body(["eee": 2])
+            .put
+            .loggingComponents(.standart)
+        try await client.httpTest { _, _ in
+            Data(#"{"success": true}"#.utf8)
+        }
+    }
+}
+
+struct PrintLogger: LogHandler {
+    
+    var metadata: Logging.Logger.Metadata = [:]
+    var logLevel: Logging.Logger.Level = .info
+    subscript(metadataKey key: String) -> Logging.Logger.Metadata.Value? {
+        get { metadata[key] }
+        set { metadata[key] = newValue }
+    }
+    
+    func log(
+        level: Logger.Level,
+        message: Logger.Message,
+        metadata: Logger.Metadata?,
+        source: String,
+        file: String,
+        function: String,
+        line: UInt
+    ) {
+        guard self.logLevel <= level else { return }
+        print(message)
+    }
 }

@@ -12,7 +12,7 @@ final class LogLevelModifierTests: XCTestCase {
 		let client = NetworkClient(baseURL: URL(string: "https://example.com")!)
 		let modifiedClient = client.log(level: .debug)
 
-		XCTAssertEqual(modifiedClient.configs().logLevel, .debug)
+        XCTAssertEqual(modifiedClient.configs().logger.logLevel, .debug)
 	}
 
 	func testLogger() {

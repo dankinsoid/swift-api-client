@@ -34,10 +34,20 @@ extension NetworkClient {
 		}
 	}
 
+    func httpTest(
+        test: @escaping (URLRequest, NetworkClient.Configs) throws -> (Data, HTTPURLResponse)
+    ) async throws {
+        try await configs(\.testHTTPClient) {
+            try test($0, $1)
+        }
+        .httpClient(.test())
+        .call(.http, as: .void)
+    }
+    
 	func httpTest(
 		test: @escaping (URLRequest, NetworkClient.Configs) throws -> Data
 	) async throws {
-		try await configs(\.testHTTPClient) {
+		try await httpTest {
 			let data = try test($0, $1)
 			guard let response = HTTPURLResponse(
 				url: $0.url ?? URL(string: "https://example.com")!,
@@ -49,6 +59,5 @@ extension NetworkClient {
 			}
 			return (data, response)
 		}
-		.call(.http, as: .void)
 	}
 }

@@ -40,7 +40,7 @@ public extension NetworkClient.Configs {
 public extension NetworkClientCaller where Result == AsyncValue<Value>, Response == Data {
 
 	static var http: NetworkClientCaller {
-		NetworkClientCaller { request, configs, serialize in
+		NetworkClientCaller { uuid, request, configs, serialize in
 			{
 				var request = request
 				if request.httpMethod == nil {
@@ -49,7 +49,17 @@ public extension NetworkClientCaller where Result == AsyncValue<Value>, Response
 				if request.httpBodyStream != nil {
 					configs.logger.error("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
 				}
+                let start = Date()
 				let (data, response) = try await configs.httpClient.data(request, configs)
+                if !configs.loggingComponents.isEmpty {
+                    let message = configs.loggingComponents.responseMessage(
+                        for: response,
+                        uuid: uuid,
+                        data: data,
+                        duration: Date().timeIntervalSince(start)
+                    )
+                    configs.logger.info("\(message)")
+                }
 				return try serialize(data) {
 					try configs.httpResponseValidator.validate(response, data, configs)
 				}
