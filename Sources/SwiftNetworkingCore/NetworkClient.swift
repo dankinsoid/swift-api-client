@@ -129,11 +129,6 @@ public struct NetworkClient {
 	private func createRequest() throws -> (URLRequest, Configs) {
 		var configs = Configs(createRequest: _createRequest)
 		modifyConfigs(&configs)
-		do {
-			return try (_createRequest(configs), configs)
-		} catch {
-			configs.logger.error("Request creation failed with error: `\(error.humanReadable)`")
-			throw error
-		}
+		return try (_createRequest(configs), configs)
 	}
 }

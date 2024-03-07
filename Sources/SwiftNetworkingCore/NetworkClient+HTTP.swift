@@ -47,21 +47,52 @@ public extension NetworkClientCaller where Result == AsyncValue<Value>, Response
 					request.httpMethod = HTTPMethod.get.rawValue
 				}
 				if request.httpBodyStream != nil {
-					configs.logger.error("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
+					configs.logger.warning("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
 				}
-                let start = Date()
-				let (data, response) = try await configs.httpClient.data(request, configs)
-                if !configs.loggingComponents.isEmpty {
-                    let message = configs.loggingComponents.responseMessage(
-                        for: response,
-                        uuid: uuid,
-                        data: data,
-                        duration: Date().timeIntervalSince(start)
-                    )
-                    configs.logger.info("\(message)")
-                }
-				return try serialize(data) {
-					try configs.httpResponseValidator.validate(response, data, configs)
+				let data: Data
+				let response: HTTPURLResponse
+				let start = Date()
+				do {
+					(data, response) = try await configs.httpClient.data(request, configs)
+				} catch {
+					let duration = Date().timeIntervalSince(start)
+					if !configs.loggingComponents.isEmpty {
+						let message = configs.loggingComponents.errorMessage(
+							uuid: uuid,
+							error: error,
+							duration: duration
+						)
+						configs.logger.error("\(message)")
+					}
+					throw error
+				}
+				let duration = Date().timeIntervalSince(start)
+				do {
+					let result = try serialize(data) {
+						try configs.httpResponseValidator.validate(response, data, configs)
+					}
+					if !configs.loggingComponents.isEmpty {
+						let message = configs.loggingComponents.responseMessage(
+							for: response,
+							uuid: uuid,
+							data: data,
+							duration: duration
+						)
+						configs.logger.log(level: configs.logLevel, "\(message)")
+					}
+					return result
+				} catch {
+					if !configs.loggingComponents.isEmpty {
+						let message = configs.loggingComponents.responseMessage(
+							for: response,
+							uuid: uuid,
+							data: data,
+							duration: duration,
+							error: error
+						)
+						configs.logger.error("\(message)")
+					}
+					throw error
 				}
 			}
 		} mockResult: { value in

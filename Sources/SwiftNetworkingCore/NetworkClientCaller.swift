@@ -8,7 +8,7 @@ import FoundationNetworking
 public struct NetworkClientCaller<Response, Value, Result> {
 
 	private let _call: (
-        UUID,
+		UUID,
 		URLRequest,
 		NetworkClient.Configs,
 		@escaping (Response, () throws -> Void) throws -> Value
@@ -21,7 +21,7 @@ public struct NetworkClientCaller<Response, Value, Result> {
 	///   - mockResult: A closure that handles mock results.
 	public init(
 		call: @escaping (
-            _ uuid: UUID,
+			_ uuid: UUID,
 			_ request: URLRequest,
 			_ configs: NetworkClient.Configs,
 			_ serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
@@ -39,7 +39,7 @@ public struct NetworkClientCaller<Response, Value, Result> {
 	///   - serialize: A closure that serializes the response.
 	/// - Returns: The result of the network call.
 	public func call(
-        uuid: UUID,
+		uuid: UUID,
 		request: URLRequest,
 		configs: NetworkClient.Configs,
 		serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
@@ -144,39 +144,47 @@ public extension NetworkClient {
 		fileID: String = #fileID,
 		line: UInt = #line
 	) throws -> Result {
-		try withRequest { request, configs in
-			do {
-                let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-                let uuid = UUID()
-                var request = request
+		let uuid = UUID()
+		do {
+			return try withRequest { request, configs in
+				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+				var request = request
 				try configs.beforeCall(&request, configs)
 
-                if !configs.loggingComponents.isEmpty {
-                    let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
-                    configs.logger.info("\(message)")
-                }
+				if !configs.loggingComponents.isEmpty {
+					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
+					configs.logger.info("\(message)")
+				}
 
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
 					return try caller.mockResult(for: mock)
 				}
 
-                return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
-					configs.logger.trace("Response")
+				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
 					do {
 						try validate()
 						return try serializer.serialize(response, configs)
 					} catch {
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-							configs.logger.trace("Response failed with error: `\(error.humanReadable)`")
 							throw failure
 						}
 						throw error
 					}
 				}
-			} catch {
-				configs.logger.error("Request \(request.description) failed with error: `\(error.humanReadable)`")
-				throw error
 			}
+		} catch {
+			withConfigs { configs in
+				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+				if !configs.loggingComponents.isEmpty {
+					let message = configs.loggingComponents.errorMessage(
+						uuid: uuid,
+						error: error,
+						fileIDLine: fileIDLine
+					)
+					configs.logger.error("\(message)")
+				}
+			}
+			throw error
 		}
 	}
 

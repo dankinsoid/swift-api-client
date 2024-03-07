@@ -17,14 +17,14 @@ private extension DecodingError {
 
 	var humanReadable: String {
 		switch self {
-		case let .typeMismatch(any, context):
-			return "Expected \(any) at \(context.humanReadable)"
-		case let .valueNotFound(any, context):
-			return "Value of \(any) not found at \(context.humanReadable)"
-		case let .keyNotFound(codingKey, context):
-			return "Key \(context.humanReadable + codingKey.string) not found"
+		case let .typeMismatch(_, context):
+			return context.humanReadable
+		case let .valueNotFound(_, context):
+			return context.humanReadable
+		case let .keyNotFound(_, context):
+			return context.humanReadable
 		case let .dataCorrupted(context):
-			return "Data corrupted at \(context.humanReadable)"
+			return context.humanReadable
 		@unknown default:
 			return localizedDescription
 		}
@@ -34,7 +34,14 @@ private extension DecodingError {
 private extension DecodingError.Context {
 
 	var humanReadable: String {
-		codingPath.map(\.string).joined()
+		"\(debugDescription) Path: \\\(codingPath.humanReadable)"
+	}
+}
+
+extension [CodingKey] {
+
+	var humanReadable: String {
+		isEmpty ? "root" : map(\.string).joined()
 	}
 }
 

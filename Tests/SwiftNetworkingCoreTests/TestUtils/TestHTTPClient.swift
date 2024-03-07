@@ -34,16 +34,16 @@ extension NetworkClient {
 		}
 	}
 
-    func httpTest(
-        test: @escaping (URLRequest, NetworkClient.Configs) throws -> (Data, HTTPURLResponse)
-    ) async throws {
-        try await configs(\.testHTTPClient) {
-            try test($0, $1)
-        }
-        .httpClient(.test())
-        .call(.http, as: .void)
-    }
-    
+	func httpTest(
+		test: @escaping (URLRequest, NetworkClient.Configs) throws -> (Data, HTTPURLResponse)
+	) async throws {
+		try await configs(\.testHTTPClient) {
+			try test($0, $1)
+		}
+		.httpClient(.test())
+		.call(.http, as: .void)
+	}
+
 	func httpTest(
 		test: @escaping (URLRequest, NetworkClient.Configs) throws -> Data
 	) async throws {

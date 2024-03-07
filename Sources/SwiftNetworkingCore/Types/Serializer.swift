@@ -9,14 +9,7 @@ public struct Serializer<Response, T> {
 	/// Initializes a new `Serializer` with a custom serialization closure.
 	/// - Parameter serialize: A closure that takes a response and network configurations, then returns a serialized object of type `T`.
 	public init(_ serialize: @escaping (Response, NetworkClient.Configs) throws -> T) {
-		self.serialize = { response, configs in
-			do {
-				return try serialize(response, configs)
-			} catch {
-				configs.logger.error("Response decoding failed with error: `\(error.humanReadable)`")
-				throw error
-			}
-		}
+		self.serialize = serialize
 	}
 }
 

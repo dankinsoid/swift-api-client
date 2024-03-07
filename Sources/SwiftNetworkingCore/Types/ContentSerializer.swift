@@ -11,14 +11,7 @@ public struct ContentSerializer<T> {
 	public init(
 		_ serialize: @escaping (T, NetworkClient.Configs) throws -> (Data, ContentType)
 	) {
-		self.serialize = { value, configs in
-			do {
-				return try serialize(value, configs)
-			} catch {
-				configs.logger.error("Response decoding failed with error: `\(error.humanReadable)`")
-				throw error
-			}
-		}
+		self.serialize = serialize
 	}
 }
 
