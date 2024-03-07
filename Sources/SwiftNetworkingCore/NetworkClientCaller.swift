@@ -153,7 +153,7 @@ public extension NetworkClient {
 
 				if !configs.loggingComponents.isEmpty {
 					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
-					configs.logger.info("\(message)")
+                    configs.logger.log(level: configs.logLevel, "\(message)")
 				}
 
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
