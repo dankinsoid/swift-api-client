@@ -1,6 +1,6 @@
- import Foundation
+import Foundation
 
- public extension ContentEncoder where Self == FormURLEncoder {
+public extension ContentEncoder where Self == FormURLEncoder {
 
 	/// A static property to get a `FormURLEncoder` instance with default encoding strategies.
 	static var formURL: Self { .formURL() }
@@ -14,8 +14,8 @@
 	///   - trimmingSquareBrackets: A flag to determine if square brackets should be trimmed. Default is `true`.
 	/// - Returns: An instance of `Self` configured with the specified strategies.
 	static func formURL(
-        dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
-        keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
+		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
+		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
 		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .point,
 		trimmingSquareBrackets: Bool = true
@@ -28,10 +28,10 @@
 			trimmingSquareBrackets: trimmingSquareBrackets
 		)
 	}
- }
+}
 
 /// A `ContentEncoder` for encoding objects into `x-www-form-urlencoded` format.
- public struct FormURLEncoder: ContentEncoder {
+public struct FormURLEncoder: ContentEncoder {
 
 	private var urlEncoder: URLQueryEncoder
 
@@ -43,10 +43,10 @@
 	///   - nestedEncodingStrategy: Strategy for encoding nested objects. Default is `.point`.
 	///   - trimmingSquareBrackets: A flag to determine if square brackets should be trimmed. Default is `true`.
 	public init(
-        dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
-        keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-        arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
-        nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .point,
+		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
+		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
+		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
+		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .point,
 		trimmingSquareBrackets: Bool = true
 	) {
 		urlEncoder = URLQueryEncoder(
@@ -71,4 +71,4 @@
 		guard let data = try urlEncoder.encodePath(value).data(using: .utf8) else { throw Errors.unknown }
 		return data
 	}
- }
+}

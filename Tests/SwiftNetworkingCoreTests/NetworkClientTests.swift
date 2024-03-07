@@ -55,31 +55,3 @@ final class NetworkClientTests: XCTestCase {
 		XCTAssertFalse(disabled)
 	}
 }
-
-struct Hm: Codable {
-
-	var name: String
-}
-
-struct PrintLogger: LogHandler {
-
-	var metadata: Logging.Logger.Metadata = [:]
-	var logLevel: Logging.Logger.Level = .info
-	subscript(metadataKey key: String) -> Logging.Logger.Metadata.Value? {
-		get { metadata[key] }
-		set { metadata[key] = newValue }
-	}
-
-	func log(
-		level: Logger.Level,
-		message: Logger.Message,
-		metadata: Logger.Metadata?,
-		source: String,
-		file: String,
-		function: String,
-		line: UInt
-	) {
-		guard logLevel <= level else { return }
-		print(message)
-	}
-}

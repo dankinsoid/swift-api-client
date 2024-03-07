@@ -40,20 +40,46 @@ public extension NetworkClient.Configs {
 public extension NetworkClientCaller where Result == AsyncValue<Value>, Response == Data {
 
 	static var http: NetworkClientCaller {
+		.http { request, configs in
+			var request = request
+			if request.httpMethod == nil {
+				request.httpMethod = HTTPMethod.get.rawValue
+			}
+			if request.httpBodyStream != nil {
+				configs.logger.warning("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
+			}
+			return try await configs.httpClient.data(request, configs)
+		}
+	}
+}
+
+extension NetworkClientCaller where Result == AsyncValue<Value>, Response == Data {
+
+	static func http(
+		task: @escaping @Sendable (URLRequest, NetworkClient.Configs) async throws -> (Data, HTTPURLResponse)
+	) -> NetworkClientCaller {
+		.http(task: task) {
+			try $2.httpResponseValidator.validate($1, $0, $2)
+		} data: {
+			$0
+		}
+	}
+}
+
+extension NetworkClientCaller where Result == AsyncValue<Value> {
+
+	static func http(
+		task: @escaping @Sendable (URLRequest, NetworkClient.Configs) async throws -> (Response, HTTPURLResponse),
+		validate: @escaping (Response, HTTPURLResponse, NetworkClient.Configs) throws -> Void,
+		data: @escaping (Response) -> Data?
+	) -> NetworkClientCaller {
 		NetworkClientCaller { uuid, request, configs, serialize in
 			{
-				var request = request
-				if request.httpMethod == nil {
-					request.httpMethod = HTTPMethod.get.rawValue
-				}
-				if request.httpBodyStream != nil {
-					configs.logger.warning("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
-				}
-				let data: Data
+				let value: Response
 				let response: HTTPURLResponse
 				let start = Date()
 				do {
-					(data, response) = try await configs.httpClient.data(request, configs)
+					(value, response) = try await task(request, configs)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs.loggingComponents.isEmpty {
@@ -67,9 +93,10 @@ public extension NetworkClientCaller where Result == AsyncValue<Value>, Response
 					throw error
 				}
 				let duration = Date().timeIntervalSince(start)
+				let data = data(value)
 				do {
-					let result = try serialize(data) {
-						try configs.httpResponseValidator.validate(response, data, configs)
+					let result = try serialize(value) {
+						try validate(value, response, configs)
 					}
 					if !configs.loggingComponents.isEmpty {
 						let message = configs.loggingComponents.responseMessage(

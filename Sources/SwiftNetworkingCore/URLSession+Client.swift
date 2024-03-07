@@ -37,34 +37,49 @@ public extension HTTPClient {
 	}
 }
 
-// public extension HTTPUploadClient {
+public extension HTTPUploadClient {
 
-// 	static func urlSession(_ session: URLSession) -> Self {
-// 		HTTPUploadClient { request, uploadTask, _ in
-// 		  try await asyncMethod { completion in
-// 				session.uploadTask(with: request, task: uploadTask, completionHandler: completion)
-// 			}
-// 		}
-// 	}
+	static func urlSession(_ session: URLSession) -> Self {
+		HTTPUploadClient { request, uploadTask, _ in
+			try await asyncMethod { completion in
+				session.uploadTask(with: request, task: uploadTask, completionHandler: completion)
+			}
+		}
+	}
 
-// 	static var urlSession: Self {
-// 		urlSession(.shared)
-// 	}
-// }
+	static var urlSession: Self {
+		urlSession(.shared)
+	}
+}
 
-// private extension URLSession {
+public extension HTTPDownloadClient {
 
-// 	func uploadTask(with request: URLRequest, task: UploadTask, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) -> URLSessionUploadTask {
-// 		switch task {
-// 			case let .data(data):
-// 				return uploadTask(with: request, from: data, completionHandler: completionHandler)
-// 			case let .file(url):
-// 				return uploadTask(with: request, fromFile: url, completionHandler: completionHandler)
-// 			case .stream:
-// 			return uploadTask(withStreamedRequest: request)
-// 		}
-// 	}
-// }
+	static func urlSession(_ session: URLSession) -> Self {
+		HTTPDownloadClient { request, _ in
+			try await asyncMethod { completion in
+				session.downloadTask(with: request, completionHandler: completion)
+			}
+		}
+	}
+
+	static var urlSession: Self {
+		urlSession(.shared)
+	}
+}
+
+private extension URLSession {
+
+	func uploadTask(with request: URLRequest, task: UploadTask, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) -> URLSessionUploadTask {
+		switch task {
+		case let .data(data):
+			return uploadTask(with: request, from: data, completionHandler: completionHandler)
+		case let .file(url):
+			return uploadTask(with: request, fromFile: url, completionHandler: completionHandler)
+		case .stream:
+			return uploadTask(withStreamedRequest: request)
+		}
+	}
+}
 
 private func asyncMethod<T, S: URLSessionTask>(
 	_ method: @escaping (
