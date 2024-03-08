@@ -103,11 +103,29 @@ public extension LoggingComponents {
 		return message
 	}
 
+    func responseMessage(
+        for response: HTTPURLResponse,
+        uuid: UUID,
+        data: Data?,
+        duration: TimeInterval,
+        error: Error? = nil
+    ) -> String {
+        responseMessage(
+            uuid: uuid,
+            statusCode: response.httpStatusCode,
+            data: data,
+            headers: response.headers,
+            duration: duration,
+            error: error
+        )
+    }
+
 	func responseMessage(
-		for response: HTTPURLResponse,
-		uuid: UUID,
+        uuid: UUID,
+		statusCode: HTTPStatusCode? = nil,
 		data: Data?,
-		duration: TimeInterval,
+        headers: HTTPHeaders = [],
+		duration: TimeInterval? = nil,
 		error: Error? = nil
 	) -> String {
 		guard !isEmpty else { return "" }
@@ -115,17 +133,17 @@ public extension LoggingComponents {
 		if contains(.uuid) {
 			message = "[\(uuid.uuidString)]\n" + message
 		}
-		if response.httpStatusCode.isSuccess, error == nil {
+		if statusCode?.isSuccess != false, error == nil {
 			message.append("✅")
 		} else {
 			message.append("🛑")
 		}
 		var isMultiline = false
-		if contains(.statusCode) {
-			message += " \(response.statusCode) \(response.httpStatusCode.name)"
+        if let statusCode, contains(.statusCode) {
+            message += " \(statusCode.rawValue) \(statusCode.name)"
 		}
 		var inBrackets: [String] = []
-		if contains(.duration) {
+		if let duration, contains(.duration) {
 			inBrackets.append("\(Int(duration * 1000))ms")
 		}
 		if contains(.bodySize), let data {
@@ -140,8 +158,8 @@ public extension LoggingComponents {
 			isMultiline = true
 		}
 
-		if contains(.headers), !response.allHeaderFields.isEmpty {
-			message += "\n\(response.headers.multilineDescription)"
+		if contains(.headers), !headers.isEmpty {
+			message += "\n\(headers.multilineDescription)"
 			isMultiline = true
 		}
 		if contains(.body), let body = data, let bodyString = String(data: body, encoding: .utf8) {
