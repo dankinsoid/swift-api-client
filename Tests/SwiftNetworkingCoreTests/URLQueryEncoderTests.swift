@@ -205,7 +205,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatNestedDictionariesCanHaveBracketKeyPathsByDefault() {
         // Given
-        let encoder = FormURLEncoder(nestedEncodingStrategy: .squareBrackets)
+        let encoder = FormURLEncoder(nestedEncodingStrategy: .brackets)
         let parameters = ["a": ["b": "b"]]
         
         // When
@@ -217,7 +217,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatNestedDictionariesCanHaveExplicitBracketKeyPaths() {
         // Given
-        let encoder = FormURLEncoder(nestedEncodingStrategy: .squareBrackets)
+        let encoder = FormURLEncoder(nestedEncodingStrategy: .brackets)
         let parameters = ["a": ["b": "b"]]
         
         // When
@@ -345,7 +345,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatEncodableSuperclassCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ["foo": [EncodableSuperclass()]]
         
         // When
@@ -357,7 +357,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatEncodableSuperclassCanBeEncodedWithIndexInBracketsAndNestedDots() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true), nestedEncodingStrategy: .dots)
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true), nestedEncodingStrategy: .dots)
         let parameters = ["foo": [EncodableSuperclass()]]
         
         // When
@@ -370,7 +370,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatEncodableSubclassCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = EncodableSubclass()
         
         // When
@@ -383,7 +383,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatManuallyEncodableSubclassCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ManuallyEncodableSubclass()
         
         // When
@@ -398,7 +398,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatEncodableStructCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = EncodableStruct()
         
         // When
@@ -411,7 +411,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatManuallyEncodableStructCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ManuallyEncodableStruct()
         
         // When
@@ -424,7 +424,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatArrayNestedDictionaryIntValueCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ["foo": [["bar": 2], ["qux": 3], ["quy": 4]]]
         
         // When
@@ -436,7 +436,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatArrayNestedDictionaryStringValueCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ["foo": [["bar": "2"], ["qux": "3"], ["quy": "4"]]]
         
         // When
@@ -448,7 +448,7 @@ final class FormURLEncoderTests: XCTestCase {
     
     func testThatArrayNestedDictionaryBoolValueCanBeEncodedWithIndexInBrackets() {
         // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .squareBrackets(indexed: true))
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
         let parameters = ["foo": [["bar": true], ["qux": false], ["quy": true]]]
         
         // When

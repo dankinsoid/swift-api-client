@@ -80,7 +80,7 @@ enum QueryValue {
 
 	enum Errors: Error {
 
-		case noEqualSign(String), unknown, expectedKeyedValue, prohibitedNesting
+		case noEqualSign(String), unknown, expectedKeyedValue, prohibitedNesting, repeatKeyAt
 	}
     
     struct Key {

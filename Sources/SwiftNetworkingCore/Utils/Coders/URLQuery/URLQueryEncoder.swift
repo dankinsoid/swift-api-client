@@ -12,8 +12,8 @@ public struct URLQueryEncoder: QueryEncoder {
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: ArrayEncodingStrategy = .squareBrackets(indexed: false),
-		nestedEncodingStrategy: NestedEncodingStrategy = .squareBrackets,
+		arrayEncodingStrategy: ArrayEncodingStrategy = .brackets(indexed: false),
+		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
         boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) {
 		self.dateEncodingStrategy = dateEncodingStrategy
@@ -68,7 +68,9 @@ public struct URLQueryEncoder: QueryEncoder {
         /// value1,value2
         case separator(String)
 		/// key[0]=value1&key[1]=value2
-		case squareBrackets(indexed: Bool)
+		case brackets(indexed: Bool)
+        /// No brackets are appended. The key is encoded as is and repeated for each value.
+        case repeatKey
 		case custom((_ path: [CodingKey], _ string: [String]) throws -> String)
         
         /// value1,value2
@@ -84,7 +86,7 @@ public struct URLQueryEncoder: QueryEncoder {
 
 	public enum NestedEncodingStrategy {
 
-		case squareBrackets, dots, json(JSONEncoder?)
+		case brackets, dots, json(JSONEncoder?)
         
         public static var json: NestedEncodingStrategy { .json(nil) }
 	}
@@ -100,7 +102,7 @@ public struct URLQueryEncoder: QueryEncoder {
 		return try array.map {
 			let name: String
 			switch nestedEncodingStrategy {
-			case .squareBrackets:
+			case .brackets:
                 guard var key = $0.0.first?.value else {
 					throw QueryValue.Errors.unknown
 				}
@@ -149,11 +151,19 @@ public struct URLQueryEncoder: QueryEncoder {
 
 	private func encode(_ array: [QueryValue], path: [QueryValue.Key]) throws -> QueryValue.Keyed {
 		switch arrayEncodingStrategy {
-		case let .squareBrackets(indexed):
+		case let .brackets(indexed):
 			return try encode(
                 array.enumerated().map { (.int(indexed ? "\($0.offset)" : ""), $0.element) },
                 path: path
 			)
+        case .repeatKey:
+            guard let key = path.last else {
+                throw QueryValue.Errors.unknown
+            }
+            return try encode(
+                array.enumerated().map { (key, $0.element) },
+                path: path.dropLast()
+            )
 		default:
 			let string = try getString(from: .unkeyed(array))
 			return [(path, string)]
@@ -168,7 +178,7 @@ public struct URLQueryEncoder: QueryEncoder {
 			switch arrayEncodingStrategy {
 			case let .separator(separator):
 				return try array.map(getString).joined(separator: separator)
-			case .squareBrackets:
+            case .brackets, .repeatKey:
 				throw QueryValue.Errors.prohibitedNesting
 			case let .custom(block):
 				return try block([], array.map(getString))
