@@ -94,12 +94,12 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 		try self.init(rawValue: String(from: decoder))
 	}
 
-    public func charset(_ charset: Charset) -> ContentType {
-        var result = self
-        result.parameters["charset"] = charset.rawValue
-        return result
-    }
-    
+	public func charset(_ charset: Charset) -> ContentType {
+		var result = self
+		result.parameters["charset"] = charset.rawValue
+		return result
+	}
+
 	public func encode(to encoder: Encoder) throws {
 		try rawValue.encode(to: encoder)
 	}
@@ -108,23 +108,23 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 public extension ContentType {
 
 	/// Predefined application content types.
-    struct Charset: RawRepresentable, ExpressibleByStringLiteral, Hashable {
-        
-        public var rawValue: String
-        
-        public init(rawValue: RawValue) {
-            self.rawValue = rawValue
-        }
-        
-        public init(stringLiteral value: String) {
-            self.init(rawValue: value)
-        }
-        
-        /// `utf8`
-        public static let utf8: Charset = "utf-8"
-    }
-    
-    /// Predefined application content types.
+	struct Charset: RawRepresentable, ExpressibleByStringLiteral, Hashable {
+
+		public var rawValue: String
+
+		public init(rawValue: RawValue) {
+			self.rawValue = rawValue
+		}
+
+		public init(stringLiteral value: String) {
+			self.init(rawValue: value)
+		}
+
+		/// `utf8`
+		public static let utf8: Charset = "utf-8"
+	}
+
+	/// Predefined application content types.
 	struct Application: RawRepresentable, ExpressibleByStringLiteral {
 
 		public var rawValue: String

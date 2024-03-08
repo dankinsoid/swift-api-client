@@ -7,20 +7,20 @@ public struct URLQueryEncoder: QueryEncoder {
 	public var arrayEncodingStrategy: ArrayEncodingStrategy
 	public var nestedEncodingStrategy: NestedEncodingStrategy
 	public var keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy
-    public var boolEncodingStrategy: BoolEncodingStrategy
+	public var boolEncodingStrategy: BoolEncodingStrategy
 
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
 		arrayEncodingStrategy: ArrayEncodingStrategy = .brackets(indexed: false),
 		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
-        boolEncodingStrategy: BoolEncodingStrategy = .literal
+		boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) {
 		self.dateEncodingStrategy = dateEncodingStrategy
 		self.arrayEncodingStrategy = arrayEncodingStrategy
 		self.nestedEncodingStrategy = nestedEncodingStrategy
 		self.keyEncodingStrategy = keyEncodingStrategy
-        self.boolEncodingStrategy = boolEncodingStrategy
+		self.boolEncodingStrategy = boolEncodingStrategy
 	}
 
 	public func encode<T: Encodable>(_ value: T, for baseURL: URL) throws -> URL {
@@ -49,9 +49,14 @@ public struct URLQueryEncoder: QueryEncoder {
 	}
 
 	public func encodeQuery<T: Encodable>(_ value: T) throws -> String {
-        var components = URLComponents()
-        components.queryItems = try encode(value)
-        return components.percentEncodedQuery ?? ""
+		var components = URLComponents()
+		components.queryItems = try encode(value).map {
+			URLQueryItem(
+				name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
+				value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986)
+			)
+		}
+		return components.query ?? ""
 	}
 
 	public func encodeParameters<T: Encodable>(_ value: T) throws -> [String: String] {
@@ -64,49 +69,49 @@ public struct URLQueryEncoder: QueryEncoder {
 	}
 
 	public enum ArrayEncodingStrategy {
-        
-        /// value1,value2
-        case separator(String)
+
+		/// value1,value2
+		case separator(String)
 		/// key[0]=value1&key[1]=value2
 		case brackets(indexed: Bool)
-        /// No brackets are appended. The key is encoded as is and repeated for each value.
-        case repeatKey
+		/// No brackets are appended. The key is encoded as is and repeated for each value.
+		case repeatKey
 		case custom((_ path: [CodingKey], _ string: [String]) throws -> String)
-        
-        /// value1,value2
-        public static var commaSeparator: Self {
-            .separator(",")
-        }
+
+		/// value1,value2
+		public static var commaSeparator: Self {
+			.separator(",")
+		}
 	}
-    
-    public enum BoolEncodingStrategy {
-        
-        case numeric, literal, custom((_ value: Bool) -> String)
-    }
+
+	public enum BoolEncodingStrategy {
+
+		case numeric, literal, custom((_ value: Bool) -> String)
+	}
 
 	public enum NestedEncodingStrategy {
 
 		case brackets, dots, json(JSONEncoder?)
-        
-        public static var json: NestedEncodingStrategy { .json(nil) }
+
+		public static var json: NestedEncodingStrategy { .json(nil) }
 	}
 
 	private func getQueryItems(from output: QueryValue) throws -> [URLQueryItem] {
 		let array: QueryValue.Keyed
 		switch output {
-		case .single, .unkeyed:
+		case .single, .unkeyed, .null:
 			throw QueryValue.Errors.expectedKeyedValue
 		case let .keyed(dictionary):
-            array = try encode(dictionary.map { (.string($0.0), $0.1) })
+			array = try encode(dictionary.map { (.string($0.0), $0.1) })
 		}
 		return try array.map {
 			let name: String
 			switch nestedEncodingStrategy {
 			case .brackets:
-                guard var key = $0.0.first?.value else {
+				guard var key = $0.0.first?.value else {
 					throw QueryValue.Errors.unknown
 				}
-                let chain = $0.0.dropFirst().map(\.value).joined(separator: "][")
+				let chain = $0.0.dropFirst().map(\.value).joined(separator: "][")
 				if $0.0.count > 1 {
 					key += "[" + chain + "]"
 				}
@@ -114,16 +119,16 @@ public struct URLQueryEncoder: QueryEncoder {
 			case .dots, .json:
 				var result = ""
 				let point = String(QueryValue.point)
-                var wasInt = false
+				var wasInt = false
 				for key in $0.0 {
-                    if key.isInt || wasInt || key.value.isEmpty {
-                        result += "[\(key.value)]"
-                        wasInt = true
+					if key.isInt || wasInt || key.value.isEmpty {
+						result += "[\(key.value)]"
+						wasInt = true
 					} else {
-                        if !result.isEmpty, result.last != "]" {
+						if !result.isEmpty, result.last != "]" {
 							result += point
 						}
-                        result += key.value
+						result += key.value
 					}
 				}
 				name = result
@@ -132,16 +137,21 @@ public struct URLQueryEncoder: QueryEncoder {
 		}
 	}
 
-    private func encode(_ dictionary: [(QueryValue.Key, QueryValue)], path: [QueryValue.Key] = []) throws -> QueryValue.Keyed {
+	private func encode(_ dictionary: [(QueryValue.Key, QueryValue)], path: [QueryValue.Key] = []) throws -> QueryValue.Keyed {
 		guard !dictionary.isEmpty else { return [] }
 		var result: QueryValue.Keyed = []
 		for (key, query) in dictionary {
+			if case .null = query {
+				continue
+			}
 			let path = path + [key]
 			switch query {
+			case .null:
+				break
 			case let .single(value):
-                result.append((path, value))
+				result.append((path, value))
 			case let .keyed(array):
-                result += try encode(array.map { (.string($0.0), $0.1) }, path: path)
+				result += try encode(array.map { (.string($0.0), $0.1) }, path: path)
 			case let .unkeyed(array):
 				result += try encode(array, path: path)
 			}
@@ -153,35 +163,37 @@ public struct URLQueryEncoder: QueryEncoder {
 		switch arrayEncodingStrategy {
 		case let .brackets(indexed):
 			return try encode(
-                array.enumerated().map { (.int(indexed ? "\($0.offset)" : ""), $0.element) },
-                path: path
+				array.enumerated().map { (.int(indexed ? "\($0.offset)" : ""), $0.element) },
+				path: path
 			)
-        case .repeatKey:
-            guard let key = path.last else {
-                throw QueryValue.Errors.unknown
-            }
-            return try encode(
-                array.enumerated().map { (key, $0.element) },
-                path: path.dropLast()
-            )
+		case .repeatKey:
+			guard let key = path.last else {
+				throw QueryValue.Errors.unknown
+			}
+			return try encode(
+				array.enumerated().map { (key, $0.element) },
+				path: path.dropLast()
+			)
 		default:
-			let string = try getString(from: .unkeyed(array))
+			guard let string = try getString(from: .unkeyed(array)) else { return [] }
 			return [(path, string)]
 		}
 	}
 
-	private func getString(from output: QueryValue) throws -> String {
+	private func getString(from output: QueryValue) throws -> String? {
 		switch output {
 		case let .single(value):
 			return value
+		case .null:
+			return nil
 		case let .unkeyed(array):
 			switch arrayEncodingStrategy {
 			case let .separator(separator):
-				return try array.map(getString).joined(separator: separator)
-            case .brackets, .repeatKey:
+				return try array.compactMap(getString).joined(separator: separator)
+			case .brackets, .repeatKey:
 				throw QueryValue.Errors.prohibitedNesting
 			case let .custom(block):
-				return try block([], array.map(getString))
+				return try block([], array.compactMap(getString))
 			}
 		case .keyed:
 			throw QueryValue.Errors.prohibitedNesting
@@ -194,13 +206,23 @@ final class _URLQueryEncoder: Encoder {
 	var codingPath: [CodingKey]
 	let context: URLQueryEncoder
 	var userInfo: [CodingUserInfoKey: Any]
-	var result: QueryValue
+	@Ref var result: QueryValue
 
-	init(path: [CodingKey] = [], context: URLQueryEncoder) {
+	convenience init(path: [CodingKey] = [], context: URLQueryEncoder) {
+		var value: QueryValue = .keyed([])
+		let ref: Ref<QueryValue> = Ref {
+			value
+		} set: {
+			value = $0
+		}
+		self.init(path: path, context: context, result: ref)
+	}
+
+	init(path: [CodingKey] = [], context: URLQueryEncoder, result: Ref<QueryValue>) {
 		codingPath = path
 		self.context = context
 		userInfo = [:]
-		result = QueryValue.keyed([])
+		_result = result
 	}
 
 	func container<Key>(keyedBy _: Key.Type) -> KeyedEncodingContainer<Key> where Key: CodingKey {
@@ -232,13 +254,13 @@ final class _URLQueryEncoder: Encoder {
 
 	@discardableResult
 	func encode(_ value: Encodable) throws -> QueryValue {
-        if case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty {
-            let jsonEncoder = jsonEncoder ?? {
-               let encoder = JSONEncoder()
-                encoder.dateEncodingStrategy = context.dateEncodingStrategy
-                encoder.keyEncodingStrategy = context.keyEncodingStrategy
-                return encoder
-            }()
+		if case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty {
+			let jsonEncoder = jsonEncoder ?? {
+				let encoder = JSONEncoder()
+				encoder.dateEncodingStrategy = context.dateEncodingStrategy
+				encoder.keyEncodingStrategy = context.keyEncodingStrategy
+				return encoder
+			}()
 			let data = try jsonEncoder.encode(value)
 			guard let string = String(data: data, encoding: .utf8) else {
 				throw EncodingError.invalidValue(
@@ -256,6 +278,8 @@ final class _URLQueryEncoder: Encoder {
 			result = .single(decimal.description)
 		} else if let url = value as? URL {
 			result = .single(url.absoluteString)
+		} else if let url = value as? Data {
+			result = .single(url.base64EncodedString())
 		} else {
 			try value.encode(to: self)
 		}
@@ -272,11 +296,11 @@ private struct URLQuerySingleValueEncodingContainer: SingleValueEncodingContaine
 	@Ref var result: QueryValue
 
 	mutating func encodeNil() throws {
-		append("")
+		append(.null)
 	}
 
 	mutating func encode(_ value: Bool) throws {
-        append(encoder.context.boolEncodingStrategy.encode(value))
+		append(encoder.context.boolEncodingStrategy.encode(value))
 	}
 
 	mutating func encode(_ value: String) throws {
@@ -373,7 +397,22 @@ private struct URLQuerySingleValueEncodingContainer: SingleValueEncodingContaine
 	}
 
 	mutating func superEncoder() -> Encoder {
-		_URLQueryEncoder(path: codingPath, context: encoder.context)
+		if isSingle {
+			return _URLQueryEncoder(path: codingPath, context: encoder.context, result: $result)
+		} else {
+			let new = QueryValue.unkeyed([])
+			append(new)
+			let lastIndex = result.unkeyed.count - 1
+			return _URLQueryEncoder(
+				path: nestedPath(),
+				context: encoder.context,
+				result: Ref { [$result] in
+					$result.wrappedValue.unkeyed[lastIndex]
+				} set: { [$result] newValue in
+					$result.wrappedValue.unkeyed[lastIndex] = newValue
+				}
+			)
+		}
 	}
 
 	private func nestedPath() -> [CodingKey] {
@@ -397,6 +436,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 
 	var codingPath: [CodingKey]
 	var encoder: _URLQueryEncoder
+
 	@Ref var result: [(String, QueryValue)]
 
 	@inline(__always)
@@ -409,11 +449,11 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encode(_ value: Bool, forKey key: Key) throws {
-        append(encoder.context.boolEncodingStrategy.encode(value), forKey: key)
+		append(encoder.context.boolEncodingStrategy.encode(value), forKey: key)
 	}
 
 	mutating func encodeIfPresent(_ value: Bool?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: String, forKey key: Key) throws {
@@ -421,7 +461,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: String?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Double, forKey key: Key) throws {
@@ -429,7 +469,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Double?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Float, forKey key: Key) throws {
@@ -437,7 +477,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Float?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Int, forKey key: Key) throws {
@@ -445,7 +485,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Int?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Int8, forKey key: Key) throws {
@@ -453,7 +493,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Int8?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Int16, forKey key: Key) throws {
@@ -461,7 +501,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Int16?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Int32, forKey key: Key) throws {
@@ -469,7 +509,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Int32?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: Int64, forKey key: Key) throws {
@@ -477,7 +517,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: Int64?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: UInt, forKey key: Key) throws {
@@ -485,7 +525,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: UInt?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: UInt8, forKey key: Key) throws {
@@ -493,7 +533,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: UInt8?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: UInt16, forKey key: Key) throws {
@@ -501,7 +541,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: UInt16?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: UInt32, forKey key: Key) throws {
@@ -509,7 +549,7 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: UInt32?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encode(_ value: UInt64, forKey key: Key) throws {
@@ -517,12 +557,11 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func encodeIfPresent(_ value: UInt64?, forKey key: Key) throws {
-		append(value?.description ?? "", forKey: key)
+		append(value?.description, forKey: key)
 	}
 
 	mutating func encodeIfPresent(_ value: (some Encodable)?, forKey key: Key) throws {
 		guard let value else {
-			append("", forKey: key)
 			return
 		}
 		try encode(value, forKey: key)
@@ -570,11 +609,22 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	mutating func superEncoder() -> Encoder {
-		_URLQueryEncoder(path: codingPath, context: encoder.context)
+		encoder
 	}
 
-	mutating func superEncoder(forKey _: Key) -> Encoder {
-		_URLQueryEncoder(path: codingPath, context: encoder.context)
+	mutating func superEncoder(forKey key: Key) -> Encoder {
+		let new: QueryValue = .unkeyed([])
+		let index = result.count
+		append(new, forKey: key)
+		return _URLQueryEncoder(
+			path: nestedPath(for: key),
+			context: encoder.context,
+			result: Ref { [$result] in
+				$result.wrappedValue[index].1
+			} set: { [$result] in
+				$result.wrappedValue[index].1 = $0
+			}
+		)
 	}
 
 	private func nestedPath(for key: Key) -> [CodingKey] {
@@ -582,8 +632,8 @@ private struct URLQueryKeyedEncodingContainer<Key: CodingKey>: KeyedEncodingCont
 	}
 
 	@inline(__always)
-	private mutating func append(_ value: String, forKey key: Key) {
-		append(.single(value), forKey: key)
+	private mutating func append(_ value: String?, forKey key: Key) {
+		append(value.map { .single($0) } ?? .null, forKey: key)
 	}
 
 	@inline(__always)
@@ -631,17 +681,35 @@ extension JSONEncoder.DateEncodingStrategy {
 }
 
 extension URLQueryEncoder.BoolEncodingStrategy {
-    
-    func encode(_ value: Bool) -> String {
-        switch self {
-        case .numeric:
-            return value ? "1" : "0"
-        case .literal:
-            return value.description
-        case let .custom(closure):
-            return closure(value)
-        }
-    }
+
+	func encode(_ value: Bool) -> String {
+		switch self {
+		case .numeric:
+			return value ? "1" : "0"
+		case .literal:
+			return value.description
+		case let .custom(closure):
+			return closure(value)
+		}
+	}
+}
+
+public extension CharacterSet {
+
+	/// Creates a CharacterSet from RFC 3986 allowed characters.
+	///
+	/// RFC 3986 states that the following characters are "reserved" characters.
+	///
+	/// - General Delimiters: ":", "#", "[", "]", "@", "?", "/"
+	/// - Sub-Delimiters: "!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "="
+	///
+	/// In RFC 3986 - Section 3.4, it states that the "?" and "/" characters should not be escaped to allow
+	/// query strings to include a URL. Therefore, all "reserved" characters with the exception of "?" and "/"
+	/// should be percent-escaped in the query string.
+	static let urlQueryAllowedRFC3986: CharacterSet = {
+		let encodableDelimiters = CharacterSet(charactersIn: ":#[]@!$&'()*+,;=")
+		return CharacterSet.urlQueryAllowed.subtracting(encodableDelimiters)
+	}()
 }
 
 extension String {

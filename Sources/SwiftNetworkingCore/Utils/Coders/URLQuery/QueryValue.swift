@@ -7,6 +7,7 @@ enum QueryValue {
 	case single(String)
 	case keyed([(String, QueryValue)])
 	case unkeyed([QueryValue])
+	case null
 
 	static let start = "?"
 	static let comma = ","
@@ -82,13 +83,13 @@ enum QueryValue {
 
 		case noEqualSign(String), unknown, expectedKeyedValue, prohibitedNesting, repeatKeyAt
 	}
-    
-    struct Key {
 
-        let value: String
-        let isInt: Bool
-        
-        static func string(_ string: String) -> Self { Self(value: string, isInt: false) }
-        static func int(_ string: String) -> Self { Self(value: string, isInt: true) }
-    }
+	struct Key {
+
+		let value: String
+		let isInt: Bool
+
+		static func string(_ string: String) -> Self { Self(value: string, isInt: false) }
+		static func int(_ string: String) -> Self { Self(value: string, isInt: true) }
+	}
 }

@@ -57,9 +57,9 @@ final class RequestModifiersTests: XCTestCase {
 	}
 
 	func testQueryParametersAdding() throws {
-		let modifiedClient = client.query("page", "1")
+		let modifiedClient = client.query("page", "some parameter ❤️")
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=1")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
 
 	func testBaseURLSetting() throws {

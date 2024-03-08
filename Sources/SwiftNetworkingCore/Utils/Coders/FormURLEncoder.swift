@@ -11,21 +11,21 @@ public extension ContentEncoder where Self == FormURLEncoder {
 	///   - keyEncodingStrategy: Strategy for encoding key names. Default is `UseDeafultKeyCodingStrategy`.
 	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.brackets(indexed: false)`.
 	///   - nestedEncodingStrategy: Strategy for encoding nested objects. Default is `.brackets`.
-    ///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.
+	///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.
 	/// - Returns: An instance of `Self` configured with the specified strategies.
 	static func formURL(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
 		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
-        boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
+		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) -> Self {
 		FormURLEncoder(
 			dateEncodingStrategy: dateEncodingStrategy,
 			keyEncodingStrategy: keyEncodingStrategy,
 			arrayEncodingStrategy: arrayEncodingStrategy,
 			nestedEncodingStrategy: nestedEncodingStrategy,
-            boolEncodingStrategy: boolEncodingStrategy
+			boolEncodingStrategy: boolEncodingStrategy
 		)
 	}
 }
@@ -41,26 +41,26 @@ public struct FormURLEncoder: ContentEncoder {
 	///   - keyEncodingStrategy: Strategy for encoding key names. Default is `UseDeafultKeyCodingStrategy`.
 	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.brackets(indexed: true)`.
 	///   - nestedEncodingStrategy: Strategy for encoding nested objects. Default is `.brackets`.
-    ///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.   
+	///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
 		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
-        boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
+		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) {
 		urlEncoder = URLQueryEncoder(
 			dateEncodingStrategy: dateEncodingStrategy,
 			keyEncodingStrategy: keyEncodingStrategy,
 			arrayEncodingStrategy: arrayEncodingStrategy,
 			nestedEncodingStrategy: nestedEncodingStrategy,
-            boolEncodingStrategy: boolEncodingStrategy
+			boolEncodingStrategy: boolEncodingStrategy
 		)
 	}
 
 	/// The content type associated with this encoder, which is `application/x-www-form-urlencoded; charset=utf-8`.
 	public var contentType: ContentType {
-        .application(.urlEncoded).charset(.utf8)
+		.application(.urlEncoded).charset(.utf8)
 	}
 
 	/// Encodes the given `Encodable` value into `x-www-form-urlencoded` format.

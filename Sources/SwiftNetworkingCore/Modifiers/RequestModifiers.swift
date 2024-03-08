@@ -105,9 +105,9 @@ public extension NetworkClient {
 			let (data, contentType) = try serializer.serialize(value, configs)
 			req.httpBodyStream = nil
 			req.httpBody = data
-            if req.value(forHTTPHeaderKey: .contentType) == nil {
-                req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
-            }
+			if req.value(forHTTPHeaderKey: .contentType) == nil {
+				req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+			}
 		}
 	}
 
@@ -156,9 +156,9 @@ public extension NetworkClient {
 			let (data, contentType) = try serializer.serialize(value, configs)
 			req.httpBodyStream = InputStream(data: data)
 			req.httpBody = nil
-            if req.value(forHTTPHeaderKey: .contentType) == nil {
-                req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
-            }
+			if req.value(forHTTPHeaderKey: .contentType) == nil {
+				req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+			}
 		}
 	}
 
@@ -227,10 +227,17 @@ public extension NetworkClient {
 				let url = req.url,
 				var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			{
-				if components.queryItems == nil {
-					components.queryItems = []
+				if components.percentEncodedQueryItems == nil {
+					components.percentEncodedQueryItems = []
 				}
-				try components.queryItems?.append(contentsOf: items(configs))
+				try components.percentEncodedQueryItems?.append(
+					contentsOf: items(configs).map {
+						URLQueryItem(
+							name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
+							value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986)
+						)
+					}
+				)
 				req.url = components.url ?? url
 			} else {
 				configs.logger.error("Invalid request: \(req)")
