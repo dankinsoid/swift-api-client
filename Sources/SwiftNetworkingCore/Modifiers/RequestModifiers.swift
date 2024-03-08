@@ -105,7 +105,9 @@ public extension NetworkClient {
 			let (data, contentType) = try serializer.serialize(value, configs)
 			req.httpBodyStream = nil
 			req.httpBody = data
-			req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+            if req.value(forHTTPHeaderKey: .contentType) == nil {
+                req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+            }
 		}
 	}
 
@@ -154,7 +156,9 @@ public extension NetworkClient {
 			let (data, contentType) = try serializer.serialize(value, configs)
 			req.httpBodyStream = InputStream(data: data)
 			req.httpBody = nil
-			req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+            if req.value(forHTTPHeaderKey: .contentType) == nil {
+                req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+            }
 		}
 	}
 

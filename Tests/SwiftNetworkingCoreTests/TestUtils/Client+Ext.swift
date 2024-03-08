@@ -5,10 +5,10 @@ import FoundationNetworking
 #endif
 
 extension NetworkClient {
-
-	func request() throws -> URLRequest {
-		try withRequest { request, _ in request }
-	}
+    
+    static var test: NetworkClient {
+        NetworkClient(baseURL: URL(string: "https://example.com")!)
+    }
 
 	func configs() -> Configs {
 		withConfigs { $0 }

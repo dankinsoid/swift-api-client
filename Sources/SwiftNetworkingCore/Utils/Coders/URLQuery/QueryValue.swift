@@ -2,7 +2,7 @@ import Foundation
 
 enum QueryValue {
 
-	typealias Keyed = [([String], String)]
+	typealias Keyed = [([Key], String)]
 
 	case single(String)
 	case keyed([(String, QueryValue)])
@@ -82,4 +82,13 @@ enum QueryValue {
 
 		case noEqualSign(String), unknown, expectedKeyedValue, prohibitedNesting
 	}
+    
+    struct Key {
+
+        let value: String
+        let isInt: Bool
+        
+        static func string(_ string: String) -> Self { Self(value: string, isInt: false) }
+        static func int(_ string: String) -> Self { Self(value: string, isInt: true) }
+    }
 }

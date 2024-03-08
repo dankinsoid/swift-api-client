@@ -11,8 +11,7 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 	/// A string representation of the content type, including type, subtype, and parameters.
 	public var rawValue: String {
 		get {
-			(["\(type)/\(subtype)"] + parameters.map { "\($0.key)=\($0.value)" }.sorted())
-				.joined(separator: ";")
+			(["\(type)/\(subtype)"] + parameters.map { "\($0.key)=\($0.value)" }.sorted()).joined(separator: "; ")
 		}
 		set {
 			self = ContentType(rawValue: newValue)
@@ -95,6 +94,12 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 		try self.init(rawValue: String(from: decoder))
 	}
 
+    public func charset(_ charset: Charset) -> ContentType {
+        var result = self
+        result.parameters["charset"] = charset.rawValue
+        return result
+    }
+    
 	public func encode(to encoder: Encoder) throws {
 		try rawValue.encode(to: encoder)
 	}
@@ -103,6 +108,23 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 public extension ContentType {
 
 	/// Predefined application content types.
+    struct Charset: RawRepresentable, ExpressibleByStringLiteral, Hashable {
+        
+        public var rawValue: String
+        
+        public init(rawValue: RawValue) {
+            self.rawValue = rawValue
+        }
+        
+        public init(stringLiteral value: String) {
+            self.init(rawValue: value)
+        }
+        
+        /// `utf8`
+        public static let utf8: Charset = "utf-8"
+    }
+    
+    /// Predefined application content types.
 	struct Application: RawRepresentable, ExpressibleByStringLiteral {
 
 		public var rawValue: String
@@ -155,13 +177,9 @@ public extension ContentType {
 	}
 
 	/// Creates a content type for `text` with a specific subtype and optional charset. You can use a string literal as well.
-	/// Example: `text/plain; charset=utf-8`
-	static func text(_ subtype: Text, charset: String? = nil) -> ContentType {
-		ContentType(
-			"text",
-			subtype.rawValue,
-			parameters: charset.map { ["charset": $0] } ?? [:]
-		)
+	/// Example: `text/plain`
+	static func text(_ subtype: Text) -> ContentType {
+		ContentType("text", subtype.rawValue)
 	}
 
 	/// Predefined multipart content types.

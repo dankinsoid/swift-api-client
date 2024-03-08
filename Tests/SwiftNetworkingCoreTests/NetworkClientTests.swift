@@ -22,7 +22,7 @@ final class NetworkClientTests: XCTestCase {
 		XCTAssertEqual(request, resultRequest)
 	}
 
-	func testmodifyRequest() throws {
+	func testModifyRequest() throws {
 		let interval: TimeInterval = 30
 		let client = NetworkClient(baseURL: URL(string: "https://example.com")!)
 			.modifyRequest { request in

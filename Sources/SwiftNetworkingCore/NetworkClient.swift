@@ -106,6 +106,11 @@ public struct NetworkClient {
 		return try await operation(request, configs)
 	}
 
+    /// Build `URLRequest`
+    public func request() throws -> URLRequest {
+        try withRequest { request, _ in request }
+    }
+
 	/// Executes an operation with the current configurations.
 	/// - Parameter operation: A closure that takes `Configs` and returns a generic type `T`.
 	/// - Rethrows: Rethrows any errors encountered within the closure.
