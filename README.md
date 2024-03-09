@@ -42,7 +42,18 @@ try await johnClient.body(updatedUser).put()
 try await johnClient.delete()
 ```
 
-## Built-in `NetworkClient` modifiers
+## What is `NetworkClient`
+
+`NetworkClient` struct is a combination of two components: a closure to create a URLRequest and a typed dictionary of configs.\
+So there are two ways to extend a NetworkClient basically:
+- `modifyRequest` modifiers.
+- `configs` modifiers.
+
+And there is one way to execute an operation on the client:
+- `withRequest` methods.
+
+All bult-int extensions are based on these modifiers.
+## Built-in `NetworkClient` extensions
 ### Request building
 There are a lot of methods to modify a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream`.\
 Full list of modifiers is in [RequestModifiers.swift](/Sources/SwiftNetworkingCore/Modifiers/RequestModifiers.swift)\
@@ -101,7 +112,7 @@ All these encoders and decoders can be customized with eponymous modifiers.
 You can specify a custom content serializer by passing a custom `ContentSerializer` instance to `.body(_:as:)` modifier.
 
 ### Auth
-There are `.auth` and `.isAuthEnabled` configurations. They can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers. It allows to inject an auth type for all requests and turn of it particallary and vice versa.
+There are `.auth` and `.isAuthEnabled` configurations. They can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers. It allows to inject an auth type for all requests and turn it off particallary and vice versa.
 
 `.auth` configuration is an `AuthModifier` instance, there are several built-in `AuthModifier`:
 - `.bearer(token)` - for Bearer token auth.
@@ -132,9 +143,33 @@ Content-Type: application/json
 ```
 Logs messages format can be customized by `.loggingComponents(_:)` modifier.
 
-## How to extend `NetworkClient`
+## `NetworkClient.Configs`
+A collection of configs values propagated through modifiers chain.
 
-`NetworkClient` struct is a combination of two components: a closure to create a URLReauest and a typed dictionory of configs. So there is two ways to extend a NetworkClient.
+Create custom configs values by extending the `NetworkClient.Configs` structure with a new property. Use your key to get and set the value, and provide a dedicated modifier for clients to use when setting the value:
+```swift
+extension NetworkClient.Configs {
+
+	var myCustomValue: MyConfig {
+		get {
+			self[\.myCustomValue] ?? myDefaultConfig
+		set {
+			self[\.myCustomValue] = newValue
+		}
+	}
+}
+
+extension NetworkClient {
+    func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
+        configs(\.myCustomValue, myCustomValue)
+    }
+}
+```
+
+There is `valueFor` global method that allows you to define default values depending on the environment: live, test or preview.
+
+### Configs modifications order
+
 
 ## Installation
 
@@ -148,7 +183,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.20.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.21.0")
   ],
   targets: [
     .target(
