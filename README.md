@@ -156,7 +156,7 @@ extension NetworkClient.Configs {
 
 extension NetworkClient {
   func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
-    modify(\.myCustomValue, myCustomValue)
+    configs(\.myCustomValue, myCustomValue)
   }
 }
 ```
