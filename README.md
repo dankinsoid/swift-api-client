@@ -187,7 +187,7 @@ print(configs.intValue) // 3
 
 ## Introducing `swift-networking-addons`
 
-To enhance your experience with `swift-networking`, we're excited to introduce [`swift-networking-addons`](https://github.com/your-github/swift-networking-addons) — a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
+To enhance your experience with `swift-networking`, we're excited to introduce [`swift-networking-addons`](https://github.com/dankinsoid/swift-networking-addons) — a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
 
 ## Installation
 
