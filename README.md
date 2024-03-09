@@ -20,7 +20,7 @@ let client = NetworkClient(url: baseURL)
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
 
-// Create a client instance for /users path
+// Create a `NetworkClient` instance for /users path
 let usersClient = client("users")
 
 // GET /users?name=John&limit=1
@@ -29,7 +29,7 @@ let john: User = try await usersClient
   .auth(enabled: false)
   .get()
 
-// Create a client instance for /users/{userID} path
+// Create a `NetworkClient` instance for /users/{userID} path
 let johnClient = usersClient(john.id)
 
 // GET /user/{userID}
@@ -71,6 +71,7 @@ There are several built-in callers:
 - `.httpPublisher` - for HTTP requests with Combine syntax.
 - `.httpDownload` - for HTTP download requests with `try await` syntax.
 - `.httpUpload` - for HTTP upload requests with `try await` syntax.
+- `.mock` - for mock requests with `try await` syntax.
 
 All built-in http callers use `.httpClient` configuration that can be customized with `.httpClient()` modifier. Default `.httpClient` is `URLSession.shared`. It's possiible to wrap a current `.httpClient` instance.
 
@@ -95,11 +96,41 @@ There are several built-in configurations for encoding and decoding:
 
 All these encoders and decoders can be customized with eponymous modifiers.
 
-### Auth
+#### ContentSerializer
+`ContentSerializer` is a struct that describes a request body serialization. There is one built-in content serializer: `.encodable` that utilises `.bodyEncoder` configuration.
+You can specify a custom content serializer by passing a custom `ContentSerializer` instance to `.body(_:as:)` modifier.
 
-### Testing
+### Auth
+There are `.auth` and `.isAuthEnabled` configurations. They can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers. It allows to inject an auth type for all requests and turn of it particallary and vice versa.
+
+`.auth` configuration is an `AuthModifier` instance, there are several built-in `AuthModifier`:
+- `.bearer(token)` - for Bearer token auth.
+- `.basic(username:password:)` - for Basic auth.
+- `.apiKey(key:field:)` - for API Key auth.
+
+### Mocking
+There are some built-in tools for mocking requests.
+- `.mock(_:)` modifier - This modifiers specifies a mocked response for a request.
+-  `Mockable` protocol - Any request returning a `Mockable` response will be mocked if needed even without `.mock(_:)` modifier.
+-  `.usingMocksPolicy` configuration - Defines whether to use mocks or not. It can be customized with `.usingMocks(policy:)` modifier. By default mocks are ignored in `live` environment and used when specified for tests and SwiftUI previews.
+
+-  `.mock(_:)` `NetworkClientCaller` - Alternative way to mock requests like `client.call(.mock(data), as: .decodable)`.
+
+Also it's possible to create and inject custom HTTPClient for tests or previews.
 
 ### Logging
+`swift-networking-core` uses `swift-log` for logging. There are `.logger` and `.logLevel` configurations. It can be customized with `logger` and `.log(level:)` modifiers. By default log level is `.info`. Also there is a built-in `.none` Logger to turn off all logs.
+
+Log example: 
+```
+[29CDD5AE-1A5D-4135-B76E-52A8973985E4] ModuleName/FileName.swift/72
+--> 🌐 PUT /petstore (9-byte body)
+Content-Type: application/json
+--> END PUT
+[29CDD5AE-1A5D-4135-B76E-52A8973985E4]
+<-- ✅ 200 OK (100ms, 15-byte body)
+```
+Logs messages format can be customized by `.loggingComponents(_:)` modifier.
 
 ## How to extend `NetworkClient`
 
@@ -117,7 +148,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.19.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.20.0")
   ],
   targets: [
     .target(
