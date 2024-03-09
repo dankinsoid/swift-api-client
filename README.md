@@ -1,6 +1,4 @@
 # swift-networking
-A lightweight core component of the [swift-networking](https://github.com/dankinsoid/swift-networking.git) library.
-
 `swift-networking` is a comprehensive and modular client networking library for Swift.
 
 ## Main Goals of the Library
@@ -187,6 +185,10 @@ let configs = try client
 print(configs.intValue) // 3
 ```
 
+## Introducing `swift-networking-addons`
+
+To enhance your experience with `swift-networking`, we're excited to introduce [`swift-networking-addons`](https://github.com/your-github/swift-networking-addons) — a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
+
 ## Installation
 
 1. [Swift Package Manager](https://github.com/apple/swift-package-manager)
@@ -199,7 +201,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.23.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.24.0")
   ],
   targets: [
     .target(
