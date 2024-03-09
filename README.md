@@ -1,18 +1,19 @@
 # swift-networking-core
-Lightweight core of the [swift-networking](https://github.com/dankinsoid/swift-networking.git) library.
+A lightweight core component of the [swift-networking](https://github.com/dankinsoid/swift-networking.git) library.
 
-`swift-networking-core` is a comprehensive, and modular client networking library for Swift.
+`swift-networking-core` is a comprehensive and modular client networking library for Swift.
 
-## Main goals of the library
+## Main Goals of the Library
 - Minimalistic and intuitive syntax.
-- Reusability, injection of configurations through all requests.
-- Extensebility and modularity.
-- Simple core with a wide range of possibilities.
-- Testability and mockability.
+- Reusability, allowing for the injection of configurations across all requests.
+- Extensibility and modularity.
+- A simple core offering a wide range of possibilities.
+- Facilitation of testing and mocking.
 
 ## Usage
-Core of the library is `NetworkClient` struct. It is a request builder and a request executor at the same time. It is a generic struct, so you can use it for any task associated with `URLRequest`.\
-While full example is in [Example folder](/Example/) here is a simple example of usage:
+The core of the library is the `NetworkClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with `URLRequest`.
+
+While a full example is available in the [Example folder](/Example/), here is a simple usage example:
 ```swift
 let client = NetworkClient(url: baseURL)
   .auth(.bearer(token))
@@ -20,7 +21,7 @@ let client = NetworkClient(url: baseURL)
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
 
-// Create a `NetworkClient` instance for /users path
+// Create a `NetworkClient` instance for the /users path
 let usersClient = client("users")
 
 // GET /users?name=John&limit=1
@@ -44,95 +45,91 @@ try await johnClient.delete()
 
 ## What is `NetworkClient`
 
-`NetworkClient` struct is a combination of two components: a closure to create a URLRequest and a typed dictionary of configs.\
-So there are two ways to extend a NetworkClient basically:
+`NetworkClient` is a struct combining a closure for creating a URLRequest and a typed dictionary of configurations `NetworkClient.Configs`. There are two primary ways to extend a `NetworkClient`:
 - `modifyRequest` modifiers.
 - `configs` modifiers.
 
-And there is one way to execute an operation on the client:
+Executing an operation on the client involves::
 - `withRequest` methods.
 
-All bult-int extensions are based on these modifiers.
-## Built-in `NetworkClient` extensions
+All built-in extensions utilize these modifiers.
+## Built-in `NetworkClient` Extensions
 ### Request building
-There are a lot of methods to modify a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream`.\
-Full list of modifiers is in [RequestModifiers.swift](/Sources/SwiftNetworkingCore/Modifiers/RequestModifiers.swift)\
-All of them are based on `modifyRequest` modifier.
+Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.\
+The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftNetworkingCore/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
 
-Some non-obvious modifiers are:
-- `.callAsFunction(path...)` - the shorthand for `.path(path...)` modifier, which allow to write `client("path")` instead of `client.path("path")`.
-- `.get`, `.post`, `.put`, `.delete`, `.patch` - shorthands for `method(method)` modifiers.
+Notable non-obvious modifiers include:
+- `.callAsFunction(path...)` - as a shorthand for the `.path(path...)` modifier, allowing `client("path")` instead of `client.path("path")`.
+- HTTP method shorthands like `.get`, `.post`, `.put`, `.delete`, `.patch`.
 
 ### Request execution
-There is a `call(_ caller: NetworkClientCaller<...>, as serializer: Serializer<...>)`.
+The method`call(_ caller: NetworkClientCaller<...>, as serializer: Serializer<...>)` is provided.
 Examples:
 ```swift
 try await client.call(.http, as: .decodable)
 try await client.call(.http, as: .void)
 try client.call(.httpPublisher, as: .decodable)
 ```
-Also there are shorthands for built-in callers and serializers:
-- `call()` - the equivalent of `call(.http, as: .decodable)` or `call(.http, as: .void)`
-- `callAsFunction()` - the equivalent of `call()`. It allows to write `client.delete()` instead of `client.delete.call()`. Or  `client()` instead of `client.call()`.
+There are also shorthands for built-in callers and serializers:
+- `call()` is equivalent to `call(.http, as: .decodable)` or `call(.http, as: .void)`
+- `callAsFunction()` acts as `call()`, simplifying `client.delete()` to `client.delete.call()` or  `client()` instead of `client.call()`, etc.
 
-#### NetworkClientCaller
-`NetworkClientCaller` is a struct that describes a request execution.
-There are several built-in callers:
-- `.http` - for HTTP requests with `try await` syntax.
-- `.httpPublisher` - for HTTP requests with Combine syntax.
-- `.httpDownload` - for HTTP download requests with `try await` syntax.
-- `.httpUpload` - for HTTP upload requests with `try await` syntax.
-- `.mock` - for mock requests with `try await` syntax.
+#### `NetworkClientCaller`
+Defines request execution with several built-in callers for various request types, including:
+- `.http` for HTTP requests using `try await` syntax.
+- `.httpPublisher` for HTTP requests with Combine syntax.
+- `.httpDownload` for HTTP download requests using `try await` syntax.
+- `.httpUpload` for HTTP upload requests using `try await` syntax.
+- `.mock` for mock requests using `try await` syntax.
 
-All built-in http callers use `.httpClient` configuration that can be customized with `.httpClient()` modifier. Default `.httpClient` is `URLSession.shared`. It's possiible to wrap a current `.httpClient` instance.
+All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession.shared`. It's possible to customize the current `.httpClient` instance.
 
-It's possible to create custom callers for different types of requests such as WebSocket, GraphQL, etc.
+Custom callers can be created for different types of requests, such as WebSocket, GraphQL, etc.
 
 #### Serializer
-`Serializer` is a struct that describes a response serialization.
-There are several built-in serializers:
-- `.decodable` - for decoding a response to a Decodable type.
-- `.data` - for getting a raw Data response.
-- `.void` - for ignoring a response.
-- `.instance` - for getting a response the same type as `NetworkClientCaller` returns. For http requests it is `Data`.
+`Serializer` is a struct that describes response serialization with several built-in serializers:
+- `.decodable` for decoding a response into a Decodable type.
+- `.data` for obtaining a raw Data response.
+- `.void` for ignoring the response.
+- `.instance` for receiving a response of the same type as `NetworkClientCaller` returns. For HTTP requests, it is `Data`.
 
-`.decodable` serializer uses `.bodyDecoder` configuration that can be customized with `.bodyDecoder` modifier. Default `bodyDecoder` is `JSONDecoder()`.
+The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be customized with the `.bodyDecoder` modifier. The default `bodyDecoder` is `JSONDecoder()`.
 
-### Encoding and decoding
+### Encoding and Decoding
 There are several built-in configurations for encoding and decoding:
-- `.bodyEncoder` - for encoding a request body. Built-in encoders are `.json`, `.formURL`.
-- `.bodyDecoder` - for decoding a request body. Built-in decoder is `.json`.
-- `.queryEncoder` - for encoding a query. Built-in encoder is `.query`.
-- `.errorDecoder` - for decoding an error response. Built-in decoder is `.decodable(type)`.
+- `.bodyEncoder` for encoding a request body. Built-in encoders include `.json` and `.formURL`.
+- `.bodyDecoder` for decoding a request body. The built-in decoder is `.json`.
+- `.queryEncoder` for encoding a query. The built-in encoder is `.query`.
+- `.errorDecoder` for decoding an error response. The built-in decoder is `.decodable(type)`.
 
-All these encoders and decoders can be customized with eponymous modifiers.
+These encoders and decoders can be customized with corresponding modifiers.
 
 #### ContentSerializer
-`ContentSerializer` is a struct that describes a request body serialization. There is one built-in content serializer: `.encodable` that utilises `.bodyEncoder` configuration.
-You can specify a custom content serializer by passing a custom `ContentSerializer` instance to `.body(_:as:)` modifier.
+`ContentSerializer` is a struct that describes request body serialization, with one built-in content serializer: `.encodable` that utilizes the `.bodyEncoder` configuration. Custom content serializers can be specified by passing a `ContentSerializer` instance to the `.body(_:as:)` modifier.
 
 ### Auth
-There are `.auth` and `.isAuthEnabled` configurations. They can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers. It allows to inject an auth type for all requests and turn it off particallary and vice versa.
+`.auth` and `.isAuthEnabled` configurations can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers, allowing the injection of an authentication type for all requests and enabling/disabling it for specific requests.
 
-`.auth` configuration is an `AuthModifier` instance, there are several built-in `AuthModifier`:
-- `.bearer(token)` - for Bearer token auth.
-- `.basic(username:password:)` - for Basic auth.
-- `.apiKey(key:field:)` - for API Key auth.
+The `.auth` configuration is an `AuthModifier` instance with several built-in `AuthModifier` types:
+- `.bearer(token)` for Bearer token authentication.
+- `.basic(username:password:)` for Basic authentication.
+- `.apiKey(key:field:)` for API Key authentication.
 
 ### Mocking
-There are some built-in tools for mocking requests.
-- `.mock(_:)` modifier - This modifiers specifies a mocked response for a request.
--  `Mockable` protocol - Any request returning a `Mockable` response will be mocked if needed even without `.mock(_:)` modifier.
--  `.usingMocksPolicy` configuration - Defines whether to use mocks or not. It can be customized with `.usingMocks(policy:)` modifier. By default mocks are ignored in `live` environment and used when specified for tests and SwiftUI previews.
+Built-in tools for mocking requests include:
+- `.mock(_:)` modifier to specify a mocked response for a request.
+- `Mockable` protocol allows any request returning a `Mockable` response to be mocked even without the `.mock(_:)` modifier.
+- `.usingMocksPolicy` configuration defines whether to use mocks, customizable with `.usingMocks(policy:)` modifier. By default, mocks are ignored in the `live` environment and used as specified for tests and SwiftUI previews.
 
--  `.mock(_:)` `NetworkClientCaller` - Alternative way to mock requests like `client.call(.mock(data), as: .decodable)`.
+Additionally, `.mock(_:)` as a `NetworkClientCaller` offers an alternative way to mock requests, like `client.call(.mock(data), as: .decodable)`.
 
-Also it's possible to create and inject custom HTTPClient for tests or previews.
+Custom HTTPClient instances can also be created and injected for testing or previews.
 
 ### Logging
-`swift-networking-core` uses `swift-log` for logging. There are `.logger` and `.logLevel` configurations. It can be customized with `logger` and `.log(level:)` modifiers. By default log level is `.info`. Also there is a built-in `.none` Logger to turn off all logs.
+`swift-networking-core` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers. The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
 
-Log example: 
+Log example:
+
 ```
 [29CDD5AE-1A5D-4135-B76E-52A8973985E4] ModuleName/FileName.swift/72
 --> 🌐 PUT /petstore (9-byte body)
@@ -141,20 +138,18 @@ Content-Type: application/json
 [29CDD5AE-1A5D-4135-B76E-52A8973985E4]
 <-- ✅ 200 OK (100ms, 15-byte body)
 ```
-Logs messages format can be customized by `.loggingComponents(_:)` modifier.
+Log message format can be customized with the `.loggingComponents(_:)` modifier.
 
 ## `NetworkClient.Configs`
-A collection of configs values propagated through modifiers chain.
+A collection of config values is propagated through the modifier chain. These configs are accessible in all core methods: `modifyRequest`, `withRequest`, and `withConfigs`.
 
-These configs are available in all core methods `modifyRequest`, `withRequest` and `withConfigs`.
-
-Create custom configs values by extending the `NetworkClient.Configs` structure with a new property. Use your key to get and set the value via subscript with your property key path, and provide a dedicated modifier for clients to use when setting the value:
+To create custom config values, extend the `NetworkClient.Configs` structure with a new property. Use subscript with your property key path to get and set the value, and provide a dedicated modifier for clients to use when setting this value:
 ```swift
 extension NetworkClient.Configs {
-
   var myCustomValue: MyConfig {
     get {
       self[\.myCustomValue] ?? myDefaultConfig
+    }
     set {
       self[\.myCustomValue] = newValue
     }
@@ -163,15 +158,15 @@ extension NetworkClient.Configs {
 
 extension NetworkClient {
   func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
-    configs(\.myCustomValue, myCustomValue)
+    modify(\.myCustomValue, myCustomValue)
   }
 }
 ```
 
 There is `valueFor` global method that allows you to define default values depending on the environment: live, test or preview.
 
-### Configs modifications order
-All configs are collected in final `withRequest` method and then passed to all modifiers. So the last defined value will be used. Note that all executions methods like `call` are based on `withRequest` method.
+### Configs Modifications Order
+All configs are collected in the final `withRequest` method and then passed to all modifiers, so the last defined value is used. Note that all execution methods, like `call`, are based on the `withRequest` method.
 
 For instance, the following code will print `3` in all cases:
 ```swift
@@ -204,7 +199,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.1")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.2")
   ],
   targets: [
     .target(
