@@ -1,6 +1,6 @@
 import Foundation
 import Logging
-@testable import SwiftNetworkingCore
+@testable import SwiftNetworking
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

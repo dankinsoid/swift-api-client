@@ -4,7 +4,7 @@ import Reachability
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
-@testable import SwiftNetworkingCore
+@testable import SwiftNetworking
 import XCTest
 
 final class NetworkClientReachabilityTests: XCTestCase {

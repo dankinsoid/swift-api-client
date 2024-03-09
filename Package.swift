@@ -4,7 +4,7 @@
 import PackageDescription
 
 var package = Package(
-	name: "swift-networking-core",
+	name: "swift-networking",
 	platforms: [
 		.macOS(.v10_15),
 		.iOS(.v13),
@@ -12,22 +12,21 @@ var package = Package(
 		.tvOS(.v13),
 	],
 	products: [
-		.library(name: "SwiftNetworkingCore", targets: ["SwiftNetworkingCore"]),
+		.library(name: "SwiftNetworking", targets: ["SwiftNetworking"]),
 	],
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
 	],
 	targets: [
 		.target(
-			name: "SwiftNetworkingCore",
+			name: "SwiftNetworking",
 			dependencies: [
 				.product(name: "Logging", package: "swift-log"),
 			]
 		),
 		.testTarget(
-			name: "SwiftNetworkingCoreTests",
-			dependencies: [.target(name: "SwiftNetworkingCore")]
+			name: "SwiftNetworkingTests",
+			dependencies: [.target(name: "SwiftNetworking")]
 		),
 	]
 )

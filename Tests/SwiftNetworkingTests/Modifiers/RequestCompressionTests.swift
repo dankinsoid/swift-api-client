@@ -1,7 +1,7 @@
 
 #if canImport(zlib)
 import Foundation
-@testable import SwiftNetworkingCore
+@testable import SwiftNetworking
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

@@ -1,7 +1,7 @@
-# swift-networking-core
+# swift-networking
 A lightweight core component of the [swift-networking](https://github.com/dankinsoid/swift-networking.git) library.
 
-`swift-networking-core` is a comprehensive and modular client networking library for Swift.
+`swift-networking` is a comprehensive and modular client networking library for Swift.
 
 ## Main Goals of the Library
 - Minimalistic and intuitive syntax.
@@ -56,7 +56,7 @@ All built-in extensions utilize these modifiers.
 ## Built-in `NetworkClient` Extensions
 ### Request building
 Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.\
-The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftNetworkingCore/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
+The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftNetworking/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
 
 Notable non-obvious modifiers include:
 - `.callAsFunction(path...)` - as a shorthand for the `.path(path...)` modifier, allowing `client("path")` instead of `client.path("path")`.
@@ -126,7 +126,7 @@ Additionally, `.mock(_:)` as a `NetworkClientCaller` offers an alternative way t
 Custom HTTPClient instances can also be created and injected for testing or previews.
 
 ### Logging
-`swift-networking-core` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers. The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
+`swift-networking` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers. The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
 
 Log example:
 
@@ -199,13 +199,13 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.2")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.23.0")
   ],
   targets: [
     .target(
       name: "SomeProject",
       dependencies: [
-        .product(name:  "SwiftNetworkingCore", package: "swift-networking-core"),
+        .product(name:  "SwiftNetworking", package: "swift-networking"),
       ]
     )
   ]
@@ -221,7 +221,7 @@ dankinsoid, voidilov@gmail.com
 
 ## License
 
-swift-networking-core is available under the MIT license. See the LICENSE file for more info.
+swift-networking is available under the MIT license. See the LICENSE file for more info.
 
 ## Contributing
 We welcome contributions to Swift-Networking! Please read our contributing guidelines to get started.

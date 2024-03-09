@@ -1,5 +1,5 @@
 import Foundation
-import SwiftNetworkingCore
+import SwiftNetworking
 
 struct PetstoreDecoder: DataDecoder {
 

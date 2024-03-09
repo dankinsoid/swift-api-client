@@ -1,5 +1,5 @@
 import Foundation
-import SwiftNetworkingCore
+import SwiftNetworking
 import XCTest
 
 final class URLEncodedFormQueryEncoderTests: XCTestCase {
@@ -1007,7 +1007,7 @@ struct OrderedDict: ExpressibleByDictionaryLiteral, Encodable {
 	}
 
 	func encode(to encoder: Encoder) throws {
-		var container = encoder.container(keyedBy: SwiftNetworkingCoreTests.Key.self)
+		var container = encoder.container(keyedBy: SwiftNetworkingTests.Key.self)
 		for (key, value) in dict {
 			try container.encode(value, forKey: .init(key))
 		}

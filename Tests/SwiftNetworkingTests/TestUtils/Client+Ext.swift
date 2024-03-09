@@ -1,5 +1,5 @@
 import Foundation
-import SwiftNetworkingCore
+import SwiftNetworking
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif

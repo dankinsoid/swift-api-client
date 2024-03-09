@@ -1,5 +1,5 @@
 import Foundation
-@testable import SwiftNetworkingCore
+@testable import SwiftNetworking
 import XCTest
 #if canImport(FoundationNetworking)
 import FoundationNetworking

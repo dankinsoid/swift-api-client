@@ -21,7 +21,7 @@ var package = Package(
 		.target(
 			name: "PetStore",
 			dependencies: [
-				.product(name: "SwiftNetworkingCore", package: "swift-networking-core"),
+				.product(name: "SwiftNetworking", package: "swift-networking"),
 			]
 		),
 	]

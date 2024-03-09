@@ -1,6 +1,6 @@
 import Foundation
 import Logging
-@testable import SwiftNetworkingCore
+@testable import SwiftNetworking
 import XCTest
 #if canImport(FoundationNetworking)
 import FoundationNetworking
@@ -54,27 +54,54 @@ final class NetworkClientTests: XCTestCase {
 
 		XCTAssertFalse(disabled)
 	}
+
+	func testConfigsOrder() throws {
+		let client = NetworkClient.test
+		let (request, configs) = try client
+			.configs(\.intValue, 1)
+			.query {
+				[URLQueryItem(name: "0", value: "\($0.intValue)")]
+			}
+			.configs(\.intValue, 2)
+			.query {
+				[URLQueryItem(name: "1", value: "\($0.intValue)")]
+			}
+			.configs(\.intValue, 3)
+			.query {
+				[URLQueryItem(name: "2", value: "\($0.intValue)")]
+			}
+			.withRequest { request, configs in
+				(request, configs)
+			}
+
+		XCTAssertEqual(request.url?.query, "0=3&1=3&2=3")
+		XCTAssertEqual(configs.intValue, 3)
+	}
     
-    func testConfigsOrder() throws {
-        let client = NetworkClient.test
-        let (request, configs) = try client
-            .configs(\.intValue, 1)
-            .query {
-                [URLQueryItem(name: "0", value: "\($0.intValue)")]
-            }
-            .configs(\.intValue, 2)
-            .query {
-                [URLQueryItem(name: "1", value: "\($0.intValue)")]
-            }
-            .configs(\.intValue, 3)
-            .query {
-                [URLQueryItem(name: "2", value: "\($0.intValue)")]
-            }
-            .withRequest { request, configs in
-                (request, configs)
-            }
+    func testConfigs() throws {
+        let enabled = NetworkClient.test
+            .configs(\.testValue, true)
+            .withConfigs(\.testValue)
         
-        XCTAssertEqual(request.url?.query, "0=3&1=3&2=3")
-        XCTAssertEqual(configs.intValue, 3)
+        XCTAssertTrue(enabled)
+        
+        let disabled = NetworkClient.test
+            .configs(\.testValue, false)
+            .withConfigs(\.testValue)
+        
+        XCTAssertFalse(disabled)
+    }
+}
+
+extension NetworkClient.Configs {
+    
+    var testValue: Bool {
+        get { self[\.testValue] ?? false }
+        set { self[\.testValue] = newValue }
+    }
+    
+    var intValue: Int {
+        get { self[\.intValue] ?? 0 }
+        set { self[\.intValue] = newValue }
     }
 }
