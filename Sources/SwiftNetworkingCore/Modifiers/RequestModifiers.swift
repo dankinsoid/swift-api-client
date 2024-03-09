@@ -3,6 +3,8 @@ import Foundation
 import FoundationNetworking
 #endif
 
+// MARK: - Path modifiers
+
 public extension NetworkClient {
 
 	/// Appends path components to the URL of the request.
@@ -31,6 +33,8 @@ public extension NetworkClient {
 	}
 }
 
+// MARK: - Method modifiers
+
 public extension NetworkClient {
 
 	/// Sets the HTTP method for the request.
@@ -53,6 +57,8 @@ public extension NetworkClient {
 	/// Sets the HTTP `PATCH` method for the request.
 	var patch: NetworkClient { method(.patch) }
 }
+
+// MARK: - Headers modifiers
 
 public extension NetworkClient {
 
@@ -92,6 +98,8 @@ public extension NetworkClient {
 		headers(HTTPHeader(field, value), update: update)
 	}
 }
+
+// MARK: - Body modifiers
 
 public extension NetworkClient {
 
@@ -207,6 +215,8 @@ public extension NetworkClient {
 	}
 }
 
+// MARK: - Query modifiers
+
 public extension NetworkClient {
 
 	/// Adds URL query parameters using a closure providing an array of `URLQueryItem`.
@@ -294,6 +304,8 @@ public extension NetworkClient {
 	}
 }
 
+// MARK: - URL modifiers
+
 public extension NetworkClient {
 
 	/// Sets the base URL for the request.
@@ -344,7 +356,7 @@ public extension NetworkClient {
 
 public extension NetworkClient {
 
-	/// Modifies the URL components of the request.
+	/// Modifies the URL the request via URLComponents.
 	///
 	/// - Parameter modifier: A closure that takes the current URL components and modifies them.
 	/// - Returns: An instance of `NetworkClient` with the modified URL components.
@@ -372,6 +384,8 @@ public extension NetworkClient {
 	}
 }
 
+// MARK: - Timeout modifiers
+
 public extension NetworkClient {
 
 	/// Sets the URLRequest timeoutInterval property.
@@ -383,6 +397,8 @@ public extension NetworkClient {
 		}
 	}
 }
+
+// MARK: - Cache policy modifiers
 
 public extension NetworkClient {
 
