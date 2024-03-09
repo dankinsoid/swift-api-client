@@ -47,7 +47,7 @@ try await johnClient.delete()
 - `modifyRequest` modifiers.
 - `configs` modifiers.
 
-Executing an operation on the client involves::
+Executing an operation on the client involves:
 - `withRequest` methods.
 
 All built-in extensions utilize these modifiers.
@@ -103,10 +103,12 @@ There are several built-in configurations for encoding and decoding:
 These encoders and decoders can be customized with corresponding modifiers.
 
 #### ContentSerializer
-`ContentSerializer` is a struct that describes request body serialization, with one built-in content serializer: `.encodable` that utilizes the `.bodyEncoder` configuration. Custom content serializers can be specified by passing a `ContentSerializer` instance to the `.body(_:as:)` modifier.
+`ContentSerializer` is a struct that describes request body serialization, with one built-in content serializer: `.encodable` that utilizes the `.bodyEncoder` configuration.
+Custom content serializers can be specified by passing a `ContentSerializer` instance to the `.body(_:as:)` modifier.
 
 ### Auth
-`.auth` and `.isAuthEnabled` configurations can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers, allowing the injection of an authentication type for all requests and enabling/disabling it for specific requests.
+`.auth` and `.isAuthEnabled` configurations can be customized with `.auth(_:)` and `.auth(enabled:)` modifiers,
+allowing the injection of an authentication type for all requests and enabling/disabling it for specific requests.
 
 The `.auth` configuration is an `AuthModifier` instance with several built-in `AuthModifier` types:
 - `.bearer(token)` for Bearer token authentication.
@@ -117,14 +119,16 @@ The `.auth` configuration is an `AuthModifier` instance with several built-in `A
 Built-in tools for mocking requests include:
 - `.mock(_:)` modifier to specify a mocked response for a request.
 - `Mockable` protocol allows any request returning a `Mockable` response to be mocked even without the `.mock(_:)` modifier.
-- `.usingMocksPolicy` configuration defines whether to use mocks, customizable with `.usingMocks(policy:)` modifier. By default, mocks are ignored in the `live` environment and used as specified for tests and SwiftUI previews.
+- `.usingMocksPolicy` configuration defines whether to use mocks, customizable with `.usingMocks(policy:)` modifier.
+By default, mocks are ignored in the `live` environment and used as specified for tests and SwiftUI previews.
 
 Additionally, `.mock(_:)` as a `NetworkClientCaller` offers an alternative way to mock requests, like `client.call(.mock(data), as: .decodable)`.
 
 Custom HTTPClient instances can also be created and injected for testing or previews.
 
 ### Logging
-`swift-networking` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers. The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
+`swift-networking` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers.
+The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
 
 Log example:
 
@@ -141,7 +145,8 @@ Log message format can be customized with the `.loggingComponents(_:)` modifier.
 ## `NetworkClient.Configs`
 A collection of config values is propagated through the modifier chain. These configs are accessible in all core methods: `modifyRequest`, `withRequest`, and `withConfigs`.
 
-To create custom config values, extend the `NetworkClient.Configs` structure with a new property. Use subscript with your property key path to get and set the value, and provide a dedicated modifier for clients to use when setting this value:
+To create custom config values, extend the `NetworkClient.Configs` structure with a new property.
+Use subscript with your property key path to get and set the value, and provide a dedicated modifier for clients to use when setting this value:
 ```swift
 extension NetworkClient.Configs {
   var myCustomValue: MyConfig {
@@ -164,7 +169,8 @@ extension NetworkClient {
 There is `valueFor` global method that allows you to define default values depending on the environment: live, test or preview.
 
 ### Configs Modifications Order
-All configs are collected in the final `withRequest` method and then passed to all modifiers, so the last defined value is used. Note that all execution methods, like `call`, are based on the `withRequest` method.
+All configs are collected in the final `withRequest` method and then passed to all modifiers, so the last defined value is used.
+Note that all execution methods, like `call`, are based on the `withRequest` method.
 
 For instance, the following code will print `3` in all cases:
 ```swift
@@ -187,7 +193,8 @@ print(configs.intValue) // 3
 
 ## Introducing `swift-networking-addons`
 
-To enhance your experience with `swift-networking`, we're excited to introduce [`swift-networking-addons`](https://github.com/dankinsoid/swift-networking-addons) — a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
+To enhance your experience with `swift-networking`, I'm excited to introduce [`swift-networking-addons`](https://github.com/dankinsoid/swift-networking-addons) 
+— a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
 
 ## Installation
 
@@ -201,7 +208,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.24.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.25.0")
   ],
   targets: [
     .target(

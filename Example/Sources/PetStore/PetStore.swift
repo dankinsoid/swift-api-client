@@ -1,23 +1,16 @@
 import Foundation
 import SwiftNetworking
 
-public struct Petstore {
+public struct  PetStore {
 
 	// MARK: - BaseURL
-
-	public enum BaseURL: String {
-
-		case production = "https://petstore.com"
-		case staging = "https://staging.petstore.com"
-		case test = "http://localhost:8080"
-	}
 
 	var client: NetworkClient
 
 	public init(baseURL: BaseURL, fileID: String, line: UInt) {
-		client = NetworkClient(baseURL: URL(string: baseURL.rawValue)!)
+        client = NetworkClient(baseURL: baseURL.url)
 			.fileIDLine(fileID: fileID, line: line)
-			.bodyDecoder(PetstoreDecoder())
+			.bodyDecoder(PetStoreDecoder())
 			.bearerAuth(
 				valueFor(
 					live: UserDefaultsTokenCacheService(),
@@ -35,7 +28,7 @@ public struct Petstore {
 
 // MARK: - "pet" path
 
-public extension Petstore {
+public extension  PetStore {
 
 	var pet: Pet {
 		Pet(client: client("pet"))
@@ -96,7 +89,7 @@ public extension Petstore {
 
 // MARK: - "store" path
 
-public extension Petstore {
+public extension  PetStore {
 
 	var store: Store {
 		Store(client: client("store").auth(enabled: false))
@@ -135,7 +128,7 @@ public extension Petstore {
 
 // MARK: "user" path
 
-public extension Petstore {
+public extension  PetStore {
 
 	var user: User {
 		User(client: client("user").auth(enabled: false))
