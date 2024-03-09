@@ -148,7 +148,7 @@ A collection of configs values propagated through modifiers chain.
 
 These configs are available in all core methods `modifyRequest`, `withRequest` and `withConfigs`.
 
-Create custom configs values by extending the `NetworkClient.Configs` structure with a new property. Use your key to get and set the value, and provide a dedicated modifier for clients to use when setting the value:
+Create custom configs values by extending the `NetworkClient.Configs` structure with a new property. Use your key to get and set the value via subscript with your property key path, and provide a dedicated modifier for clients to use when setting the value:
 ```swift
 extension NetworkClient.Configs {
 
@@ -204,7 +204,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.1")
   ],
   targets: [
     .target(
