@@ -30,4 +30,9 @@ extension NetworkClient.Configs {
 		get { self[\.testValue] ?? false }
 		set { self[\.testValue] = newValue }
 	}
+    
+    var intValue: Int {
+        get { self[\.intValue] ?? 0 }
+        set { self[\.intValue] = newValue }
+    }
 }

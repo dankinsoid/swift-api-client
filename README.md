@@ -146,30 +146,51 @@ Logs messages format can be customized by `.loggingComponents(_:)` modifier.
 ## `NetworkClient.Configs`
 A collection of configs values propagated through modifiers chain.
 
+These configs are available in all core methods `modifyRequest`, `withRequest` and `withConfigs`.
+
 Create custom configs values by extending the `NetworkClient.Configs` structure with a new property. Use your key to get and set the value, and provide a dedicated modifier for clients to use when setting the value:
 ```swift
 extension NetworkClient.Configs {
 
-	var myCustomValue: MyConfig {
-		get {
-			self[\.myCustomValue] ?? myDefaultConfig
-		set {
-			self[\.myCustomValue] = newValue
-		}
-	}
+  var myCustomValue: MyConfig {
+    get {
+      self[\.myCustomValue] ?? myDefaultConfig
+    set {
+      self[\.myCustomValue] = newValue
+    }
+  }
 }
 
 extension NetworkClient {
-    func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
-        configs(\.myCustomValue, myCustomValue)
-    }
+  func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
+    configs(\.myCustomValue, myCustomValue)
+  }
 }
 ```
 
 There is `valueFor` global method that allows you to define default values depending on the environment: live, test or preview.
 
 ### Configs modifications order
+All configs are collected in final `withRequest` method and then passed to all modifiers. So the last defined value will be used. Note that all executions methods like `call` are based on `withRequest` method.
 
+For instance, the following code will print `3` in all cases:
+```swift
+let configs = try client
+  .configs(\.intValue, 1)
+  .modifyRequest { _, configs in
+    print(configs.intValue) // 3
+  }
+  .configs(\.intValue, 2)
+  .modifyRequest { _, configs in
+    print(configs.intValue) // 3
+  }
+  .configs(\.intValue, 3)
+  .withRequest { _, configs in
+    print(configs.intValue)  // 3
+    return configs
+  }
+print(configs.intValue) // 3
+```
 
 ## Installation
 
@@ -183,7 +204,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.21.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking-core.git", from: "0.22.0")
   ],
   targets: [
     .target(

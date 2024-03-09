@@ -24,7 +24,7 @@ final class NetworkClientTests: XCTestCase {
 
 	func testModifyRequest() throws {
 		let interval: TimeInterval = 30
-		let client = NetworkClient(baseURL: URL(string: "https://example.com")!)
+		let client = NetworkClient.test
 			.modifyRequest { request in
 				request.timeoutInterval = interval
 			}
@@ -33,7 +33,7 @@ final class NetworkClientTests: XCTestCase {
 	}
 
 	func testWithRequest() throws {
-		let client = NetworkClient(baseURL: URL(string: "https://example.com")!)
+		let client = NetworkClient.test
 		let result = try client.withRequest { request, _ in
 			request.url?.absoluteString == "https://example.com"
 		}
@@ -41,7 +41,7 @@ final class NetworkClientTests: XCTestCase {
 	}
 
 	func testWithConfigs() throws {
-		let client = NetworkClient(baseURL: URL(string: "https://example.com")!)
+		let client = NetworkClient.test
 		let enabled = client
 			.configs(\.testValue, true)
 			.withConfigs(\.testValue)
@@ -54,4 +54,27 @@ final class NetworkClientTests: XCTestCase {
 
 		XCTAssertFalse(disabled)
 	}
+    
+    func testConfigsOrder() throws {
+        let client = NetworkClient.test
+        let (request, configs) = try client
+            .configs(\.intValue, 1)
+            .query {
+                [URLQueryItem(name: "0", value: "\($0.intValue)")]
+            }
+            .configs(\.intValue, 2)
+            .query {
+                [URLQueryItem(name: "1", value: "\($0.intValue)")]
+            }
+            .configs(\.intValue, 3)
+            .query {
+                [URLQueryItem(name: "2", value: "\($0.intValue)")]
+            }
+            .withRequest { request, configs in
+                (request, configs)
+            }
+        
+        XCTAssertEqual(request.url?.query, "0=3&1=3&2=3")
+        XCTAssertEqual(configs.intValue, 3)
+    }
 }
