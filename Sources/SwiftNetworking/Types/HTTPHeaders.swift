@@ -249,8 +249,14 @@ public extension HTTPHeader {
 	/// - Parameter value: The `Content-Disposition` value.
 	///
 	/// - Returns:         The header.
-	static func contentDisposition(_ value: String) -> HTTPHeader {
-		HTTPHeader(.contentDisposition, value)
+	static func contentDisposition(_ type: String, name: String, filename: String? = nil) -> HTTPHeader {
+		let nameEncoded = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? name
+		var value = "form-data; name=\"\(nameEncoded)\""
+		if let filename {
+			let filenameEncoded = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? filename
+			value += "; filename=\"\(filenameEncoded)\""
+		}
+		return HTTPHeader(.contentDisposition, value)
 	}
 
 	/// Returns a `Content-Encoding` header.

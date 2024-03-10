@@ -1,14 +1,14 @@
 import Foundation
 import SwiftNetworking
 
-public struct  PetStore {
+public struct PetStore {
 
 	// MARK: - BaseURL
 
 	var client: NetworkClient
 
 	public init(baseURL: BaseURL, fileID: String, line: UInt) {
-        client = NetworkClient(baseURL: baseURL.url)
+		client = NetworkClient(baseURL: baseURL.url)
 			.fileIDLine(fileID: fileID, line: line)
 			.bodyDecoder(PetStoreDecoder())
 			.bearerAuth(
@@ -28,7 +28,7 @@ public struct  PetStore {
 
 // MARK: - "pet" path
 
-public extension  PetStore {
+public extension PetStore {
 
 	var pet: Pet {
 		Pet(client: client("pet"))
@@ -89,7 +89,7 @@ public extension  PetStore {
 
 // MARK: - "store" path
 
-public extension  PetStore {
+public extension PetStore {
 
 	var store: Store {
 		Store(client: client("store").auth(enabled: false))
@@ -128,7 +128,7 @@ public extension  PetStore {
 
 // MARK: "user" path
 
-public extension  PetStore {
+public extension PetStore {
 
 	var user: User {
 		User(client: client("user").auth(enabled: false))

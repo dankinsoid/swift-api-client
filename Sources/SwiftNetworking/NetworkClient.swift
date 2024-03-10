@@ -18,16 +18,16 @@ public struct NetworkClient {
 		_createRequest = createRequest
 	}
 
-    /// Initializes a new network client with a closure that creates a URLRequest.
-    /// - Parameter baseURL: A closure that takes `Configs` and returns a `URL`.
-    public init(
-        baseURL: @escaping (Configs) throws -> URL
-    ) {
-        self.init {
-            try URLRequest(url: baseURL($0))
-        }
-    }
-    
+	/// Initializes a new network client with a closure that creates a URLRequest.
+	/// - Parameter baseURL: A closure that takes `Configs` and returns a `URL`.
+	public init(
+		baseURL: @escaping (Configs) throws -> URL
+	) {
+		self.init {
+			try URLRequest(url: baseURL($0))
+		}
+	}
+
 	/// Initializes a new network client with a base URL for requests.
 	/// - Parameter baseURL: The base URL to be used for creating requests.
 	public init(

@@ -95,7 +95,7 @@ The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be 
 
 ### Encoding and Decoding
 There are several built-in configurations for encoding and decoding:
-- `.bodyEncoder` for encoding a request body. Built-in encoders include `.json` and `.formURL`.
+- `.bodyEncoder` for encoding a request body. Built-in encoders include `.json`, `.formURL` and `.multipartFormData`.
 - `.bodyDecoder` for decoding a request body. The built-in decoder is `.json`.
 - `.queryEncoder` for encoding a query. The built-in encoder is `.query`.
 - `.errorDecoder` for decoding an error response. The built-in decoder is `.decodable(type)`.
@@ -208,7 +208,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.25.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.26.0")
   ],
   targets: [
     .target(

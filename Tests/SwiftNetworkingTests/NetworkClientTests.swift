@@ -77,31 +77,31 @@ final class NetworkClientTests: XCTestCase {
 		XCTAssertEqual(request.url?.query, "0=3&1=3&2=3")
 		XCTAssertEqual(configs.intValue, 3)
 	}
-    
-    func testConfigs() throws {
-        let enabled = NetworkClient.test
-            .configs(\.testValue, true)
-            .withConfigs(\.testValue)
-        
-        XCTAssertTrue(enabled)
-        
-        let disabled = NetworkClient.test
-            .configs(\.testValue, false)
-            .withConfigs(\.testValue)
-        
-        XCTAssertFalse(disabled)
-    }
+
+	func testConfigs() throws {
+		let enabled = NetworkClient.test
+			.configs(\.testValue, true)
+			.withConfigs(\.testValue)
+
+		XCTAssertTrue(enabled)
+
+		let disabled = NetworkClient.test
+			.configs(\.testValue, false)
+			.withConfigs(\.testValue)
+
+		XCTAssertFalse(disabled)
+	}
 }
 
 extension NetworkClient.Configs {
-    
-    var testValue: Bool {
-        get { self[\.testValue] ?? false }
-        set { self[\.testValue] = newValue }
-    }
-    
-    var intValue: Int {
-        get { self[\.intValue] ?? 0 }
-        set { self[\.intValue] = newValue }
-    }
+
+	var testValue: Bool {
+		get { self[\.testValue] ?? false }
+		set { self[\.testValue] = newValue }
+	}
+
+	var intValue: Int {
+		get { self[\.intValue] ?? 0 }
+		set { self[\.intValue] = newValue }
+	}
 }

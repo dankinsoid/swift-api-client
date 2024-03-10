@@ -103,28 +103,28 @@ public extension LoggingComponents {
 		return message
 	}
 
-    func responseMessage(
-        for response: HTTPURLResponse,
-        uuid: UUID,
-        data: Data?,
-        duration: TimeInterval,
-        error: Error? = nil
-    ) -> String {
-        responseMessage(
-            uuid: uuid,
-            statusCode: response.httpStatusCode,
-            data: data,
-            headers: response.headers,
-            duration: duration,
-            error: error
-        )
-    }
+	func responseMessage(
+		for response: HTTPURLResponse,
+		uuid: UUID,
+		data: Data?,
+		duration: TimeInterval,
+		error: Error? = nil
+	) -> String {
+		responseMessage(
+			uuid: uuid,
+			statusCode: response.httpStatusCode,
+			data: data,
+			headers: response.headers,
+			duration: duration,
+			error: error
+		)
+	}
 
 	func responseMessage(
-        uuid: UUID,
+		uuid: UUID,
 		statusCode: HTTPStatusCode? = nil,
 		data: Data?,
-        headers: HTTPHeaders = [],
+		headers: HTTPHeaders = [],
 		duration: TimeInterval? = nil,
 		error: Error? = nil
 	) -> String {
@@ -139,8 +139,8 @@ public extension LoggingComponents {
 			message.append("🛑")
 		}
 		var isMultiline = false
-        if let statusCode, contains(.statusCode) {
-            message += " \(statusCode.rawValue) \(statusCode.name)"
+		if let statusCode, contains(.statusCode) {
+			message += " \(statusCode.rawValue) \(statusCode.name)"
 		}
 		var inBrackets: [String] = []
 		if let duration, contains(.duration) {

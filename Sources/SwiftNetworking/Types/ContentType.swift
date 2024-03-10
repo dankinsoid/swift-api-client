@@ -203,8 +203,12 @@ public extension ContentType {
 
 	/// Creates a content type for `multipart` with a specific subtype. You can use a string literal as well.
 	/// Example: `multipart/form-data`
-	static func multipart(_ subtype: Multipart) -> ContentType {
-		ContentType("multipart", subtype.rawValue)
+	static func multipart(_ subtype: Multipart, boundary: String? = nil) -> ContentType {
+		var result = ContentType("multipart", subtype.rawValue)
+		if let boundary {
+			result.parameters["boundary"] = boundary
+		}
+		return result
 	}
 
 	/// `*/*`

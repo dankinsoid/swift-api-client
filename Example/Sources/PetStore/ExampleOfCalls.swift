@@ -11,6 +11,6 @@ func exampleOfAPICalls() async throws {
 	_ = try await api().user("name").delete()
 }
 
-func api(fileID: String = #fileID, line: UInt = #line) ->  PetStore {
-	 PetStore(baseURL: .production, fileID: fileID, line: line)
+func api(fileID: String = #fileID, line: UInt = #line) -> PetStore {
+	PetStore(baseURL: .production, fileID: fileID, line: line)
 }
