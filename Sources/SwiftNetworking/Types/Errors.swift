@@ -11,6 +11,7 @@ enum Errors: LocalizedError {
 	case duplicateHeader(HTTPHeader.Key)
 	case invalidFileURL(URL)
 	case invalidUTF8Data
+	case custom(String)
 
 	var errorDescription: String? {
 		switch self {
@@ -32,6 +33,8 @@ enum Errors: LocalizedError {
 			return "Invalid file URL \(url)"
 		case .invalidUTF8Data:
 			return "Invalid UTF-8 data"
+		case let .custom(message):
+			return message
 		}
 	}
 }

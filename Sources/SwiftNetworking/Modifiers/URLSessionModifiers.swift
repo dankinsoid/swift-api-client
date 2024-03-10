@@ -8,19 +8,19 @@ public extension NetworkClient.Configs {
 	/// Underlying URLSession of the client.
 	var urlSession: URLSession {
 		let session = URLSession.networkClient
-#if !canImport(FoundationNetworking)
+		#if !canImport(FoundationNetworking)
 		SessionDelegateProxy.shared.configs = self
-#endif
+		#endif
 		return session
 	}
 
-#if !canImport(FoundationNetworking)
+	#if !canImport(FoundationNetworking)
 	/// The delegate for the URLSession of the client.
 	var urlSessionDelegate: URLSessionDelegate? {
 		get { self[\.urlSessionDelegate] ?? nil }
 		set { self[\.urlSessionDelegate] = newValue }
 	}
-#endif
+	#endif
 }
 
 #if !canImport(FoundationNetworking)
@@ -36,7 +36,7 @@ public extension NetworkClient {
 private extension URLSession {
 
 	static var networkClient: URLSession = {
-#if !canImport(FoundationNetworking)
+		#if !canImport(FoundationNetworking)
 		var configs = URLSessionConfiguration.default
 		configs.headers = .default
 		return URLSession(
@@ -44,8 +44,8 @@ private extension URLSession {
 			delegate: SessionDelegateProxy.shared,
 			delegateQueue: nil
 		)
-#else
-        return URLSession.shared
-#endif
+		#else
+		return URLSession.shared
+		#endif
 	}()
 }

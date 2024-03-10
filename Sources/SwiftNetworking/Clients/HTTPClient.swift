@@ -79,7 +79,7 @@ extension NetworkClientCaller where Result == AsyncValue<Value> {
 				let response: HTTPURLResponse
 				let start = Date()
 				do {
-					(value, response) = try await task(request, configs)
+					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs, next: task)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs.loggingComponents.isEmpty {

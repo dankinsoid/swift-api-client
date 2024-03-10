@@ -1,4 +1,5 @@
 import Foundation
+
 #if !canImport(FoundationNetworking)
 
 final class SessionDelegateProxy: NSObject, URLSessionDelegate {

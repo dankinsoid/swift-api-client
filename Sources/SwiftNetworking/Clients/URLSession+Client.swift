@@ -4,7 +4,7 @@ import Logging
 import FoundationNetworking
 #endif
 
-public extension HTTPClient {
+public extension HTTPClient<Data> {
 
 	/// Creates an `HTTPClient` that uses a specified `URLSession` for network requests.
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
@@ -12,7 +12,7 @@ public extension HTTPClient {
 		HTTPClient { request, configs in
 			#if os(Linux)
 			return try await asyncMethod { completion in
-                configs.urlSession.dataTask(with: request, completionHandler: completion)
+				configs.urlSession.dataTask(with: request, completionHandler: completion)
 			}
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
