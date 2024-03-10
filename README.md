@@ -33,6 +33,8 @@
 ## Usage
 The core of the library is the `NetworkClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with `URLRequest`.
 
+The branching and configuration injection/overriding capabilities of NetworkClient, extending to all its child instances, facilitate the effortless recycling of networking logic and tasks, thereby eliminating the need for copy-pasting.
+
 While a full example is available in the [Example folder](/Example/), here is a simple usage example:
 ```swift
 let client = NetworkClient(url: baseURL)
@@ -230,7 +232,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.31.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.32.0")
   ],
   targets: [
     .target(
