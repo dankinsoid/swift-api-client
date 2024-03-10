@@ -230,7 +230,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.29.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.30.0")
   ],
   targets: [
     .target(
