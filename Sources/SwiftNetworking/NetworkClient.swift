@@ -1,7 +1,6 @@
 import Foundation
-import Logging
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+@_exported import FoundationNetworking
 #endif
 
 /// A network client for handling url requests with configurable request and configuration handling.
