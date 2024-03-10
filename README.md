@@ -102,7 +102,7 @@ Defines request execution with several built-in callers for various request type
 - `.httpUpload` for HTTP upload requests using `try await` syntax.
 - `.mock` for mock requests using `try await` syntax.
 
-All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession.shared`. It's possible to customize the current `.httpClient` instance.
+All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession`. It's possible to customize the current `.httpClient` instance.
 
 Custom callers can be created for different types of requests, such as WebSocket, GraphQL, etc.
 
@@ -230,7 +230,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.30.1")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.31.0")
   ],
   targets: [
     .target(

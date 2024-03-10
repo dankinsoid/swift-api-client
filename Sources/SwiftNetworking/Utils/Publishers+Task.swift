@@ -44,7 +44,7 @@ public extension Publishers.Task where Failure == Never {
 		}
 	}
 
-    init(_ task: @escaping (_ send: (Output) -> Void) async -> Void) {
+	init(_ task: @escaping (_ send: (Output) -> Void) async -> Void) {
 		self.init { send in
 			await task {
 				send(.success($0))
@@ -55,7 +55,7 @@ public extension Publishers.Task where Failure == Never {
 
 public extension Publishers.Task where Failure == Error {
 
-    init(_ task: @escaping (_ send: (Output) -> Void) async throws -> Void) {
+	init(_ task: @escaping (_ send: (Output) -> Void) async throws -> Void) {
 		self.init { send in
 			do {
 				try await task {

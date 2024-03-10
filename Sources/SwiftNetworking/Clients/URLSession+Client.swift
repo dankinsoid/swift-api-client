@@ -7,63 +7,49 @@ import FoundationNetworking
 public extension HTTPClient {
 
 	/// Creates an `HTTPClient` that uses a specified `URLSession` for network requests.
-	/// - Parameter session: The `URLSession` to use for network requests.
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
-	static func urlSession(_ session: URLSession) -> Self {
-		HTTPClient { request, _ in
+	static var urlSession: Self {
+		HTTPClient { request, configs in
 			#if os(Linux)
 			return try await asyncMethod { completion in
 				session.dataTask(with: request, completionHandler: completion)
 			}
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
-				let (data, response) = try await session.data(for: request)
+				let (data, response) = try await configs.urlSession.data(for: request)
 				guard let httpResponse = response.http else {
 					throw Errors.responseTypeIsNotHTTP
 				}
 				return (data, httpResponse)
 			} else {
 				return try await asyncMethod { completion in
-					session.dataTask(with: request, completionHandler: completion)
+					configs.urlSession.dataTask(with: request, completionHandler: completion)
 				}
 			}
 			#endif
 		}
 	}
-
-	/// A static property to get an `HTTPClient` that uses the shared `URLSession`.
-	static var urlSession: Self {
-		urlSession(.shared)
-	}
 }
 
 public extension HTTPUploadClient {
 
-	static func urlSession(_ session: URLSession) -> Self {
-		HTTPUploadClient { request, uploadTask, _ in
+	static var urlSession: Self {
+		HTTPUploadClient { request, uploadTask, configs in
 			try await asyncMethod { completion in
-				session.uploadTask(with: request, task: uploadTask, completionHandler: completion)
+				configs.urlSession.uploadTask(with: request, task: uploadTask, completionHandler: completion)
 			}
 		}
-	}
-
-	static var urlSession: Self {
-		urlSession(.shared)
 	}
 }
 
 public extension HTTPDownloadClient {
 
-	static func urlSession(_ session: URLSession) -> Self {
-		HTTPDownloadClient { request, _ in
+	static var urlSession: Self {
+		HTTPDownloadClient { request, configs in
 			try await asyncMethod { completion in
-				session.downloadTask(with: request, completionHandler: completion)
+				configs.urlSession.downloadTask(with: request, completionHandler: completion)
 			}
 		}
-	}
-
-	static var urlSession: Self {
-		urlSession(.shared)
 	}
 }
 
