@@ -4,7 +4,7 @@ import Logging
 import FoundationNetworking
 #endif
 
-public extension HTTPClient<Data> {
+public extension HTTPClient {
 
 	/// Creates an `HTTPClient` that uses a specified `URLSession` for network requests.
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
