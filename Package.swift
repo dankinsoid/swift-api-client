@@ -4,7 +4,7 @@
 import PackageDescription
 
 var package = Package(
-	name: "swift-networking",
+	name: "swift-api-client",
 	platforms: [
 		.macOS(.v10_15),
 		.iOS(.v13),
@@ -12,21 +12,21 @@ var package = Package(
 		.tvOS(.v13),
 	],
 	products: [
-		.library(name: "SwiftNetworking", targets: ["SwiftNetworking"]),
+		.library(name: "SwiftAPIClient", targets: ["SwiftAPIClient"]),
 	],
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
 	],
 	targets: [
 		.target(
-			name: "SwiftNetworking",
+			name: "SwiftAPIClient",
 			dependencies: [
 				.product(name: "Logging", package: "swift-log"),
 			]
 		),
 		.testTarget(
-			name: "SwiftNetworkingTests",
-			dependencies: [.target(name: "SwiftNetworking")]
+			name: "SwiftAPIClientTests",
+			dependencies: [.target(name: "SwiftAPIClient")]
 		),
 	]
 )

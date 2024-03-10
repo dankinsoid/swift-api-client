@@ -8,9 +8,9 @@ protocol TokenRefresher {
 	) async throws -> (Data, HTTPURLResponse)
 }
 
-extension NetworkClient {
+extension APIClient {
 
-	func tokenRefresher(_ refresher: @escaping (NetworkClient.Configs) -> TokenRefresher) -> NetworkClient {
+	func tokenRefresher(_ refresher: @escaping (APIClient.Configs) -> TokenRefresher) -> APIClient {
 		configs { configs in
 			let base = configs.httpClient
 			configs.httpClient = HTTPClient { request, configs in
@@ -26,7 +26,7 @@ struct APITokenRefresher: TokenRefresher {
 
 	let tokenService: TokenCacheService
 
-	init(_ configs: NetworkClient.Configs) {
+	init(_ configs: APIClient.Configs) {
 		tokenService = configs.tokenCacheService
 	}
 

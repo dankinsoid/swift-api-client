@@ -5,10 +5,10 @@ public struct PetStore {
 
 	// MARK: - BaseURL
 
-	var client: NetworkClient
+	var client: APIClient
 
     public init(baseURL: BaseURL, fileID: String, line: UInt) {
-        client = NetworkClient(baseURL: baseURL.url)
+        client = APIClient(baseURL: baseURL.url)
             .fileIDLine(fileID: fileID, line: line)
             .bodyDecoder(PetStoreDecoder())
             .tokenRefresher { client, _ in
@@ -29,7 +29,7 @@ public extension PetStore {
 
 	struct Pet {
 
-		var client: NetworkClient
+		var client: APIClient
 
 		public func update(_ pet: PetModel) async throws -> PetModel {
 			try await client.body(pet).put()
@@ -53,7 +53,7 @@ public extension PetStore {
 
 		public struct PetByID {
 
-			var client: NetworkClient
+			var client: APIClient
 
 			public func get() async throws -> PetModel {
 				try await client()
@@ -90,7 +90,7 @@ public extension PetStore {
 
 	struct Store {
 
-		var client: NetworkClient
+		var client: APIClient
 
 		public func inventory() async throws -> [String: Int] {
 			try await client("inventory").auth(enabled: true).call()
@@ -106,7 +106,7 @@ public extension PetStore {
 
 		public struct Order {
 
-			var client: NetworkClient
+			var client: APIClient
 
 			public func find() async throws -> OrderModel {
 				try await client()
@@ -129,7 +129,7 @@ public extension PetStore {
 
 	struct User {
 
-		var client: NetworkClient
+		var client: APIClient
 
 		public func create(_ model: UserModel) async throws -> UserModel {
 			try await client.body(model).post()
@@ -155,7 +155,7 @@ public extension PetStore {
 
 		public struct UserByUsername {
 
-			var client: NetworkClient
+			var client: APIClient
 
 			public func get() async throws -> UserModel {
 				try await client()

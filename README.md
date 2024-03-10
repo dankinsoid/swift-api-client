@@ -1,23 +1,23 @@
-`swift-networking` is a comprehensive and modular client networking library for Swift.
+`swift-api-client` is a comprehensive and modular Swift library for API design.
 
 ## Table of Contents
 - [Table of Contents](#table-of-contents)
 - [Main Goals of the Library](#main-goals-of-the-library)
 - [Usage](#usage)
-- [What is `NetworkClient`](#what-is-networkclient)
-- [Built-in `NetworkClient` Extensions](#built-in-networkclient-extensions)
+- [What is `APIClient`](#what-is-apiclient)
+- [Built-in `APIClient` Extensions](#built-in-apiclient-extensions)
   - [Request building](#request-building)
   - [Request execution](#request-execution)
-    - [`NetworkClientCaller`](#networkclientcaller)
+    - [`APIClientCaller`](#apiclientcaller)
     - [Serializer](#serializer)
   - [Encoding and Decoding](#encoding-and-decoding)
     - [ContentSerializer](#contentserializer)
   - [Auth](#auth)
   - [Mocking](#mocking)
   - [Logging](#logging)
-- [`NetworkClient.Configs`](#networkclientconfigs)
+- [`APIClient.Configs`](#apiclientconfigs)
   - [Configs Modifications Order](#configs-modifications-order)
-- [Introducing `swift-networking-addons`](#introducing-swift-networking-addons)
+- [Introducing `swift-api-client-addons`](#introducing-swift-api-client-addons)
 - [Installation](#installation)
 - [Author](#author)
 - [License](#license)
@@ -31,19 +31,19 @@
 - Facilitation of testing and mocking.
 
 ## Usage
-The core of the library is the `NetworkClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with `URLRequest`.
+The core of the library is the `APIClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with `URLRequest`.
 
-The branching and configuration injection/overriding capabilities of NetworkClient, extending to all its child instances, facilitate the effortless recycling of networking logic and tasks, thereby eliminating the need for copy-pasting.
+The branching and configuration injection/overriding capabilities of APIClient, extending to all its child instances, facilitate the effortless recycling of networking logic and tasks, thereby eliminating the need for copy-pasting.
 
 While a full example is available in the [Example folder](/Example/), here is a simple usage example:
 ```swift
-let client = NetworkClient(url: baseURL)
+let client = APIClient(url: baseURL)
   .auth(.bearer(token))
   .bodyDecoder(.json(dateDecodingStrategy: .iso8601))
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
 
-// Create a `NetworkClient` instance for the /users path
+// Create a `APIClient` instance for the /users path
 let usersClient = client("users")
 
 // GET /users?name=John&limit=1
@@ -52,7 +52,7 @@ let john: User = try await usersClient
   .auth(enabled: false)
   .get()
 
-// Create a `NetworkClient` instance for /users/{userID} path
+// Create a `APIClient` instance for /users/{userID} path
 let johnClient = usersClient(john.id)
 
 // GET /user/{userID}
@@ -65,9 +65,9 @@ try await johnClient.body(updatedUser).put()
 try await johnClient.delete()
 ```
 
-## What is `NetworkClient`
+## What is `APIClient`
 
-`NetworkClient` is a struct combining a closure for creating a URLRequest and a typed dictionary of configurations `NetworkClient.Configs`. There are two primary ways to extend a `NetworkClient`:
+`APIClient` is a struct combining a closure for creating a URLRequest and a typed dictionary of configurations `APIClient.Configs`. There are two primary ways to extend a `APIClient`:
 - `modifyRequest` modifiers.
 - `configs` modifiers.
 
@@ -75,17 +75,17 @@ Executing an operation on the client involves:
 - `withRequest` methods.
 
 All built-in extensions utilize these modifiers.
-## Built-in `NetworkClient` Extensions
+## Built-in `APIClient` Extensions
 ### Request building
 Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.\
-The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftNetworking/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
+The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftAPIClient/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
 
 Notable non-obvious modifiers include:
 - `.callAsFunction(path...)` - as a shorthand for the `.path(path...)` modifier, allowing `client("path")` instead of `client.path("path")`.
 - HTTP method shorthands like `.get`, `.post`, `.put`, `.delete`, `.patch`.
 
 ### Request execution
-The method`call(_ caller: NetworkClientCaller<...>, as serializer: Serializer<...>)` is provided.
+The method`call(_ caller: APIClientCaller<...>, as serializer: Serializer<...>)` is provided.
 Examples:
 ```swift
 try await client.call(.http, as: .decodable)
@@ -96,7 +96,7 @@ There are also shorthands for built-in callers and serializers:
 - `call()` is equivalent to `call(.http, as: .decodable)` or `call(.http, as: .void)`
 - `callAsFunction()` acts as `call()`, simplifying `client.delete()` to `client.delete.call()` or  `client()` instead of `client.call()`, etc.
 
-#### `NetworkClientCaller`
+#### `APIClientCaller`
 Defines request execution with several built-in callers for various request types, including:
 - `.http` for HTTP requests using `try await` syntax.
 - `.httpPublisher` for HTTP requests with Combine syntax.
@@ -113,7 +113,7 @@ Custom callers can be created for different types of requests, such as WebSocket
 - `.decodable` for decoding a response into a Decodable type.
 - `.data` for obtaining a raw Data response.
 - `.void` for ignoring the response.
-- `.instance` for receiving a response of the same type as `NetworkClientCaller` returns. For HTTP requests, it is `Data`.
+- `.instance` for receiving a response of the same type as `APIClientCaller` returns. For HTTP requests, it is `Data`.
 
 The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be customized with the `.bodyDecoder` modifier. The default `bodyDecoder` is `JSONDecoder()`.
 
@@ -146,12 +146,12 @@ Built-in tools for mocking requests include:
 - `.usingMocksPolicy` configuration defines whether to use mocks, customizable with `.usingMocks(policy:)` modifier.
 By default, mocks are ignored in the `live` environment and used as specified for tests and SwiftUI previews.
 
-Additionally, `.mock(_:)` as a `NetworkClientCaller` offers an alternative way to mock requests, like `client.call(.mock(data), as: .decodable)`.
+Additionally, `.mock(_:)` as a `APIClientCaller` offers an alternative way to mock requests, like `client.call(.mock(data), as: .decodable)`.
 
 Custom HTTPClient instances can also be created and injected for testing or previews.
 
 ### Logging
-`swift-networking` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers.
+`swift-api-client` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers.
 The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
 
 Log example:
@@ -166,13 +166,13 @@ Content-Type: application/json
 ```
 Log message format can be customized with the `.loggingComponents(_:)` modifier.
 
-## `NetworkClient.Configs`
+## `APIClient.Configs`
 A collection of config values is propagated through the modifier chain. These configs are accessible in all core methods: `modifyRequest`, `withRequest`, and `withConfigs`.
 
-To create custom config values, extend the `NetworkClient.Configs` structure with a new property.
+To create custom config values, extend the `APIClient.Configs` structure with a new property.
 Use subscript with your property key path to get and set the value, and provide a dedicated modifier for clients to use when setting this value:
 ```swift
-extension NetworkClient.Configs {
+extension APIClient.Configs {
   var myCustomValue: MyConfig {
     get {
       self[\.myCustomValue] ?? myDefaultConfig
@@ -183,8 +183,8 @@ extension NetworkClient.Configs {
   }
 }
 
-extension NetworkClient {
-  func myCustomValue(_ myCustomValue: MyConfig) -> NetworkClient {
+extension APIClient {
+  func myCustomValue(_ myCustomValue: MyConfig) -> APIClient {
     configs(\.myCustomValue, myCustomValue)
   }
 }
@@ -215,10 +215,10 @@ let configs = try client
 print(configs.intValue) // 3
 ```
 
-## Introducing `swift-networking-addons`
+## Introducing `swift-api-client-addons`
 
-To enhance your experience with `swift-networking`, I'm excited to introduce [`swift-networking-addons`](https://github.com/dankinsoid/swift-networking-addons) 
-— a complementary library designed to extend the core functionality of `swift-networking` with additional features and utilities.
+To enhance your experience with `swift-api-client`, I'm excited to introduce [`swift-api-client-addons`](https://github.com/dankinsoid/swift-api-client-addons) 
+— a complementary library designed to extend the core functionality of `swift-api-client` with additional features and utilities.
 
 ## Installation
 
@@ -232,13 +232,13 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.38.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.39.0")
   ],
   targets: [
     .target(
       name: "SomeProject",
       dependencies: [
-        .product(name:  "SwiftNetworking", package: "swift-networking"),
+        .product(name:  "SwiftAPIClient", package: "swift-api-client"),
       ]
     )
   ]
@@ -254,7 +254,7 @@ Daniil Voidilov, voidilov@gmail.com
 
 ## License
 
-swift-networking is available under the MIT license. See the LICENSE file for more info.
+swift-api-client is available under the MIT license. See the LICENSE file for more info.
 
 ## Contributing
 We welcome contributions to Swift-Networking! Please read our contributing guidelines to get started.
