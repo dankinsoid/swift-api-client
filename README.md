@@ -78,6 +78,13 @@ All built-in extensions utilize these modifiers.
 ## Built-in `APIClient` Extensions
 ### Request building
 Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.\
+```swift
+let client = APIClient(url: baseURL)
+  .method(.post)
+  .body(someEncodableBody)
+  .query(someEncodableQuery)
+  .header(.acceptEncoding, "UTF-8")
+```
 The full list of modifiers is available in [RequestModifiers.swift](/Sources/SwiftAPIClient/Modifiers/RequestModifiers.swift), all based on the `modifyRequest` modifier.
 
 Notable non-obvious modifiers include:
@@ -232,7 +239,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.40.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.41.0")
   ],
   targets: [
     .target(
