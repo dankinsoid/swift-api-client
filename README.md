@@ -1,6 +1,28 @@
-# swift-networking
 `swift-networking` is a comprehensive and modular client networking library for Swift.
 
+## Table of Contents
+- [Table of Contents](#table-of-contents)
+- [Main Goals of the Library](#main-goals-of-the-library)
+- [Usage](#usage)
+- [What is `NetworkClient`](#what-is-networkclient)
+- [Built-in `NetworkClient` Extensions](#built-in-networkclient-extensions)
+  - [Request building](#request-building)
+  - [Request execution](#request-execution)
+    - [`NetworkClientCaller`](#networkclientcaller)
+    - [Serializer](#serializer)
+  - [Encoding and Decoding](#encoding-and-decoding)
+    - [ContentSerializer](#contentserializer)
+  - [Auth](#auth)
+  - [Mocking](#mocking)
+  - [Logging](#logging)
+- [`NetworkClient.Configs`](#networkclientconfigs)
+  - [Configs Modifications Order](#configs-modifications-order)
+- [Introducing `swift-networking-addons`](#introducing-swift-networking-addons)
+- [Installation](#installation)
+- [Author](#author)
+- [License](#license)
+- [Contributing](#contributing)
+ 
 ## Main Goals of the Library
 - Minimalistic and intuitive syntax.
 - Reusability, allowing for the injection of configurations across all requests.
@@ -208,7 +230,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.27.0")
+    .package(url: "https://github.com/dankinsoid/swift-networking.git", from: "0.28.0")
   ],
   targets: [
     .target(
