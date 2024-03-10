@@ -25,11 +25,9 @@ extension NetworkClient {
 struct APITokenRefresher: TokenRefresher {
 
 	let tokenService: TokenCacheService
-	let client: NetworkClient
 
 	init(_ configs: NetworkClient.Configs) {
 		tokenService = configs.tokenCacheService
-		client = configs.client
 	}
 
 	private let tokenRefreshStatusCode = 401 // Status code indicating the token needs to be refreshed

@@ -17,12 +17,31 @@ public extension HTTPClientMiddleware where Self == TokenRefresherMiddleware {
 	}
 }
 
+extension NetworkClient {
+
+    public func tokenRefresher(
+        cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
+        expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
+        refreshToken: @escaping (NetworkClient, NetworkClient.Configs) async throws -> String,
+        auth: @escaping (String) -> AuthModifier
+    ) -> Self {
+        httpClientMiddleware(
+            TokenRefresherMiddleware(
+                cacheService: cacheService,
+                expiredStatusCodes: expiredStatusCodes,
+                refreshToken: { try await refreshToken(self, $0) },
+                auth: auth
+            )
+        )
+    }
+}
+
 public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 
-	let tokenCacheService: TokenCacheService
-	let expiredStatusCodes: Set<HTTPStatusCode>
-	let auth: (String) -> AuthModifier
-	let refreshToken: (NetworkClient.Configs) async throws -> String
+	private let tokenCacheService: TokenCacheService
+	private let expiredStatusCodes: Set<HTTPStatusCode>
+	private let auth: (String) -> AuthModifier
+	private let refreshToken: (NetworkClient.Configs) async throws -> String
 
 	public init(
 		cacheService: TokenCacheService,

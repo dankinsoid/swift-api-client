@@ -125,7 +125,7 @@ public struct NetworkClient {
 	/// - Rethrows: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) throws -> T) rethrows -> T {
-		var configs = Configs(createRequest: _createRequest)
+		var configs = Configs()
 		modifyConfigs(&configs)
 		return try operation(configs)
 	}
@@ -135,13 +135,13 @@ public struct NetworkClient {
 	/// - Rethrows: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) async throws -> T) async rethrows -> T {
-		var configs = Configs(createRequest: _createRequest)
+		var configs = Configs()
 		modifyConfigs(&configs)
 		return try await operation(configs)
 	}
 
 	private func createRequest() throws -> (URLRequest, Configs) {
-		var configs = Configs(createRequest: _createRequest)
+		var configs = Configs()
 		modifyConfigs(&configs)
 		return try (_createRequest(configs), configs)
 	}

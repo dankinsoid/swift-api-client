@@ -7,24 +7,16 @@ public struct PetStore {
 
 	var client: NetworkClient
 
-	public init(baseURL: BaseURL, fileID: String, line: UInt) {
-		client = NetworkClient(baseURL: baseURL.url)
-			.fileIDLine(fileID: fileID, line: line)
-			.bodyDecoder(PetStoreDecoder())
-			.bearerAuth(
-				valueFor(
-					live: UserDefaultsTokenCacheService(),
-					test: MockTokenCacheService()
-				)
-			)
-            .httpClientMiddleware(
-                .tokenRefresher {
-                    try await $0.client.path("token").get()
-                } auth: {
-                    .bearer(token: $0)
-                }
-            )
-	}
+    public init(baseURL: BaseURL, fileID: String, line: UInt) {
+        client = NetworkClient(baseURL: baseURL.url)
+            .fileIDLine(fileID: fileID, line: line)
+            .bodyDecoder(PetStoreDecoder())
+            .tokenRefresher { client, _ in
+                try await client.path("token").post()
+            } auth: {
+                .bearer(token: $0)
+            }
+    }
 }
 
 // MARK: - "pet" path
