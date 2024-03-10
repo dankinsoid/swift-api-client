@@ -2,9 +2,8 @@ import Foundation
 
 public extension HTTPClientMiddleware where Self == TokenRefresherMiddleware {
 
-	///
 	static func tokenRefresher(
-		cacheService: TokenCacheService = .keychain,
+        cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
 		refreshToken: @escaping (NetworkClient.Configs) async throws -> String,
 		auth: @escaping (String) -> AuthModifier

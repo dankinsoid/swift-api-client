@@ -17,12 +17,13 @@ public struct PetStore {
 					test: MockTokenCacheService()
 				)
 			)
-			.tokenRefresher {
-				valueFor(
-					live: APITokenRefresher($0),
-					test: MockTokenRefresher()
-				) as TokenRefresher
-			}
+            .httpClientMiddleware(
+                .tokenRefresher {
+                    try await $0.client.path("token").get()
+                } auth: {
+                    .bearer(token: $0)
+                }
+            )
 	}
 }
 
