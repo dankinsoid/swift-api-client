@@ -3,7 +3,7 @@ import Foundation
 public extension HTTPClientMiddleware where Self == TokenRefresherMiddleware {
 
 	static func tokenRefresher(
-        cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
+		cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
 		refreshToken: @escaping (APIClient.Configs) async throws -> String,
 		auth: @escaping (String) -> AuthModifier
@@ -17,23 +17,23 @@ public extension HTTPClientMiddleware where Self == TokenRefresherMiddleware {
 	}
 }
 
-extension APIClient {
+public extension APIClient {
 
-    public func tokenRefresher(
-        cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
-        expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
-        refreshToken: @escaping (APIClient, APIClient.Configs) async throws -> String,
-        auth: @escaping (String) -> AuthModifier
-    ) -> Self {
-        httpClientMiddleware(
-            TokenRefresherMiddleware(
-                cacheService: cacheService,
-                expiredStatusCodes: expiredStatusCodes,
-                refreshToken: { try await refreshToken(self, $0) },
-                auth: auth
-            )
-        )
-    }
+	func tokenRefresher(
+		cacheService: TokenCacheService = valueFor(live: .keychain, test: .mock),
+		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
+		refreshToken: @escaping (APIClient, APIClient.Configs) async throws -> String,
+		auth: @escaping (String) -> AuthModifier
+	) -> Self {
+		httpClientMiddleware(
+			TokenRefresherMiddleware(
+				cacheService: cacheService,
+				expiredStatusCodes: expiredStatusCodes,
+				refreshToken: { try await refreshToken(self, $0) },
+				auth: auth
+			)
+		)
+	}
 }
 
 public struct TokenRefresherMiddleware: HTTPClientMiddleware {

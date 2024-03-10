@@ -12,8 +12,7 @@ public extension APIClient {
 		private var values: [PartialKeyPath<APIClient.Configs>: Any] = [:]
 
 		/// Initializes a new configuration set for `APIClient`.
-		public init() {
-		}
+		public init() {}
 
 		/// Provides subscript access to configuration values based on their key paths.
 		/// - Parameter keyPath: A `WritableKeyPath` to the configuration property.

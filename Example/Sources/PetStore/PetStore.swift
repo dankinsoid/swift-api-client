@@ -7,16 +7,16 @@ public struct PetStore {
 
 	var client: APIClient
 
-    public init(baseURL: BaseURL, fileID: String, line: UInt) {
-        client = APIClient(baseURL: baseURL.url)
-            .fileIDLine(fileID: fileID, line: line)
-            .bodyDecoder(PetStoreDecoder())
-            .tokenRefresher { client, _ in
-                try await client.path("token").post()
-            } auth: {
-                .bearer(token: $0)
-            }
-    }
+	public init(baseURL: BaseURL, fileID: String, line: UInt) {
+		client = APIClient(baseURL: baseURL.url)
+			.fileIDLine(fileID: fileID, line: line)
+			.bodyDecoder(PetStoreDecoder())
+			.tokenRefresher { client, _ in
+				try await client.path("token").post()
+			} auth: {
+				.bearer(token: $0)
+			}
+	}
 }
 
 // MARK: - "pet" path
