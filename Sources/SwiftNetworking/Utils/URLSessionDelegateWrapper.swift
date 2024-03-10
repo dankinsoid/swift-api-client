@@ -1,7 +1,5 @@
 import Foundation
-#if canImport(FoundationNetworking)
-import FoundationNetworking
-#endif
+#if !canImport(FoundationNetworking)
 
 final class SessionDelegateProxy: NSObject, URLSessionDelegate {
 
@@ -69,3 +67,4 @@ extension SessionDelegateProxy: URLSessionDownloadDelegate {
 extension SessionDelegateProxy: URLSessionStreamDelegate {}
 
 extension SessionDelegateProxy: URLSessionWebSocketDelegate {}
+#endif

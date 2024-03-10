@@ -1,5 +1,6 @@
 import Foundation
 
+#if !canImport(FoundationNetworking)
 public extension NetworkClient.Configs {
 
 	/// The redirect behaviour for the client. Default is `.follow`.
@@ -17,3 +18,4 @@ public extension NetworkClient {
 		configs(\.redirectBehaviour, behaviour)
 	}
 }
+#endif
