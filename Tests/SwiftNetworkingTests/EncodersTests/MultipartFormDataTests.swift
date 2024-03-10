@@ -44,7 +44,7 @@ class MultipartFormDataTests: XCTestCase {
 			),
 		]
 
-		for (line, testCase) in testCases {
+		for (_, testCase) in testCases {
 			let actual = String(data: testCase.multipartFormData.data, encoding: .utf8)
 			let expected = testCase.expected
 

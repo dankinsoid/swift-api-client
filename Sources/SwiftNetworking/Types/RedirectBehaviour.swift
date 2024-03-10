@@ -4,7 +4,7 @@ import FoundationNetworking
 #endif
 
 /// Defines a redirect behaviour.
-public enum RedirectorBehaviour {
+public enum RedirectBehaviour {
 
 	/// Follow the redirect as defined in the response.
 	case follow

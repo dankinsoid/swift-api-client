@@ -10,6 +10,7 @@ enum Errors: LocalizedError {
 	case responseTypeIsNotHTTP
 	case duplicateHeader(HTTPHeader.Key)
 	case invalidFileURL(URL)
+    case invalidUTF8Data
 
 	var errorDescription: String? {
 		switch self {
@@ -29,6 +30,8 @@ enum Errors: LocalizedError {
 			return "Duplicate header \(key)"
 		case let .invalidFileURL(url):
 			return "Invalid file URL \(url)"
+        case .invalidUTF8Data:
+            return "Invalid UTF-8 data"
 		}
 	}
 }
