@@ -11,6 +11,7 @@ func exampleOfAPICalls() async throws {
 	_ = try await api().user("name").delete()
 }
 
+/// In order to get actual #line and #fileID in loggs use the following function instead of variable.
 func api(fileID: String = #fileID, line: UInt = #line) -> PetStore {
 	PetStore(baseURL: .production, fileID: fileID, line: line)
 }

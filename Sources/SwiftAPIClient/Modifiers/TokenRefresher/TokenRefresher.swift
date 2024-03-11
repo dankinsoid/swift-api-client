@@ -60,6 +60,9 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		configs: APIClient.Configs,
 		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
 	) async throws -> (T, HTTPURLResponse) {
+		guard configs.isAuthEnabled else {
+			return try await next(request, configs)
+		}
 		var token: String
 		let currentToken = tokenCacheService.getToken()
 		if let currentToken {
