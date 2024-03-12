@@ -42,6 +42,11 @@ let client = APIClient(url: baseURL)
   .bodyDecoder(.json(dateDecodingStrategy: .iso8601))
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
+  .tokenRefresher { client, _ in
+    try await client("token").get()
+  } auth: {
+    .bearer(token: $0)
+  }
 
 // Create a `APIClient` instance for the /users path
 let usersClient = client("users")
@@ -77,7 +82,7 @@ Executing an operation on the client involves:
 All built-in extensions utilize these modifiers.
 ## Built-in `APIClient` Extensions
 ### Request building
-Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.\
+Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.
 ```swift
 let client = APIClient(url: baseURL)
   .method(.post)
@@ -142,7 +147,7 @@ Custom content serializers can be specified by passing a `ContentSerializer` ins
 allowing the injection of an authentication type for all requests and enabling/disabling it for specific requests.
 
 The `.auth` configuration is an `AuthModifier` instance with several built-in `AuthModifier` types:
-- `.bearer(token)` for Bearer token authentication.
+- `.bearer(token:)` for Bearer token authentication.
 - `.basic(username:password:)` for Basic authentication.
 - `.apiKey(key:field:)` for API Key authentication.
 
