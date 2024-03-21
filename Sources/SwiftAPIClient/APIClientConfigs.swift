@@ -70,39 +70,37 @@ public func valueFor<Value>(
 public let _isPreview: Bool = ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
 
 #if !os(WASI)
-public let _XCTIsTesting: Bool = {
-    ProcessInfo.processInfo.environment.keys.contains("XCTestBundlePath")
-    || ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath")
-    || ProcessInfo.processInfo.environment.keys.contains("XCTestSessionIdentifier")
-    || (ProcessInfo.processInfo.arguments.first
-        .flatMap(URL.init(fileURLWithPath:))
-        .map { $0.lastPathComponent == "xctest" || $0.pathExtension == "xctest" }
-        ?? false)
-    || XCTCurrentTestCase != nil
-}()
+public let _XCTIsTesting: Bool = ProcessInfo.processInfo.environment.keys.contains("XCTestBundlePath")
+	|| ProcessInfo.processInfo.environment.keys.contains("XCTestConfigurationFilePath")
+	|| ProcessInfo.processInfo.environment.keys.contains("XCTestSessionIdentifier")
+	|| (ProcessInfo.processInfo.arguments.first
+		.flatMap(URL.init(fileURLWithPath:))
+		.map { $0.lastPathComponent == "xctest" || $0.pathExtension == "xctest" }
+		?? false)
+	|| XCTCurrentTestCase != nil
 #else
 public let _XCTIsTesting = false
 #endif
 
 #if canImport(ObjectiveC)
 private var XCTCurrentTestCase: AnyObject? {
-    guard
-        let XCTestObservationCenter = NSClassFromString("XCTestObservationCenter"),
-        let XCTestObservationCenter = XCTestObservationCenter as Any as? NSObjectProtocol,
-        let shared = XCTestObservationCenter.perform(Selector(("sharedTestObservationCenter")))?
-            .takeUnretainedValue(),
-        let observers = shared.perform(Selector(("observers")))?
-            .takeUnretainedValue() as? [AnyObject],
-        let observer =
-            observers
-            .first(where: { NSStringFromClass(type(of: $0)) == "XCTestMisuseObserver" }),
-        let currentTestCase = observer.perform(Selector(("currentTestCase")))?
-            .takeUnretainedValue()
-    else { return nil }
-    return currentTestCase
+	guard
+		let XCTestObservationCenter = NSClassFromString("XCTestObservationCenter"),
+		let XCTestObservationCenter = XCTestObservationCenter as Any as? NSObjectProtocol,
+		let shared = XCTestObservationCenter.perform(Selector(("sharedTestObservationCenter")))?
+		.takeUnretainedValue(),
+		let observers = shared.perform(Selector(("observers")))?
+		.takeUnretainedValue() as? [AnyObject],
+		let observer =
+		observers
+			.first(where: { NSStringFromClass(type(of: $0)) == "XCTestMisuseObserver" }),
+			let currentTestCase = observer.perform(Selector(("currentTestCase")))?
+			.takeUnretainedValue()
+	else { return nil }
+	return currentTestCase
 }
 #else
 private var XCTCurrentTestCase: AnyObject? {
-    nil
+	nil
 }
 #endif

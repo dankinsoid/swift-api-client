@@ -1,132 +1,147 @@
 import Foundation
 
-/// A service for caching and retrieving tokens.
-public protocol TokenCacheService {
+/// A service for caching and retrieving secure data.
+public protocol SecureCacheService {
 
-	func saveToken(_ token: String) throws
-	func getToken() -> String?
-	func clearToken() throws
+	subscript(key: SecureCacheServiceKey) -> String? { get nonmutating set }
+	func clear() throws
 }
 
-public extension TokenCacheService where Self == MockTokenCacheService {
+/// A key for a secure cache service.
+public struct SecureCacheServiceKey: Hashable, ExpressibleByStringInterpolation {
+
+	public var value: String
+
+	public init(_ value: String) {
+		self.value = value
+	}
+
+	public init(stringLiteral value: String) {
+		self.init(value)
+	}
+
+	public init(stringInterpolation: String.StringInterpolation) {
+		self.init(String(stringInterpolation: stringInterpolation))
+	}
+
+	public static let accessToken: SecureCacheServiceKey = "accessToken"
+	public static let refreshToken: SecureCacheServiceKey = "refreshToken"
+	public static let expiryDate: SecureCacheServiceKey = "expiryDate"
+}
+
+public extension SecureCacheService where Self == MockSecureCacheService {
 
 	/// A mock token cache service for testing.
-	static var mock: MockTokenCacheService {
-		MockTokenCacheService()
+	static var mock: MockSecureCacheService {
+		.shared
 	}
 }
 
-public final class MockTokenCacheService: TokenCacheService {
+public final class MockSecureCacheService: SecureCacheService {
 
-	private var token: String?
+	private var values: [SecureCacheServiceKey: String] = [:]
 
-	public static let shared = MockTokenCacheService()
+	public static let shared = MockSecureCacheService()
 
-	public func saveToken(_ token: String) throws {
-		self.token = token
+	public subscript(key: SecureCacheServiceKey) -> String? {
+		get { values[key] }
+		set { values[key] = newValue }
 	}
 
-	public func getToken() -> String? {
-		token
-	}
-
-	public func clearToken() throws {
-		token = nil
-	}
+	public func clear() throws {}
 }
 
 #if canImport(Security)
 import Security
 
-public extension TokenCacheService where Self == KeychainTokenCacheService {
+public extension SecureCacheService where Self == KeychainCacheService {
 
 	/// A Keychain token cache service with the default account and service.
-	static var keychain: KeychainTokenCacheService {
-		KeychainTokenCacheService()
+	static var keychain: KeychainCacheService {
+		.default
 	}
 
 	/// Creates a Keychain token cache service with the given account and service.
 	/// - Parameters:
-	///  - account: The account name.
 	///  - service: The service name.
 	///
-	/// `account` and `service` are used to differentiate between items stored in the Keychain.
+	/// `service` is used to differentiate between items stored in the Keychain.
 	static func keychain(
-		account: String,
-		service: String = "TokenCacheService"
-	) -> KeychainTokenCacheService {
-		KeychainTokenCacheService(account: account, service: service)
+		service: String? = nil
+	) -> KeychainCacheService {
+		KeychainCacheService(service: service)
 	}
 }
 
-public struct KeychainTokenCacheService: TokenCacheService {
+public struct KeychainCacheService: SecureCacheService {
 
-	public let account: String
-	public let service: String
+	public let service: String?
 
-	public init(
-		account: String = "apiclient.token",
-		service: String = "TokenCacheService"
-	) {
-		self.account = account
+	/// The default Keychain token cache service.
+	public static var `default` = KeychainCacheService()
+
+	public init(service: String? = nil) {
 		self.service = service
 	}
 
-	public func saveToken(_ token: String) throws {
-		// Create a query for saving the token
-		let query: [String: Any] = [
-			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: account,
-			kSecAttrService as String: service,
-			kSecValueData as String: token.data(using: .utf8)!,
-		]
+	public subscript(key: SecureCacheServiceKey) -> String? {
+		get {
+			// Create a query for retrieving the value
+			var query: [String: Any] = [
+				kSecClass as String: kSecClassGenericPassword,
+				kSecAttrAccount as String: key.value,
+				kSecReturnData as String: kCFBooleanTrue!,
+				kSecMatchLimit as String: kSecMatchLimitOne,
+			]
+			if let service {
+				query[kSecAttrService as String] = service
+			}
 
-		// Try to delete the old token if it exists
-		SecItemDelete(query as CFDictionary)
+			var item: CFTypeRef?
+			let status = SecItemCopyMatching(query as CFDictionary, &item)
 
-		// Add the new token to the Keychain
-		let status = SecItemAdd(query as CFDictionary, nil)
+			// Check the result
+			guard status == errSecSuccess, let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
+				return nil
+			}
 
-		// Check the result
-		guard status == errSecSuccess else {
-			throw Errors.custom("Error saving the token to Keychain: \(status)")
+			return token
+		}
+		nonmutating set {
+			// Create a query for saving the token
+			var query: [String: Any] = [
+				kSecClass as String: kSecClassGenericPassword,
+				kSecAttrAccount as String: key.value,
+			]
+
+			if let service {
+				query[kSecAttrService as String] = service
+			}
+
+			// Try to delete the old value if it exists
+			SecItemDelete(query as CFDictionary)
+
+			if let newValue {
+				query[kSecValueData as String] = newValue.data(using: .utf8)
+				// Add the new token to the Keychain
+				SecItemAdd(query as CFDictionary, nil)
+				// Check the result
+				// status == errSecSuccess
+			}
 		}
 	}
 
-	public func getToken() -> String? {
-		// Create a query for retrieving the token
-		let query: [String: Any] = [
-			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: account,
-			kSecAttrService as String: service,
-			kSecReturnData as String: kCFBooleanTrue!,
-			kSecMatchLimit as String: kSecMatchLimitOne,
-		]
+	public func clear() throws {
+		var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword]
 
-		var item: CFTypeRef?
-		let status = SecItemCopyMatching(query as CFDictionary, &item)
-
-		// Check the result
-		guard status == errSecSuccess, let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
-			return nil
+		if let service {
+			query[kSecAttrService as String] = service
 		}
 
-		return token
-	}
-
-	public func clearToken() throws {
-		// Create a query for deleting the token
-		let query: [String: Any] = [
-			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: account,
-			kSecAttrService as String: service,
-		]
-
-		// Delete the token from the Keychain
 		let status = SecItemDelete(query as CFDictionary)
 
-		guard status == errSecSuccess else {
-			throw Errors.custom("Error clearing the token from Keychain: \(status)")
+		guard status == noErr || status == errSecSuccess else {
+			throw Errors.custom("Failed to clear the Keychain cache.")
 		}
 	}
 }

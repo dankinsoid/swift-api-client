@@ -1,5 +1,5 @@
 import Foundation
-import SwiftNetworking
+import SwiftAPIClient
 
 public struct PetStore {
 
@@ -11,10 +11,9 @@ public struct PetStore {
 		client = APIClient(baseURL: baseURL.url)
 			.fileIDLine(fileID: fileID, line: line)
 			.bodyDecoder(PetStoreDecoder())
-			.tokenRefresher { client, _ in
-				try await client.path("token").post()
-			} auth: {
-				.bearer(token: $0)
+			.tokenRefresher { refreshToken, client, _ in
+                let tokens: Tokens = try await client.path("token").post()
+                return (tokens.accessToken, tokens.refreshToken, tokens.expiryDate)
 			}
 	}
 }

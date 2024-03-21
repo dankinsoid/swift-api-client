@@ -1,5 +1,4 @@
 import Foundation
-import SwiftNetworking
 
 public extension PetStore {
 

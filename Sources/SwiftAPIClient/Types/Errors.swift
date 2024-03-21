@@ -1,6 +1,6 @@
 import Foundation
 
-enum Errors: LocalizedError {
+enum Errors: LocalizedError, CustomStringConvertible {
 
 	case unknown
 	case invalidStatusCode(Int)
@@ -14,6 +14,10 @@ enum Errors: LocalizedError {
 	case custom(String)
 
 	var errorDescription: String? {
+		description
+	}
+
+	var description: String {
 		switch self {
 		case .unknown:
 			return "Unknown error"

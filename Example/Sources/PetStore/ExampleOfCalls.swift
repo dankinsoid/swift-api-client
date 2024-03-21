@@ -1,5 +1,5 @@
 import Foundation
-import SwiftNetworking
+import SwiftAPIClient
 
 // MARK: - Usage example
 

@@ -13,6 +13,7 @@
   - [Encoding and Decoding](#encoding-and-decoding)
     - [ContentSerializer](#contentserializer)
   - [Auth](#auth)
+    - [Token refresher](#token-refresher)
   - [Mocking](#mocking)
   - [Logging](#logging)
 - [`APIClient.Configs`](#apiclientconfigs)
@@ -42,8 +43,12 @@ let client = APIClient(url: baseURL)
   .bodyDecoder(.json(dateDecodingStrategy: .iso8601))
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
-  .tokenRefresher { client, _ in
-    try await client("token").get()
+  .tokenRefresher { refreshToken, client, _ in
+    guard let refreshToken else { throw APIError.noRefreshToken }
+    let tokens: AuthTokens = try await client("auth", "token")
+        .body(["refresh_token": refreshToken])
+        .post()
+    return (tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
   } auth: {
     .bearer(token: $0)
   }
@@ -151,6 +156,9 @@ The `.auth` configuration is an `AuthModifier` instance with several built-in `A
 - `.basic(username:password:)` for Basic authentication.
 - `.apiKey(key:field:)` for API Key authentication.
 
+#### Token refresher
+The `.tokenRefresher(...)` modifier can be used to specify a token refresher closure, which is called when a request returns a 401 status code. The refresher closure receives the cached refresh token, the client, and the response, and returns a new token, which is then used for the request. `.refreshToken` also sets the `.auth` configuration.
+
 ### Mocking
 Built-in tools for mocking requests include:
 - `.mock(_:)` modifier to specify a mocked response for a request.
@@ -244,7 +252,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.43.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.44.0")
   ],
   targets: [
     .target(
