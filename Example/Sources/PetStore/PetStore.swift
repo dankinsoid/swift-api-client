@@ -12,10 +12,20 @@ public struct PetStore {
 			.fileIDLine(fileID: fileID, line: line)
 			.bodyDecoder(PetStoreDecoder())
 			.tokenRefresher { refreshToken, client, _ in
-                let tokens: Tokens = try await client.path("token").post()
+                guard let refreshToken else {
+                    throw Errors.noRefreshToken
+                }
+                let tokens: Tokens = try await client("auth", "token")
+                    .body(["refresh_token": refreshToken])
+                    .post()
                 return (tokens.accessToken, tokens.refreshToken, tokens.expiryDate)
 			}
 	}
+
+    public enum Errors: Error {
+        
+        case noRefreshToken
+    }
 }
 
 // MARK: - "pet" path
