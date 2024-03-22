@@ -28,6 +28,10 @@ jobs:
       - id: pages
         name: Setup Pages
         uses: actions/configure-pages@v4
+      - name: Select Latest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
       - name: Build DocC
         run: |
           swift package resolve;
@@ -39,7 +43,7 @@ jobs:
             --output-path docs \
             --hosting-base-path 'swift-api-client';
           
-          echo "<script>window.location.href += \"/documentation/swift-api-client\"</script>" > docs/index.html;
+          echo "<script>window.location.href += \"documentation/swiftapiclient\"</script>" > docs/index.html;
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
