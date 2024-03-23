@@ -10,6 +10,7 @@
   - [Request execution](#request-execution)
     - [`APIClientCaller`](#apiclientcaller)
     - [Serializer](#serializer)
+    - [Some execution momdifiers](#some-execution-momdifiers)
   - [Encoding and Decoding](#encoding-and-decoding)
     - [ContentSerializer](#contentserializer)
   - [Auth](#auth)
@@ -134,6 +135,10 @@ Custom callers can be created for different types of requests, such as WebSocket
 
 The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be customized with the `.bodyDecoder` modifier. The default `bodyDecoder` is `JSONDecoder()`.
 
+#### Some execution momdifiers
+- `.retry(limit:)` for retrying a request a specified number of times.
+- `.throttle(interval:)` for throttling requests with a specified interval.
+
 ### Encoding and Decoding
 There are several built-in configurations for encoding and decoding:
 - `.bodyEncoder` for encoding a request body. Built-in encoders include `.json`, `.formURL` and `.multipartFormData`.
@@ -252,7 +257,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.45.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.46.0")
   ],
   targets: [
     .target(
