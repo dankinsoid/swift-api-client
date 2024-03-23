@@ -67,7 +67,8 @@ public struct LoggingComponents: OptionSet {
 public extension LoggingComponents {
 
 	func requestMessage(
-		for request: URLRequest,
+		for request: HTTPRequest,
+        data: Data?,
 		uuid: UUID,
 		fileIDLine: FileIDLine
 	) -> String {
@@ -81,33 +82,33 @@ public extension LoggingComponents {
 			message = "[\(uuid.uuidString)]\(contains(.location) ? " " : "\n")" + message
 		}
 		if contains(.method) {
-			message += " \(request.httpMethod ?? "GET")"
+            message += " \(request.method.rawValue)"
 		}
 		if let url = request.url, !intersection(.url).isEmpty {
 			message += " \(urlString(url))"
 		}
-		if contains(.bodySize), let body = request.httpBody {
+		if contains(.bodySize), let body = data {
 			message += " (\(body.count)-byte body)"
 		}
-		if contains(.headers), request.allHTTPHeaderFields?.isEmpty == false {
-			message += "\n\(request.headers.multilineDescription)"
+		if contains(.headers), !request.headerFields.isEmpty {
+			message += "\n\(request.headerFields.multilineDescription)"
 			isMultiline = true
 		}
-		if contains(.body), let body = request.httpBody, let bodyString = String(data: body, encoding: .utf8) {
+		if contains(.body), let body = data, let bodyString = String(data: body, encoding: .utf8) {
 			message += "\n\(bodyString)"
 			isMultiline = true
 		}
 		if isMultiline {
 			message += "\n--> END"
 			if contains(.method) {
-				message += " \(request.httpMethod ?? "GET")"
+                message += " \(request.method.rawValue)"
 			}
 		}
 		return message
 	}
 
 	func responseMessage(
-		for response: HTTPURLResponse,
+		for response: HTTPResponse,
 		uuid: UUID,
 		data: Data?,
 		duration: TimeInterval,
@@ -115,9 +116,9 @@ public extension LoggingComponents {
 	) -> String {
 		responseMessage(
 			uuid: uuid,
-			statusCode: response.httpStatusCode,
+			statusCode: response.status,
 			data: data,
-			headers: response.headers,
+			headers: response.headerFields,
 			duration: duration,
 			error: error
 		)
@@ -125,9 +126,9 @@ public extension LoggingComponents {
 
 	func responseMessage(
 		uuid: UUID,
-		statusCode: HTTPStatusCode? = nil,
+		statusCode: HTTPResponse.Status? = nil,
 		data: Data?,
-		headers: HTTPHeaders = [],
+        headers: HTTPFields = [:],
 		duration: TimeInterval? = nil,
 		error: Error? = nil
 	) -> String {
@@ -136,14 +137,14 @@ public extension LoggingComponents {
 		if contains(.uuid) {
 			message = "[\(uuid.uuidString)]\n" + message
 		}
-		if statusCode?.isSuccess != false, error == nil {
+        if statusCode?.kind == .successful, error == nil {
 			message.append("✅")
 		} else {
 			message.append("🛑")
 		}
 		var isMultiline = false
 		if let statusCode, contains(.statusCode) {
-			message += " \(statusCode.rawValue) \(statusCode.name)"
+            message += " \(statusCode.code) \(statusCode.reasonPhrase)"
 		}
 		var inBrackets: [String] = []
 		if let duration, contains(.duration) {
@@ -217,12 +218,9 @@ public extension LoggingComponents {
 	}
 }
 
-private extension HTTPHeaders {
+private extension HTTPFields {
 
 	var multilineDescription: String {
-		headers
-			.sorted(by: { $0.name.rawValue < $1.name.rawValue })
-			.map { "\($0.name): \($0.value)" }
-			.joined(separator: "\n")
+		map { "\($0.name): \($0.value)" }.joined(separator: "\n")
 	}
 }

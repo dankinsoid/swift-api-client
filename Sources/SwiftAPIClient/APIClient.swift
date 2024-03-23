@@ -6,13 +6,13 @@ import Foundation
 /// A network client for handling url requests with configurable request and configuration handling.
 public struct APIClient {
 
-	private var _createRequest: (Configs) throws -> URLRequest
+	private var _createRequest: (Configs) throws -> HTTPRequest
 	private var modifyConfigs: (inout Configs) -> Void = { _ in }
 
 	/// Initializes a new network client with a closure that creates a URLRequest.
 	/// - Parameter createRequest: A closure that takes `Configs` and returns a `URLRequest`.
 	public init(
-		createRequest: @escaping (Configs) throws -> URLRequest
+		createRequest: @escaping (Configs) throws -> HTTPRequest
 	) {
 		_createRequest = createRequest
 	}
@@ -23,7 +23,7 @@ public struct APIClient {
 		baseURL: @escaping (Configs) throws -> URL
 	) {
 		self.init {
-			try URLRequest(url: baseURL($0))
+			try HTTPRequest(url: baseURL($0))
 		}
 	}
 
@@ -32,13 +32,13 @@ public struct APIClient {
 	public init(
 		baseURL: URL
 	) {
-		self.init(request: URLRequest(url: baseURL))
+		self.init(request: HTTPRequest(url: baseURL))
 	}
 
 	/// Initializes a new network client with a predefined URLRequest.
 	/// - Parameter request: The URLRequest to be used for all requests.
 	public init(
-		request: URLRequest
+		request: HTTPRequest
 	) {
 		self.init { _ in
 			request
@@ -62,8 +62,8 @@ public struct APIClient {
 	public func configs(_ configs: @escaping (inout Configs) -> Void) -> APIClient {
 		var result = self
 		result.modifyConfigs = { [modifyConfigs] in
-			modifyConfigs(&$0)
-			configs(&$0)
+            modifyConfigs(&$0)
+            configs(&$0)
 		}
 		return result
 	}
@@ -73,7 +73,7 @@ public struct APIClient {
 	///   - modifier: A closure that takes `inout URLRequest` and modifies the URLRequest.
 	/// - Returns: An instance of `APIClient` with a modified URLRequest.
 	public func modifyRequest(
-		_ modifier: @escaping (inout URLRequest) throws -> Void
+		_ modifier: @escaping (inout HTTPRequest) throws -> Void
 	) -> APIClient {
 		modifyRequest { req, _ in
 			try modifier(&req)
@@ -86,7 +86,7 @@ public struct APIClient {
 	///   - modifier: A closure that takes `inout URLRequest` and `Configs`, and modifies the URLRequest.
 	/// - Returns: An instance of `APIClient` with a modified URLRequest.
 	public func modifyRequest(
-		_ modifier: @escaping (inout URLRequest, Configs) throws -> Void
+		_ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
 	) -> APIClient {
 		var result = self
 		result._createRequest = { [_createRequest] configs in
@@ -101,7 +101,7 @@ public struct APIClient {
 	/// - Parameter operation: A closure that takes `URLRequest` and `Configs` and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
-	public func withRequest<T>(_ operation: (URLRequest, Configs) throws -> T) throws -> T {
+	public func withRequest<T>(_ operation: (HTTPRequest, Configs) throws -> T) throws -> T {
 		let (request, configs) = try createRequest()
 		return try operation(request, configs)
 	}
@@ -110,13 +110,13 @@ public struct APIClient {
 	/// - Parameter operation: A closure that takes `URLRequest` and `Configs`, and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
-	public func withRequest<T>(_ operation: (URLRequest, Configs) async throws -> T) async throws -> T {
+	public func withRequest<T>(_ operation: (HTTPRequest, Configs) async throws -> T) async throws -> T {
 		let (request, configs) = try createRequest()
 		return try await operation(request, configs)
 	}
 
 	/// Build `URLRequest`
-	public func request() throws -> URLRequest {
+	public func request() throws -> HTTPRequest {
 		try withRequest { request, _ in request }
 	}
 
@@ -126,7 +126,7 @@ public struct APIClient {
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) throws -> T) rethrows -> T {
 		var configs = Configs()
-		var client = Self.globalModifier(self)
+    var client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
 		return try operation(configs)
 	}
@@ -142,9 +142,9 @@ public struct APIClient {
 		return try await operation(configs)
 	}
 
-	private func createRequest() throws -> (URLRequest, Configs) {
+	private func createRequest() throws -> (HTTPRequest, Configs) {
 		var configs = Configs()
-		var client = Self.globalModifier(self)
+    var client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
 		return try (client._createRequest(configs), configs)
 	}

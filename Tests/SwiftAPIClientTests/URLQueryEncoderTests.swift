@@ -13,8 +13,9 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 
 		// Then
 		let request = try client.request()
-		XCTAssertEqual(request.headers[.contentType], "application/x-www-form-urlencoded; charset=utf-8")
-		XCTAssertEqual(request.httpBody, Data("property=property".utf8))
+        let body = try client.withConfigs { try $0.body?($0) }
+		XCTAssertEqual(request.headerFields[.contentType], "application/x-www-form-urlencoded; charset=utf-8")
+		XCTAssertEqual(body, Data("property=property".utf8))
 	}
 
 	func testThatQueryIsBodyEncodedButContentTypeIsNotSetWhenRequestAlreadyHasContentType() throws {
@@ -26,8 +27,9 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 
 		// Then
 		let request = try client.request()
-		XCTAssertEqual(request.headers[.contentType], "type")
-		XCTAssertEqual(request.httpBody, Data("property=property".utf8))
+        let body = try client.withConfigs { try $0.body?($0) }
+		XCTAssertEqual(request.headerFields[.contentType], "type")
+		XCTAssertEqual(body, Data("property=property".utf8))
 	}
 }
 

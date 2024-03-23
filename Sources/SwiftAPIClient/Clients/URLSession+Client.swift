@@ -11,19 +11,22 @@ public extension HTTPClient {
 	static var urlSession: Self {
 		HTTPClient { request, body, configs in
 			#if os(Linux)
-			return try await asyncMethod { completion in
-				configs.urlSession.uploadTask(with: request, body: body, completionHandler: completion)
-			}
+            guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
+                throw Errors.custom("Invalid request")
+            }
+            return try await asyncMethod { completion in
+                configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
+            }
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
 				let (data, response) = try await configs.urlSession.data(for: request, body: body)
-				guard let httpResponse = response.http else {
-					throw Errors.responseTypeIsNotHTTP
-				}
-				return (data, httpResponse)
+                return (data, response)
 			} else {
+                guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
+                    throw Errors.custom("Invalid request")
+                }
 				return try await asyncMethod { completion in
-					configs.urlSession.uploadTask(with: request, body: body, completionHandler: completion)
+                    configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
 				}
 			}
 			#endif
@@ -35,8 +38,11 @@ public extension HTTPDownloadClient {
 
 	static var urlSession: Self {
 		HTTPDownloadClient { request, configs in
-			try await asyncMethod { completion in
-				configs.urlSession.downloadTask(with: request, completionHandler: completion)
+            guard let urlRequest = URLRequest(httpRequest: request) else {
+                throw Errors.custom("Invalid request")
+            }
+			return try await asyncMethod { completion in
+                configs.urlSession.downloadTask(with: urlRequest, completionHandler: completion)
 			}
 		}
 	}
@@ -72,11 +78,11 @@ private func asyncMethod<T, S: URLSessionTask>(
 	_ method: @escaping (
 		@escaping @Sendable (T?, URLResponse?, Error?) -> Void
 	) -> S
-) async throws -> (T, HTTPURLResponse) {
+) async throws -> (T, HTTPResponse) {
 	try await completionToThrowsAsync { continuation, handler in
 		let task = method { t, response, error in
-			if let t, let response = response?.http {
-				continuation.resume(returning: (t, response))
+			if let t, let response {
+                continuation.resume(returning: (t, response.http))
 			} else {
 				if (error as? NSError)?.code == NSURLErrorCancelled {
 					continuation.resume(throwing: CancellationError())

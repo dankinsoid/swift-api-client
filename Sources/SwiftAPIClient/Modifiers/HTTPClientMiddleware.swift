@@ -3,10 +3,11 @@ import Foundation
 public protocol HTTPClientMiddleware {
 
 	func execute<T>(
-		request: URLRequest,
+		request: HTTPRequest,
+        body: Data?,
 		configs: APIClient.Configs,
-		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
-	) async throws -> (T, HTTPURLResponse)
+		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+	) async throws -> (T, HTTPResponse)
 }
 
 public extension APIClient {
@@ -39,14 +40,15 @@ private struct HTTPClientArrayMiddleware: HTTPClientMiddleware {
 	var middlewares: [HTTPClientMiddleware] = []
 
 	func execute<T>(
-		request: URLRequest,
+		request: HTTPRequest,
+        body: Data?,
 		configs: APIClient.Configs,
-		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
-	) async throws -> (T, HTTPURLResponse) {
+		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+	) async throws -> (T, HTTPResponse) {
 		var next = next
 		for middleware in middlewares {
-			next = { [next] in try await middleware.execute(request: $0, configs: $1, next: next) }
+            next = { [next] in try await middleware.execute(request: $0, body: $1, configs: $2, next: next) }
 		}
-		return try await next(request, configs)
+		return try await next(request, body, configs)
 	}
 }

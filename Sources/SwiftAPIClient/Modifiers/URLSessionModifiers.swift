@@ -36,11 +36,30 @@ private extension URLSession {
 
 	static var apiClient: URLSession = {
 		var configs = URLSessionConfiguration.default
-		configs.headers = .default
+        configs.headers = .default
 		return URLSession(
 			configuration: configs,
 			delegate: SessionDelegateProxy.shared,
 			delegateQueue: nil
 		)
 	}()
+}
+
+private extension URLSessionConfiguration {
+    
+    /// Returns `httpAdditionalHeaders` as `HTTPFields`.
+    var headers: HTTPFields {
+        get {
+            (httpAdditionalHeaders as? [String: String]).map {
+                HTTPFields(
+                    $0.compactMap { key, value in HTTPField.Name(key).map { HTTPField(name: $0, value: value) } }
+                )
+            } ?? [:]
+        }
+        set {
+            httpAdditionalHeaders = Dictionary(
+                newValue.map { ($0.name.rawName, $0.value) }
+            ) { [$0, $1].joined(separator: ", ") }
+        }
+    }
 }

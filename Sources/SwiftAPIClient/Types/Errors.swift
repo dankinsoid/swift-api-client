@@ -8,7 +8,7 @@ enum Errors: LocalizedError, CustomStringConvertible {
 	case mockIsMissed(Any.Type)
 	case unimplemented
 	case responseTypeIsNotHTTP
-	case duplicateHeader(HTTPHeader.Key)
+	case duplicateHeader(HTTPField.Name)
 	case invalidFileURL(URL)
 	case invalidUTF8Data
 	case custom(String)

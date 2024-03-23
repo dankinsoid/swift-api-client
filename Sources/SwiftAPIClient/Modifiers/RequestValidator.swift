@@ -8,11 +8,11 @@ public struct RequestValidator {
 
 	/// A closure that validates a `URLRequest`.
 	/// - Throws: An error if validation fails.
-	public var validate: (_ request: URLRequest, APIClient.Configs) throws -> Void
+	public var validate: (_ request: HTTPRequest, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `RequestValidator` with a custom validation closure.
 	/// - Parameter validate: A closure that takes a `URLRequest` and throws an error if validation fails.
-	public init(validate: @escaping (_ request: URLRequest, APIClient.Configs) throws -> Void) {
+	public init(validate: @escaping (_ request: HTTPRequest, APIClient.Configs) throws -> Void) {
 		self.validate = validate
 	}
 }

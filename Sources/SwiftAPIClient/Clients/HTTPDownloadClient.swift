@@ -6,12 +6,12 @@ import FoundationNetworking
 public struct HTTPDownloadClient {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URLRequest and network configurations.
-	public var download: (URLRequest, APIClient.Configs) async throws -> (URL, HTTPURLResponse)
+	public var download: (HTTPRequest, APIClient.Configs) async throws -> (URL, HTTPResponse)
 
 	/// Initializes a new `HTTPUploadClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a `URLRequest` and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
 	public init(
-		_ download: @escaping (URLRequest, APIClient.Configs) async throws -> (URL, HTTPURLResponse))
+		_ download: @escaping (HTTPRequest, APIClient.Configs) async throws -> (URL, HTTPResponse))
 	{
 		self.download = download
 	}
@@ -69,12 +69,8 @@ public extension APIClient.Configs {
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == URL {
 
 	static var httpDownload: APIClientCaller {
-		.http { request, configs in
-			var request = request
-			if request.httpMethod == nil {
-				request.httpMethod = HTTPMethod.get.rawValue
-			}
-			return try await configs.httpDownloadClient.download(request, configs)
+		.http { request, _, configs in
+            try await configs.httpDownloadClient.download(request, configs)
 		} validate: { _, _, _ in
 		} data: { _ in
 			nil

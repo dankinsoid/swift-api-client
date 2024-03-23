@@ -38,9 +38,9 @@ public extension APIClient {
 public extension APIClient {
 
 	/// Sets the HTTP method for the request.
-	/// - Parameter method: The `HTTPMethod` to set for the request.
+	/// - Parameter method: The `HTTPRequest.Method` to set for the request.
 	/// - Returns: An instance of `APIClient` with the specified HTTP method.
-	func method(_ method: HTTPMethod) -> APIClient {
+    func method(_ method: HTTPRequest.Method) -> APIClient {
 		modifyRequest {
 			$0.method = method
 		}
@@ -64,16 +64,18 @@ public extension APIClient {
 
 	/// Adds or updates HTTP headers for the request.
 	/// - Parameters:
-	///   - headers: A variadic list of `HTTPHeader` to set or update.
-	///   - update: A Boolean to determine whether to update existing headers. Default is `false`.
+	///   - headers: A variadic list of `HTTPField` to set or update.
+	///   - removeCurrent: A Boolean to determine whether to remove existing headers with these keys. Default is `false`.
 	/// - Returns: An instance of `APIClient` with modified headers.
-	func headers(_ headers: HTTPHeader..., update: Bool = false) -> APIClient {
-		modifyRequest {
+	func headers(_ headers: HTTPField..., removeCurrent: Bool = false) -> APIClient {
+		modifyRequest { request in
 			for header in headers {
-				if update {
-					$0.setValue(header.value, forHTTPHeaderField: header.name.rawValue)
+				if removeCurrent {
+                    request.headerFields[fields: header.name] = [header]
 				} else {
-					$0.addValue(header.value, forHTTPHeaderField: header.name.rawValue)
+                    var field = request.headerFields[fields: header.name]
+                    field.append(header)
+                    request.headerFields[fields: header.name] = field
 				}
 			}
 		}
@@ -82,9 +84,9 @@ public extension APIClient {
 	/// Removes a specific HTTP header from the request.
 	/// - Parameter field: The key of the header to remove.
 	/// - Returns: An instance of `APIClient` with the specified header removed.
-	func removeHeader(_ field: HTTPHeader.Key) -> APIClient {
+	func removeHeader(_ field: HTTPField.Name) -> APIClient {
 		modifyRequest {
-			$0.setValue(nil, forHTTPHeaderField: field.rawValue)
+            $0.headerFields[field] = nil
 		}
 	}
 
@@ -92,10 +94,10 @@ public extension APIClient {
 	/// - Parameters:
 	///   - field: The key of the header to add or update.
 	///   - value: The value for the header.
-	///   - update: A Boolean to determine whether to update the header if it exists. Default is `false`.
+	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
 	/// - Returns: An instance of `APIClient` with modified header.
-	func header(_ field: HTTPHeader.Key, _ value: String, update: Bool = false) -> APIClient {
-		headers(HTTPHeader(field, value), update: update)
+	func header(_ field: HTTPField.Name, _ value: String, removeCurrent: Bool = false) -> APIClient {
+        headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
 	}
 }
 
@@ -109,12 +111,12 @@ public extension APIClient {
 	///   - serializer: The `ContentSerializer` used to serialize the body value.
 	/// - Returns: An instance of `APIClient` with the serialized body.
 	func body<T>(_ value: T, as serializer: ContentSerializer<T>) -> APIClient {
-		modifyRequest { req, configs in
-			let (data, contentType) = try serializer.serialize(value, configs)
-			req.httpBodyStream = nil
-			req.httpBody = data
-			if req.value(forHTTPHeaderKey: .contentType) == nil {
-				req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
+        body {
+            try serializer.serialize(value, $0)
+        }
+        .modifyRequest { req, configs in
+            if req.headerFields[.contentType] == nil {
+                req.headerFields[.contentType] = serializer.contentType(configs).rawValue
 			}
 		}
 	}
@@ -145,10 +147,7 @@ public extension APIClient {
 	/// - Parameter data: A closure taking `Configs` and returning `Data` to be set as the body.
 	/// - Returns: An instance of `APIClient` with the specified body.
 	func body(_ data: @escaping (Configs) throws -> Data) -> APIClient {
-		modifyRequest { req, configs in
-			req.httpBodyStream = nil
-			req.httpBody = try data(configs)
-		}
+        configs(\.body, data)
 	}
 
 	/// Sets the request body stream with a file URL.
@@ -158,6 +157,16 @@ public extension APIClient {
 		configs(\.file) { _ in url }
 	}
 }
+
+public extension APIClient.Configs {
+    
+    /// The data sent as the message body of a request, such as for an HTTP POST request.
+    var body: ((APIClient.Configs) throws -> Data)? {
+        get { self[\.body] ?? nil }
+        set { self[\.body] = newValue }
+    }
+}
+
 
 // MARK: - Query modifiers
 
@@ -333,25 +342,27 @@ public extension APIClient {
 public extension APIClient {
 
 	/// Sets the URLRequest timeoutInterval property.
+    ///
 	/// - Parameter timeout: The timeout interval to set for the request.
 	/// - Returns: An instance of `APIClient` with the specified timeout interval.
+    ///
+    /// If during a connection attempt the request remains idle for longer than the timeout interval, the request is considered to have timed out.
+    /// The default timeout interval is 60 seconds.
+    /// As a general rule, you should not use short timeout intervals. Instead, you should provide an easy way for the user to cancel a long-running operation.
 	func timeoutInterval(_ timeout: TimeInterval) -> APIClient {
-		modifyRequest {
-			$0.timeoutInterval = timeout
-		}
+        configs(\.timeoutInterval, timeout)
 	}
 }
 
-// MARK: - Cache policy modifiers
-
-public extension APIClient {
-
-	/// Sets the URLRequest cachePolicy property.
-	/// - Parameter policy: The cache policy to set for the request.
-	/// - Returns: An instance of `APIClient` with the specified cache policy.
-	func cachePolicy(_ policy: URLRequest.CachePolicy) -> APIClient {
-		modifyRequest {
-			$0.cachePolicy = policy
-		}
-	}
+public extension APIClient.Configs {
+    
+    /// The timeout interval of the request.
+    ///
+    /// If during a connection attempt the request remains idle for longer than the timeout interval, the request is considered to have timed out.
+    /// The default timeout interval is 60 seconds.
+    /// As a general rule, you should not use short timeout intervals. Instead, you should provide an easy way for the user to cancel a long-running operation.
+    var timeoutInterval: TimeInterval {
+        get { self[\.timeoutInterval] ?? 60 }
+        set { self[\.timeoutInterval] = newValue }
+    }
 }

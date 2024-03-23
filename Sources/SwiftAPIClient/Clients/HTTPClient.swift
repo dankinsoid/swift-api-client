@@ -7,11 +7,11 @@ import FoundationNetworking
 public struct HTTPClient {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URLRequest and network configurations.
-	public var data: (URLRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPURLResponse)
+	public var data: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
 
 	/// Initializes a new `HTTPClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a `URLRequest` and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
-	public init(_ data: @escaping (URLRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPURLResponse)) {
+	public init(_ data: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)) {
 		self.data = data
 	}
 }
@@ -79,7 +79,7 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static func http(
-		task: @escaping @Sendable (URLRequest, APIClient.Configs) async throws -> (Data, HTTPURLResponse)
+		task: @escaping @Sendable (HTTPRequest, Data?, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) -> APIClientCaller {
 		.http(task: task) {
 			try $2.httpResponseValidator.validate($1, $0, $2)
@@ -92,17 +92,17 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response ==
 extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 
 	static func http(
-		task: @escaping @Sendable (URLRequest, APIClient.Configs) async throws -> (Response, HTTPURLResponse),
-		validate: @escaping (Response, HTTPURLResponse, APIClient.Configs) throws -> Void,
+		task: @escaping @Sendable (HTTPRequest, Data?, APIClient.Configs) async throws -> (Response, HTTPResponse),
+		validate: @escaping (Response, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (Response) -> Data?
 	) -> APIClientCaller {
-		APIClientCaller { uuid, request, configs, serialize in
+		APIClientCaller { uuid, request, body, configs, serialize in
 			{
 				let value: Response
-				let response: HTTPURLResponse
+				let response: HTTPResponse
 				let start = Date()
 				do {
-					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs, next: task)
+                    (value, response) = try await configs.httpClientMiddleware.execute(request: request, body: body, configs: configs, next: task)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs.loggingComponents.isEmpty {

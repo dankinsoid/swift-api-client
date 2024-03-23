@@ -3,15 +3,21 @@ import Foundation
 /// A generic struct for serializing content into data and associated content type.
 public struct ContentSerializer<T> {
 
-	/// A closure that serializes a value of type `T` into `Data` and a corresponding `ContentType`.
-	public var serialize: (_ value: T, _ configs: APIClient.Configs) throws -> (Data, ContentType)
+	/// A closure that serializes a value of type `T` into `Data`.
+	public var serialize: (_ value: T, _ configs: APIClient.Configs) throws -> Data
+    /// A closure that return a content type of serialized data.
+    public var contentType: (_ configs: APIClient.Configs) -> ContentType
 
 	/// Initializes a new `ContentSerializer` with a custom serialization closure.
-	/// - Parameter serialize: A closure that takes a value and network configurations and returns serialized data and its content type.
+	/// - Parameters:
+    ///  - serialize: A closure that takes a value and network configurations and returns serialized data.
+    ///  - contentType: A closure that return a content type of serialized data.
 	public init(
-		_ serialize: @escaping (T, APIClient.Configs) throws -> (Data, ContentType)
+		_ serialize: @escaping (T, APIClient.Configs) throws -> Data,
+        contentType: @escaping (_ configs: APIClient.Configs) -> ContentType
 	) {
 		self.serialize = serialize
+        self.contentType = contentType
 	}
 }
 
@@ -26,8 +32,9 @@ public extension ContentSerializer where T: Encodable {
 	/// - Returns: A `ContentSerializer` that uses the body encoder from the network client configurations to serialize the value.
 	static func encodable(_: T.Type) -> Self {
 		ContentSerializer { value, configs in
-			let encoder = configs.bodyEncoder
-			return try (encoder.encode(value), encoder.contentType)
-		}
+			try configs.bodyEncoder.encode(value)
+        } contentType: { configs in
+            configs.bodyEncoder.contentType
+        }
 	}
 }

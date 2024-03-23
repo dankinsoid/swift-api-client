@@ -97,13 +97,13 @@ public extension MultipartFormData {
 		/// field is present it is assumed to be "message/rfc822" in a
 		/// "multipart/digest" and "text/plain" otherwise.
 		public func write(to data: inout Data) {
-			let header = HTTPHeader.contentDisposition("form-data", name: name, filename: filename)
+			let header = HTTPField.contentDisposition("form-data", name: name, filename: filename)
 			let contentDispositionData = Data(header.description.utf8)
 
 			data.append(contentDispositionData)
 			data.append(CRLF)
 			if let mimeType {
-				let contentTypeHeader = HTTPHeader.contentType(mimeType)
+				let contentTypeHeader = HTTPField.contentType(mimeType)
 				let contentTypeData = Data(contentTypeHeader.description.utf8)
 				data.append(contentTypeData)
 				data.append(CRLF)

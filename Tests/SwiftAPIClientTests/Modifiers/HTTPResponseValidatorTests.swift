@@ -9,7 +9,7 @@ final class HTTPResponseValidatorTests: XCTestCase {
 
 	func testStatusCodeValidator() throws {
 		let validator = HTTPResponseValidator.statusCode(200 ... 299)
-		let response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+		let response = HTTPResponse(status: 200)
 		let data = Data()
 		let configs = APIClient.Configs()
 
@@ -17,13 +17,13 @@ final class HTTPResponseValidatorTests: XCTestCase {
 		XCTAssertNoThrow(try validator.validate(response, data, configs))
 
 		// Validation should throw an error for a status code outside the range
-		let invalidResponse = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 400, httpVersion: nil, headerFields: nil)!
+		let invalidResponse = HTTPResponse(status: 400)
 		XCTAssertThrowsError(try validator.validate(invalidResponse, data, configs))
 	}
 
 	func testAlwaysSuccessValidator() throws {
 		let validator = HTTPResponseValidator.alwaysSuccess
-		let response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+		let response = HTTPResponse(status: 200)
 		let data = Data()
 		let configs = APIClient.Configs()
 

@@ -14,7 +14,7 @@ public extension APIClient {
 	/// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
-		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
+        expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
 		request: ((APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?))? = nil,
 		refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
 		auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
@@ -34,14 +34,14 @@ public extension APIClient {
 public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 
 	private let tokenCacheService: SecureCacheService
-	private let expiredStatusCodes: Set<HTTPStatusCode>
+	private let expiredStatusCodes: Set<HTTPResponse.Status>
 	private let auth: (String) -> AuthModifier
 	private let request: ((APIClient.Configs) async throws -> (String, String?, Date?))?
 	private let refresh: (String?, APIClient.Configs) async throws -> (String, String?, Date?)
 
 	public init(
 		cacheService: SecureCacheService,
-		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],
+		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
 		request: ((APIClient.Configs) async throws -> (String, String?, Date?))?,
 		refresh: @escaping (String?, APIClient.Configs) async throws -> (String, String?, Date?),
 		auth: @escaping (String) -> AuthModifier
@@ -50,16 +50,17 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		self.refresh = refresh
 		self.request = request
 		self.auth = auth
-		self.expiredStatusCodes = expiredStatusCodes
+        self.expiredStatusCodes = expiredStatusCodes
 	}
 
 	public func execute<T>(
-		request: URLRequest,
+		request: HTTPRequest,
+        body: Data?,
 		configs: APIClient.Configs,
-		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
-	) async throws -> (T, HTTPURLResponse) {
+		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+	) async throws -> (T, HTTPResponse) {
 		guard configs.isAuthEnabled else {
-			return try await next(request, configs)
+			return try await next(request, body, configs)
 		}
 		var accessToken: String
 		var refreshToken = tokenCacheService[.refreshToken]
@@ -78,12 +79,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		}
 		var authorizedRequest = request
 		try auth(accessToken).modifier(&authorizedRequest, configs)
-		let result = try await next(authorizedRequest, configs)
-		if expiredStatusCodes.contains(result.1.httpStatusCode) {
+		let result = try await next(authorizedRequest, body, configs)
+		if expiredStatusCodes.contains(result.1.status) {
 			(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, refreshToken: refreshToken)
 			authorizedRequest = request
 			try auth(accessToken).modifier(&authorizedRequest, configs)
-			return try await next(authorizedRequest, configs)
+			return try await next(authorizedRequest, body, configs)
 		}
 		return result
 	}

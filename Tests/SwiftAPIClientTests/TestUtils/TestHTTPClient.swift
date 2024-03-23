@@ -7,16 +7,16 @@ import FoundationNetworking
 extension HTTPClient {
 
 	static func test() -> HTTPClient {
-		HTTPClient { request, _, configs in
-			try configs.testHTTPClient(request, configs)
+		HTTPClient { request, body, configs in
+			try configs.testHTTPClient(request, body, configs)
 		}
 	}
 }
 
 private extension APIClient.Configs {
 
-	var testHTTPClient: (URLRequest, APIClient.Configs) throws -> (Data, HTTPURLResponse) {
-		get { self[\.testHTTPClient] ?? { _, _ in throw Unimplemented() } }
+	var testHTTPClient: (HTTPRequest, RequestBody?, APIClient.Configs) throws -> (Data, HTTPResponse) {
+		get { self[\.testHTTPClient] ?? { _, _, _ in throw Unimplemented() } }
 		set { self[\.testHTTPClient] = newValue }
 	}
 }
@@ -27,20 +27,20 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (URLRequest, APIClient.Configs) throws -> Void = { _, _ in }
+		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> Void = { _, _, _ in }
 	) async throws -> Data {
 		try await httpTest {
-			try test($0, $1)
+			try test($0, $1, $2)
 			return Data()
 		}
 	}
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (URLRequest, APIClient.Configs) throws -> (Data, HTTPURLResponse)
+		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> (Data, HTTPResponse)
 	) async throws -> Data {
 		try await configs(\.testHTTPClient) {
-			try test($0, $1)
+			try test($0, $1, $2)
 		}
 		.httpClient(.test())
 		.call(.http)
@@ -48,19 +48,11 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (URLRequest, APIClient.Configs) throws -> Data
+		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> Data
 	) async throws -> Data {
 		try await httpTest {
-			let data = try test($0, $1)
-			guard let response = HTTPURLResponse(
-				url: $0.url ?? URL(string: "https://example.com")!,
-				statusCode: 200,
-				httpVersion: nil,
-				headerFields: nil
-			) else {
-				throw Unimplemented()
-			}
-			return (data, response)
+			let data = try test($0, $1, $2)
+            return (data, HTTPResponse(status: .ok))
 		}
 	}
 }

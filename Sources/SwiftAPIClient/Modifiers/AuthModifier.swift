@@ -37,17 +37,17 @@ public extension APIClient {
 public struct AuthModifier {
 
 	/// A closure that modifies a `URLRequest` for authentication.
-	public let modifier: (inout URLRequest, APIClient.Configs) throws -> Void
+	public let modifier: (inout HTTPRequest, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
 	/// - Parameter modifier: A closure that modifies a `URLRequest` and `APIClient.Configs` for authentication.
-	public init(modifier: @escaping (inout URLRequest, APIClient.Configs) throws -> Void) {
+	public init(modifier: @escaping (inout HTTPRequest, APIClient.Configs) throws -> Void) {
 		self.modifier = modifier
 	}
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
 	/// - Parameter modifier: A closure that modifies a `URLRequest` for authentication.
-	public init(modifier: @escaping (inout URLRequest) throws -> Void) {
+	public init(modifier: @escaping (inout HTTPRequest) throws -> Void) {
 		self.init { request, _ in
 			try modifier(&request)
 		}
@@ -56,7 +56,7 @@ public struct AuthModifier {
 	/// Creates an authentication modifier for adding a `Authorization` header.
 	public static func header(_ value: String) -> AuthModifier {
 		AuthModifier {
-			$0.setValue(value, forHTTPHeaderField: HTTPHeader.Key.authorization.rawValue)
+            $0.headerFields[.authorization] = value
 		}
 	}
 }
@@ -70,7 +70,8 @@ public extension AuthModifier {
 	/// For example, to authorize as demo / p@55w0rd the client would send
 	static func basic(username: String, password: String) -> AuthModifier {
 		AuthModifier {
-			$0.headers.update(.authorization(username: username, password: password))
+            let field = HTTPField.authorization(username: username, password: password)
+            $0.headerFields[field.name] = field.value
 		}
 	}
 
@@ -79,7 +80,10 @@ public extension AuthModifier {
 	/// An API key is a token that a client provides when making API calls
 	static func apiKey(_ key: String, field: String = "X-API-Key") -> AuthModifier {
 		AuthModifier {
-			$0.setValue(key, forHTTPHeaderField: field)
+            guard let name = HTTPField.Name(field) else {
+                throw Errors.custom("Invalid field name: \(field)")
+            }
+            $0.headerFields[name] = key
 		}
 	}
 
@@ -91,29 +95,8 @@ public extension AuthModifier {
 	/// The client must send this token in the Authorization header when making requests to protected resources
 	static func bearer(token: String) -> AuthModifier {
 		AuthModifier {
-			$0.headers.update(.authorization(bearerToken: token))
+            let field = HTTPField.authorization(bearerToken: token)
+            $0.headerFields[field.name] = field.value
 		}
 	}
-
-	//    /// OAuth 2.0 is an authorization protocol that gives an API client limited access to user data on a web server.
-	//    /// GitHub, Google, and Facebook APIs notably use it.
-	//    /// OAuth relies on authentication scenarios called flows, which allow the resource owner (user) to share the protected content from the resource server without sharing their credentials.
-	//    /// For that purpose, an OAuth 2.0 server issues access tokens that the client applications can use to access protected resources on behalf of the resource owner.
-	//    /// For more information about OAuth 2.0, see oauth.net and RFC 6749.
-	//    static func oauth2(
-	//        _ type: SecuritySchemeObject.OAuth2,
-	//        id: String? = nil,
-	//        refreshUrl: String? = nil,
-	//        scopes: [String: String] = [:],
-	//        description: String? = nil
-	//    ) -> AuthModifier {
-	//        AuthModifier(id: id, scheme: .oauth2(type, refreshUrl: refreshUrl, scopes: scopes, description: description))
-	//    }
-//
-	//    /// OpenID Connect (OIDC) is an identity layer built on top of the OAuth 2.0 protocol and supported by some OAuth 2.0 providers, such as Google and Azure Active Directory.
-	//    /// It defines a sign-in flow that enables a client application to authenticate a user, and to obtain information (or "claims") about that user, such as the user name, email, and so on.
-	//    /// User identity information is encoded in a secure JSON Web Token (JWT), called ID token.
-	//    static func openIDConnect(id: String? = nil, url: String, description: String? = nil) -> AuthModifier {
-	//        AuthModifier(id: id, scheme: .openIDConnect(url: url, description: description))
-	//    }
 }
