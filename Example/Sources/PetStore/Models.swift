@@ -43,7 +43,7 @@ public enum PetStatus: String, Codable {
 
 public struct Tokens: Codable {
 
-    public var accessToken: String
-    public var refreshToken: String
-    public var expiryDate: Date
+	public var accessToken: String
+	public var refreshToken: String
+	public var expiryDate: Date
 }

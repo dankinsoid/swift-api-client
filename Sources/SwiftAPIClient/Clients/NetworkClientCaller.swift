@@ -148,8 +148,6 @@ public extension APIClient {
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				var request = request
-				try configs.beforeCall(&request, configs)
 
 				if !configs.loggingComponents.isEmpty {
 					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
@@ -186,28 +184,5 @@ public extension APIClient {
 			}
 			throw error
 		}
-	}
-
-	/// Sets a closure to be executed before making a network call.
-	///
-	/// - Parameters:
-	///   - closure: The closure to be executed before making a network call. It takes in an `inout URLRequest` and `APIClient.Configs` as parameters and can modify the request.
-	/// - Returns: The `APIClient` instance.
-	func beforeCall(_ closure: @escaping (inout URLRequest, APIClient.Configs) throws -> Void) -> APIClient {
-		configs {
-			let beforeCall = $0.beforeCall
-			$0.beforeCall = { request, configs in
-				try beforeCall(&request, configs)
-				try closure(&request, configs)
-			}
-		}
-	}
-}
-
-public extension APIClient.Configs {
-
-	var beforeCall: (inout URLRequest, APIClient.Configs) throws -> Void {
-		get { self[\.beforeCall] ?? { _, _ in } }
-		set { self[\.beforeCall] = newValue }
 	}
 }

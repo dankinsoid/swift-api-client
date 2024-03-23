@@ -10,11 +10,15 @@ import XCTest
 final class APIClientCompressionTests: XCTestCase {
 
 	@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
-	func testThatRequestCompressorProperlyCalculatesAdler32() throws {
+	func testThatRequestCompressorProperlyCalculatesAdler32() async throws {
 		let client = APIClient(baseURL: URL(string: "https://example.com")!).compressRequest()
-		let request = try client.body(Data("Wikipedia".utf8)).request()
+		let body: Data = try await client
+			.body(Data([0]))
+			.httpTest { request, _ in
+				request.httpBody!
+			}
 		// From https://en.wikipedia.org/wiki/Adler-32
-		XCTAssertEqual(request.httpBody, Data([87, 105, 107, 105, 112, 101, 100, 105, 97]))
+		XCTAssertEqual(body, Data([0x78, 0x5E, 0x63, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01]))
 	}
 }
 #endif

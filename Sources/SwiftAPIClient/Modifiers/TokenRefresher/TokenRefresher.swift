@@ -10,8 +10,8 @@ public extension APIClient {
 	/// - request: The closure to use for requesting a new token and refresh token first time. Set to `nil` if you want to request and cache tokens manually.
 	/// - refresh: The closure to use for refreshing a new token with refresh token.
 	/// - auth: The closure that creates an `AuthModifier` for the new token. Default to `.bearer(token:)`.
-    ///
-    /// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
+	///
+	/// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPStatusCode> = [.unauthorized],

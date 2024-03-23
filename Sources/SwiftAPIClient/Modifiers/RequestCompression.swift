@@ -24,32 +24,51 @@ public extension APIClient {
 		duplicateHeaderBehavior: DuplicateHeaderBehavior = .skip,
 		shouldCompressBodyData: @escaping (_ bodyData: Data) -> Bool = { _ in true }
 	) -> APIClient {
-		beforeCall { urlRequest, _ in
-			// No need to compress unless we have body data. No support for compressing streams.
-			guard let bodyData = urlRequest.httpBody else {
-				return
-			}
+		httpClientMiddleware(
+			CompressionMiddleware(
+				duplicateHeaderBehavior: duplicateHeaderBehavior,
+				shouldCompressBodyData: shouldCompressBodyData
+			)
+		)
+	}
+}
 
-			guard shouldCompressBodyData(bodyData) else {
-				return
-			}
+private struct CompressionMiddleware: HTTPClientMiddleware {
 
-			let contentEncodingKey = HTTPHeader.Key.contentEncoding.rawValue
-			if urlRequest.value(forHTTPHeaderField: contentEncodingKey) != nil {
-				switch duplicateHeaderBehavior {
-				case .error:
-					throw Errors.duplicateHeader(.contentEncoding)
-				case .replace:
-					// Header will be replaced once the body data is compressed.
-					break
-				case .skip:
-					return
-				}
-			}
+	let duplicateHeaderBehavior: DuplicateHeaderBehavior
+	let shouldCompressBodyData: (_ bodyData: Data) -> Bool
 
-			urlRequest.httpBody = try deflate(bodyData)
-			urlRequest.setValue("deflate", forHTTPHeaderField: contentEncodingKey)
+	func execute<T>(
+		request: URLRequest,
+		configs: APIClient.Configs,
+		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
+	) async throws -> (T, HTTPURLResponse) {
+		// No need to compress unless we have body data. No support for compressing streams.
+		guard let bodyData = request.httpBody else {
+			return try await next(request, configs)
 		}
+
+		guard shouldCompressBodyData(bodyData) else {
+			return try await next(request, configs)
+		}
+
+		let contentEncodingKey = HTTPHeader.Key.contentEncoding.rawValue
+		if request.value(forHTTPHeaderField: contentEncodingKey) != nil {
+			switch duplicateHeaderBehavior {
+			case .error:
+				throw Errors.duplicateHeader(.contentEncoding)
+			case .replace:
+				// Header will be replaced once the body data is compressed.
+				break
+			case .skip:
+				return try await next(request, configs)
+			}
+		}
+
+		var urlRequest = request
+		urlRequest.httpBody = try deflate(bodyData)
+		urlRequest.setValue("deflate", forHTTPHeaderField: contentEncodingKey)
+		return try await next(urlRequest, configs)
 	}
 }
 

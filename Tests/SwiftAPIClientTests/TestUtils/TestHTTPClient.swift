@@ -25,28 +25,31 @@ private struct Unimplemented: Error {}
 
 extension APIClient {
 
+	@discardableResult
 	func httpTest(
 		test: @escaping (URLRequest, APIClient.Configs) throws -> Void = { _, _ in }
-	) async throws {
+	) async throws -> Data {
 		try await httpTest {
 			try test($0, $1)
 			return Data()
 		}
 	}
 
+	@discardableResult
 	func httpTest(
 		test: @escaping (URLRequest, APIClient.Configs) throws -> (Data, HTTPURLResponse)
-	) async throws {
+	) async throws -> Data {
 		try await configs(\.testHTTPClient) {
 			try test($0, $1)
 		}
 		.httpClient(.test())
-		.call(.http, as: .void)
+		.call(.http, as: .identity)
 	}
 
+	@discardableResult
 	func httpTest(
 		test: @escaping (URLRequest, APIClient.Configs) throws -> Data
-	) async throws {
+	) async throws -> Data {
 		try await httpTest {
 			let data = try test($0, $1)
 			guard let response = HTTPURLResponse(

@@ -31,8 +31,20 @@ public extension APIClient {
 	/// - Parameter validator: The `RequestValidator` to be used for validating `URLRequest` instances.
 	/// - Returns: An instance of `APIClient` configured with the specified request validator.
 	func requestValidator(_ validator: RequestValidator) -> APIClient {
-		beforeCall {
-			try validator.validate($0, $1)
-		}
+		httpClientMiddleware(RequestValidatorMiddleware(validator: validator))
+	}
+}
+
+private struct RequestValidatorMiddleware: HTTPClientMiddleware {
+
+	let validator: RequestValidator
+
+	func execute<T>(
+		request: URLRequest,
+		configs: APIClient.Configs,
+		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
+	) async throws -> (T, HTTPURLResponse) {
+		try validator.validate(request, configs)
+		return try await next(request, configs)
 	}
 }
