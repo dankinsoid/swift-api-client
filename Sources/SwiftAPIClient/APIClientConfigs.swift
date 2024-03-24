@@ -12,7 +12,7 @@ public extension APIClient {
 		/// Global APIClient configs. Use it add some configs externally.
 		///
 		/// ```swift
-		/// let url = try await APIClient.Configs.$global.withValue {
+		/// let url = try await APIClient.withConfigs {
 		///   $0.trackDownload { progress in ... }
 		/// } operation: {
 		///   try await api().download(file: fileURL)
@@ -52,6 +52,22 @@ public extension APIClient {
 			result[keyPath: keyPath] = value
 			return result
 		}
+	}
+}
+
+public extension APIClient {
+
+	/// Set initial configurations during the operation.
+	///
+	/// ```swift
+	/// let url = try await APIClient.withConfigs {
+	///   $0.trackDownload { progress in ... }
+	/// } operation: {
+	///   try await api().download(file: fileURL)
+	/// }
+	/// ```
+	static func withConfigs<T>(_ modify: (APIClient.Configs) -> APIClient.Configs, operation: () async throws -> T) async rethrows -> T {
+		try await APIClient.Configs.$global.withValue(modify, operation: operation)
 	}
 }
 
