@@ -15,7 +15,7 @@ public extension APIClient {
 		/// let url = try await APIClient.withConfigs {
 		///   $0.trackDownload { progress in ... }
 		/// } operation: {
-		///   try await api().download(file: fileURL)
+		///   try await api().downloadFile()
 		/// }
 		/// ```
 		@TaskLocal
@@ -63,7 +63,7 @@ public extension APIClient {
 	/// let url = try await APIClient.withConfigs {
 	///   $0.trackDownload { progress in ... }
 	/// } operation: {
-	///   try await api().download(file: fileURL)
+	///   try await api().downloadFile()
 	/// }
 	/// ```
 	static func withConfigs<T>(_ modify: (APIClient.Configs) -> APIClient.Configs, operation: () async throws -> T) async rethrows -> T {
