@@ -47,19 +47,23 @@ private struct RetryOnEnterForegroundMiddleware: HTTPClientMiddleware {
 		configs: APIClient.Configs,
 		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
 	) async throws -> (T, HTTPURLResponse) {
-		let wasInBackground = WasInBackgroundService()
-		let isInBackground = await UIApplication.shared.applicationState == .background
-		if !isInBackground {
-			await wasInBackground.start()
-		}
-		do {
-			return try await next(request, configs)
-		} catch {
-			if await wasInBackground.wasInBackground {
-				return try await next(request, configs)
+		func makeRequest() async throws -> (T, HTTPURLResponse) {
+			let wasInBackground = WasInBackgroundService()
+			var isInBackground = await UIApplication.shared.applicationState == .background
+			if !isInBackground {
+				await wasInBackground.start()
 			}
-			throw error
+			do {
+				return try await next(request, configs)
+			} catch {
+				isInBackground = await UIApplication.shared.applicationState == .background
+				if !isInBackground, await wasInBackground.wasInBackground {
+					return try await makeRequest()
+				}
+				throw error
+			}
 		}
+		return try await makeRequest()
 	}
 }
 
