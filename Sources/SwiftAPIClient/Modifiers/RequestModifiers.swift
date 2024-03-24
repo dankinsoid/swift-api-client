@@ -150,68 +150,12 @@ public extension APIClient {
 			req.httpBody = try data(configs)
 		}
 	}
-}
-
-public extension APIClient {
-
-	/// Sets the request body stream with a specified value and serializer.
-	/// - Parameters:
-	///   - value: The value to be serialized and set as the body stream.
-	///   - serializer: The `ContentSerializer` used to serialize the body stream value.
-	/// - Returns: An instance of `APIClient` with the serialized body stream.
-	func bodyStream<T>(_ value: T, as serializer: ContentSerializer<T>) -> APIClient {
-		modifyRequest { req, configs in
-			let (data, contentType) = try serializer.serialize(value, configs)
-			req.httpBodyStream = InputStream(data: data)
-			req.httpBody = nil
-			if req.value(forHTTPHeaderKey: .contentType) == nil {
-				req.setValue(contentType.rawValue, forHTTPHeaderField: HTTPHeader.Key.contentType.rawValue)
-			}
-		}
-	}
-
-	/// Sets the request body stream with an `Encodable` value.
-	/// - Parameter value: The `Encodable` value to set as the body stream.
-	/// - Returns: An instance of `APIClient` with the serialized body stream.
-	func bodyStream(_ value: any Encodable) -> APIClient {
-		bodyStream(AnyEncodable(value), as: .encodable)
-	}
-
-	/// Sets the request body stream with an `Encodable` value.
-	/// - Parameter dictionary: The dictionary of encodable values to set as the body stream.
-	/// - Returns: An instance of `APIClient` with the serialized body stream.
-	@_disfavoredOverload
-	func bodyStream(_ dictionary: [String: Encodable?]) -> APIClient {
-		bodyStream(dictionary.compactMapValues { $0.map { AnyEncodable($0) } }, as: .encodable)
-	}
 
 	/// Sets the request body stream with a file URL.
 	/// - Parameter file: The file URL to set as the body stream.
 	/// - Returns: An instance of `APIClient` with the specified body stream.
-	func bodyStream(file url: URL) -> APIClient {
-		bodyStream { _ in
-			guard let stream = InputStream(url: url) else {
-				throw Errors.invalidFileURL(url)
-			}
-			return stream
-		}
-	}
-
-	/// Sets the request body stream with a closure that provides `InputStream`.
-	/// - Parameter stream: A closure returning the `InputStream` to be set as the body stream.
-	/// - Returns: An instance of `APIClient` with the specified body stream.
-	func bodyStream(_ stream: @escaping @autoclosure () throws -> InputStream) -> APIClient {
-		bodyStream { _ in try stream() }
-	}
-
-	/// Sets the request body stream with a closure that dynamically provides `InputStream` based on configurations.
-	/// - Parameter stream: A closure taking `Configs` and returning `InputStream` to be set as the body stream.
-	/// - Returns: An instance of `APIClient` with the specified body stream.
-	func bodyStream(_ stream: @escaping (Configs) throws -> InputStream) -> APIClient {
-		modifyRequest { req, configs in
-			req.httpBody = nil
-			req.httpBodyStream = try stream(configs)
-		}
+	func body(file url: URL) -> APIClient {
+		configs(\.file) { _ in url }
 	}
 }
 

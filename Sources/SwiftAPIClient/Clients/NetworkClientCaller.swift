@@ -96,12 +96,29 @@ public extension APIClient {
 	/// let value: SomeModel = try await client.call(.http, as: .decodable)
 	/// ```
 	func call<Response, Value, Result>(
-		_ caller: APIClientCaller<Response, Value, AsyncValue<Result>>,
+		_ caller: APIClientCaller<Response, Value, AsyncThrowingValue<Result>>,
 		as serializer: Serializer<Response, Value>,
 		fileID: String = #fileID,
 		line: UInt = #line
 	) async throws -> Result {
 		try await call(caller, as: serializer, fileID: fileID, line: line)()
+	}
+
+	/// Asynchronously performs a network call using the provided caller and serializer.
+	/// - Parameters:
+	///   - caller: A `APIClientCaller` instance.
+	/// - Returns: The result of the network call.
+	///
+	/// Example
+	/// ```swift
+	/// let url = try await client.call(.httpDownload)
+	/// ```
+	func call<Value, Result>(
+		_ caller: APIClientCaller<Value, Value, AsyncThrowingValue<Result>>,
+		fileID: String = #fileID,
+		line: UInt = #line
+	) async throws -> Result {
+		try await call(caller, as: .identity, fileID: fileID, line: line)()
 	}
 
 	/// Asynchronously performs a network call using the http caller and decodable serializer.
@@ -128,7 +145,24 @@ public extension APIClient {
 		try await call(fileID: fileID, line: line)
 	}
 
-	/// Performs a synchronous network call using the provided caller and serializer.
+	/// Performs a network call using the provided caller and serializer.
+	/// - Parameters:
+	///   - caller: A `APIClientCaller` instance.
+	/// - Returns: The result of the network call.
+	///
+	/// Example
+	/// ```swift
+	/// try client.call(.httpPublisher).sink { data in ... }
+	/// ```
+	func call<Value, Result>(
+		_ caller: APIClientCaller<Value, Value, Result>,
+		fileID: String = #fileID,
+		line: UInt = #line
+	) throws -> Result {
+		try call(caller, as: .identity, fileID: fileID, line: line)
+	}
+
+	/// Performs a network call using the provided caller and serializer.
 	/// - Parameters:
 	///   - caller: A `APIClientCaller` instance.
 	///   - serializer: A `Serializer` to process the response.

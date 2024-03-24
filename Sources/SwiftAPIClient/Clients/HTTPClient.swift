@@ -37,23 +37,41 @@ public extension APIClient.Configs {
 	}
 }
 
-public extension APIClientCaller where Result == AsyncValue<Value>, Response == Data {
+public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static var http: APIClientCaller {
 		.http { request, configs in
 			var request = request
-			if request.httpMethod == nil {
-				request.httpMethod = HTTPMethod.get.rawValue
-			}
 			if request.httpBodyStream != nil {
-				configs.logger.warning("HTTPBodyStream is not supported with a http caller. Use httpUpload instead.")
+				configs.logger.warning("httpBodyStream is not supported, use `.body(file:) modifier")
 			}
-			return try await configs.httpClient.data(request, configs)
+			let isUpload = request.httpBody != nil || configs.file != nil
+			if request.httpMethod == nil {
+				request.httpMethod = isUpload ? HTTPMethod.post.rawValue : HTTPMethod.get.rawValue
+			}
+
+			if request.httpBody != nil, configs.file != nil {
+				configs.logger.warning("Both body data and body file are set for the request \(request).")
+			}
+
+			let task: UploadTask?
+			if let body = request.httpBody {
+				task = .data(body)
+			} else if let file = configs.file?(configs) {
+				task = .file(file)
+			} else {
+				task = nil
+			}
+			if let task {
+				return try await configs.httpUploadClient.upload(request, task, configs)
+			} else {
+				return try await configs.httpClient.data(request, configs)
+			}
 		}
 	}
 }
 
-extension APIClientCaller where Result == AsyncValue<Value>, Response == Data {
+extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static func http(
 		task: @escaping @Sendable (URLRequest, APIClient.Configs) async throws -> (Data, HTTPURLResponse)
@@ -66,7 +84,7 @@ extension APIClientCaller where Result == AsyncValue<Value>, Response == Data {
 	}
 }
 
-extension APIClientCaller where Result == AsyncValue<Value> {
+extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 
 	static func http(
 		task: @escaping @Sendable (URLRequest, APIClient.Configs) async throws -> (Response, HTTPURLResponse),

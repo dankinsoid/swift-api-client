@@ -25,6 +25,28 @@ public extension APIClient {
 	func httpDownloadClient(_ client: HTTPDownloadClient) -> APIClient {
 		configs(\.httpDownloadClient, client)
 	}
+
+	/// Observe the download progress of the request.
+	func trackDownload(_ action: @escaping (_ progress: Double) -> Void) -> Self {
+		trackDownload { totalBytesWritten, totalBytesExpectedToWrite in
+			guard totalBytesExpectedToWrite > 0 else {
+				action(1)
+				return
+			}
+			action(Double(totalBytesWritten) / Double(totalBytesExpectedToWrite))
+		}
+	}
+
+	/// Observe the download progress of the request.
+	func trackDownload(_ action: @escaping (_ totalBytesWritten: Int64, _ totalBytesExpectedToWrite: Int64) -> Void) -> Self {
+		configs {
+			let current = $0.downloadTracker
+			$0.downloadTracker = { totalBytesWritten, totalBytesExpectedToWrite in
+				current(totalBytesWritten, totalBytesExpectedToWrite)
+				action(totalBytesWritten, totalBytesExpectedToWrite)
+			}
+		}
+	}
 }
 
 public extension APIClient.Configs {
@@ -36,9 +58,15 @@ public extension APIClient.Configs {
 		get { self[\.httpDownloadClient] ?? .urlSession }
 		set { self[\.httpDownloadClient] = newValue }
 	}
+
+	/// The closure that provides the data for the request.
+	var downloadTracker: (_ totalBytesWritten: Int64, _ totalBytesExpectedToWrite: Int64) -> Void {
+		get { self[\.downloadTracker] ?? { _, _ in } }
+		set { self[\.downloadTracker] = newValue }
+	}
 }
 
-public extension APIClientCaller where Result == AsyncValue<Value>, Response == URL {
+public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == URL {
 
 	static var httpDownload: APIClientCaller {
 		.http { request, configs in

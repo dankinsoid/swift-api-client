@@ -1,3 +1,3 @@
 import Foundation
 
-public typealias AsyncValue<Res> = () async throws -> Res
+public typealias AsyncThrowingValue<Res> = () async throws -> Res

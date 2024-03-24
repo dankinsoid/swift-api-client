@@ -34,9 +34,9 @@ public extension HTTPClient {
 public extension HTTPUploadClient {
 
 	static var urlSession: Self {
-		HTTPUploadClient { request, uploadTask, configs in
+		HTTPUploadClient { request, task, configs in
 			try await asyncMethod { completion in
-				configs.urlSession.uploadTask(with: request, task: uploadTask, completionHandler: completion)
+				configs.urlSession.uploadTask(with: request, task: task, completionHandler: completion)
 			}
 		}
 	}
@@ -61,8 +61,6 @@ private extension URLSession {
 			return uploadTask(with: request, from: data, completionHandler: completionHandler)
 		case let .file(url):
 			return uploadTask(with: request, fromFile: url, completionHandler: completionHandler)
-		case .stream:
-			return uploadTask(withStreamedRequest: request)
 		}
 	}
 }

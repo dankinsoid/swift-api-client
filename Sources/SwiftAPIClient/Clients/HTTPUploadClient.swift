@@ -17,11 +17,25 @@ public struct HTTPUploadClient {
 	}
 }
 
-public enum UploadTask: Equatable {
+public enum UploadTask: Hashable {
 
 	case file(URL)
 	case data(Data)
-	case stream
+}
+
+public extension APIClient.Configs {
+
+	/// The closure that provides the file URL for the request.
+	var file: ((APIClient.Configs) -> URL)? {
+		get { self[\.file] }
+		set { self[\.file] = newValue }
+	}
+
+	/// The closure that is called when the upload progress is updated.
+	var uploadTracker: (_ totalBytesSent: Int64, _ totalBytesExpectedToSend: Int64) -> Void {
+		get { self[\.uploadTracker] ?? { _, _ in } }
+		set { self[\.uploadTracker] = newValue }
+	}
 }
 
 public extension APIClient {
@@ -31,6 +45,28 @@ public extension APIClient {
 	/// - Returns: An instance of `APIClient` configured with the specified HTTP client.
 	func httpUploadClient(_ client: HTTPUploadClient) -> APIClient {
 		configs(\.httpUploadClient, client)
+	}
+
+	/// Observe the upload progress of the request.
+	func trackUpload(_ action: @escaping (_ progress: Double) -> Void) -> Self {
+		trackUpload { totalBytesSent, totalBytesExpectedToSend in
+			guard totalBytesExpectedToSend > 0 else {
+				action(1)
+				return
+			}
+			action(Double(totalBytesSent) / Double(totalBytesExpectedToSend))
+		}
+	}
+
+	/// Observe the upload progress of the request.
+	func trackUpload(_ action: @escaping (_ totalBytesSent: Int64, _ totalBytesExpectedToSend: Int64) -> Void) -> Self {
+		configs {
+			let current = $0.uploadTracker
+			$0.uploadTracker = { totalBytesSent, totalBytesExpectedToSend in
+				current(totalBytesSent, totalBytesExpectedToSend)
+				action(totalBytesSent, totalBytesExpectedToSend)
+			}
+		}
 	}
 }
 
@@ -42,26 +78,5 @@ public extension APIClient.Configs {
 	var httpUploadClient: HTTPUploadClient {
 		get { self[\.httpUploadClient] ?? .urlSession }
 		set { self[\.httpUploadClient] = newValue }
-	}
-}
-
-public extension APIClientCaller where Result == AsyncValue<Value>, Response == Data {
-
-	static func httpUpload(_ task: UploadTask = .stream) -> APIClientCaller {
-		.http { request, configs in
-			var request = request
-			if request.httpMethod == nil {
-				request.httpMethod = HTTPMethod.post.rawValue
-			}
-			if task == .stream, request.httpBodyStream == nil {
-				if let body = request.httpBody {
-					request.httpBody = nil
-					request.httpBodyStream = InputStream(data: body)
-				} else {
-					configs.logger.warning("There is no httpBodyStream in the request \(request).")
-				}
-			}
-			return try await configs.httpUploadClient.upload(request, task, configs)
-		}
 	}
 }

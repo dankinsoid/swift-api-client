@@ -1,13 +1,28 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
-#if !canImport(FoundationNetworking)
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+final class SessionDelegateProxy: NSObject {
 
-final class SessionDelegateProxy: NSObject, URLSessionDelegate {
-
-	static let shared = SessionDelegateProxy()
+	var configs: APIClient.Configs? {
+		get {
+			lock.lock()
+			defer { lock.unlock() }
+			return _configs
+		}
+		set {
+			lock.lock()
+			defer { lock.unlock() }
+			_configs = newValue
+		}
+	}
 
 	var originalDelegate: URLSessionDelegate? { configs?.urlSessionDelegate }
-	var configs: APIClient.Configs?
+
+	private let lock = NSRecursiveLock()
+	private var _configs: APIClient.Configs?
 
 	override func responds(to aSelector: Selector!) -> Bool {
 		if super.responds(to: aSelector) {
@@ -23,6 +38,17 @@ final class SessionDelegateProxy: NSObject, URLSessionDelegate {
 		return super.forwardingTarget(for: aSelector)
 	}
 }
+#else
+final class SessionDelegateProxy {
+
+	var configs: APIClient.Configs?
+}
+#endif
+
+extension SessionDelegateProxy: URLSessionDelegate {
+
+	static let shared = SessionDelegateProxy()
+}
 
 extension SessionDelegateProxy: URLSessionTaskDelegate {
 
@@ -33,18 +59,7 @@ extension SessionDelegateProxy: URLSessionTaskDelegate {
 		newRequest request: URLRequest,
 		completionHandler: @escaping (URLRequest?) -> Void
 	) {
-		guard let configs else {
-			(originalDelegate as? URLSessionTaskDelegate)?
-				.urlSession?(
-					session,
-					task: task,
-					willPerformHTTPRedirection: response,
-					newRequest: request,
-					completionHandler: completionHandler
-				)
-			return
-		}
-		switch configs.redirectBehaviour {
+		switch configs?.redirectBehaviour ?? .follow {
 		case .follow:
 			completionHandler(request)
 		case .doNotFollow:
@@ -53,7 +68,28 @@ extension SessionDelegateProxy: URLSessionTaskDelegate {
 			completionHandler(modifier(request, response))
 		}
 	}
+
+	func urlSession(
+		_ session: URLSession,
+		task: URLSessionTask,
+		didSendBodyData bytesSent: Int64,
+		totalBytesSent: Int64,
+		totalBytesExpectedToSend: Int64
+	) {
+		configs?.uploadTracker(totalBytesSent, totalBytesExpectedToSend)
+	}
 }
+
+#if canImport(UIKit)
+import UIKit
+
+extension SessionDelegateProxy {
+
+	func urlSessionDidFinishEvents(
+		forBackgroundURLSession session: URLSession
+	) {}
+}
+#endif
 
 extension SessionDelegateProxy: URLSessionDataDelegate {}
 
@@ -63,9 +99,18 @@ extension SessionDelegateProxy: URLSessionDownloadDelegate {
 		(originalDelegate as? URLSessionDownloadDelegate)?
 			.urlSession(session, downloadTask: downloadTask, didFinishDownloadingTo: location)
 	}
+
+	func urlSession(
+		_ session: URLSession,
+		downloadTask: URLSessionDownloadTask,
+		didWriteData bytesWritten: Int64,
+		totalBytesWritten: Int64,
+		totalBytesExpectedToWrite: Int64
+	) {
+		configs?.downloadTracker(totalBytesWritten, totalBytesExpectedToWrite)
+	}
 }
 
 extension SessionDelegateProxy: URLSessionStreamDelegate {}
 
 extension SessionDelegateProxy: URLSessionWebSocketDelegate {}
-#endif
