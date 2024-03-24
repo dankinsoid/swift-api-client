@@ -17,7 +17,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequest,
-        body: Data?,
+		body: Data?,
 		configs: APIClient.Configs,
 		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
@@ -31,7 +31,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 
 		func retry() async throws -> (T, HTTPResponse) {
 			count += 1
-            return try await next(request, body, configs)
+			return try await next(request, body, configs)
 		}
 
 		let response: HTTPResponse
@@ -44,7 +44,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 			}
 			throw error
 		}
-        if response.status.kind != .successful, needRetry() {
+		if response.status.kind != .successful, needRetry() {
 			return try await retry()
 		}
 		return (data, response)

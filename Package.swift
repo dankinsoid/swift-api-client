@@ -16,15 +16,15 @@ var package = Package(
 	],
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
-        .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.3")
+		.package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.3"),
 	],
 	targets: [
 		.target(
 			name: "SwiftAPIClient",
 			dependencies: [
 				.product(name: "Logging", package: "swift-log"),
-                .product(name: "HTTPTypes", package: "swift-http-types"),
-                .product(name: "HTTPTypesFoundation", package: "swift-http-types")
+				.product(name: "HTTPTypes", package: "swift-http-types"),
+				.product(name: "HTTPTypesFoundation", package: "swift-http-types"),
 			]
 		),
 		.testTarget(

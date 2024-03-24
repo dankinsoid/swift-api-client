@@ -10,7 +10,7 @@ public struct APIClientCaller<Response, Value, Result> {
 	private let _call: (
 		UUID,
 		HTTPRequest,
-        Data?,
+		Data?,
 		APIClient.Configs,
 		@escaping (Response, () throws -> Void) throws -> Value
 	) throws -> Result
@@ -24,7 +24,7 @@ public struct APIClientCaller<Response, Value, Result> {
 		call: @escaping (
 			_ uuid: UUID,
 			_ request: HTTPRequest,
-            _ body: Data?,
+			_ body: Data?,
 			_ configs: APIClient.Configs,
 			_ serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
 		) throws -> Result,
@@ -43,7 +43,7 @@ public struct APIClientCaller<Response, Value, Result> {
 	public func call(
 		uuid: UUID,
 		request: HTTPRequest,
-        body: Data?,
+		body: Data?,
 		configs: APIClient.Configs,
 		serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
 	) throws -> Result {
@@ -67,7 +67,7 @@ public struct APIClientCaller<Response, Value, Result> {
 	/// ```
 	public func map<T>(_ mapper: @escaping (Result) throws -> T) -> APIClientCaller<Response, Value, T> {
 		APIClientCaller<Response, Value, T> {
-            try mapper(_call($0, $1, $2, $3, $4))
+			try mapper(_call($0, $1, $2, $3, $4))
 		} mockResult: {
 			try mapper(_mockResult($0))
 		}
@@ -185,9 +185,9 @@ public extension APIClient {
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-		 		let body = try configs.body?(configs)
+				let body = try configs.body?(configs)
 				if !configs.loggingComponents.isEmpty {
-                    let message = configs.loggingComponents.requestMessage(for: request, data: body, uuid: uuid, fileIDLine: fileIDLine)
+					let message = configs.loggingComponents.requestMessage(for: request, data: body, uuid: uuid, fileIDLine: fileIDLine)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
 
@@ -195,7 +195,7 @@ public extension APIClient {
 					return try caller.mockResult(for: mock)
 				}
 
-                return try caller.call(uuid: uuid, request: request, body: body, configs: configs) { response, validate in
+				return try caller.call(uuid: uuid, request: request, body: body, configs: configs) { response, validate in
 					do {
 						try validate()
 						return try serializer.serialize(response, configs)

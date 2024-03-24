@@ -13,7 +13,7 @@ final class AuthModifierTests: XCTestCase {
 		let client = client.auth(.header("Bearer token"))
 		let enabledClient = client.auth(enabled: true)
 		let authorizedRequest = try enabledClient.request()
-        XCTAssertEqual(authorizedRequest.headerFields[.authorization], "Bearer token")
+		XCTAssertEqual(authorizedRequest.headerFields[.authorization], "Bearer token")
 	}
 
 	func testAuthDisabled() throws {

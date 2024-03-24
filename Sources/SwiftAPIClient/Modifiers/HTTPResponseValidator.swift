@@ -22,7 +22,7 @@ public extension HTTPResponseValidator {
 	/// A default validator that checks if the status code is within the given range.
 	/// Defaults to the range 200...299.
 	static var statusCode: Self {
-        statusCode(.successful)
+		statusCode(.successful)
 	}
 
 	/// Creates a validator to check if the status code is within a specific range.
@@ -30,22 +30,22 @@ public extension HTTPResponseValidator {
 	/// - Returns: An `HTTPResponseValidator` that validates based on the specified status code range.
 	static func statusCode(_ codes: ClosedRange<Int>) -> Self {
 		HTTPResponseValidator { response, _, _ in
-            guard codes.contains(response.status.code) else {
+			guard codes.contains(response.status.code) else {
 				throw Errors.invalidStatusCode(response.status.code)
 			}
 		}
 	}
-    
-    /// Creates a validator to check if the status is of a specific kind.
-    /// - Parameter kind: The kind of acceptable status.
-    /// - Returns: An `HTTPResponseValidator` that validates based on the specified status kind.
-    static func statusCode(_ kind: HTTPResponse.Status.Kind) -> Self {
-        HTTPResponseValidator { response, _, _ in
-            guard response.status.kind == kind else {
-                throw Errors.invalidStatusCode(response.status.code)
-            }
-        }
-    }
+
+	/// Creates a validator to check if the status is of a specific kind.
+	/// - Parameter kind: The kind of acceptable status.
+	/// - Returns: An `HTTPResponseValidator` that validates based on the specified status kind.
+	static func statusCode(_ kind: HTTPResponse.Status.Kind) -> Self {
+		HTTPResponseValidator { response, _, _ in
+			guard response.status.kind == kind else {
+				throw Errors.invalidStatusCode(response.status.code)
+			}
+		}
+	}
 }
 
 public extension HTTPResponseValidator {

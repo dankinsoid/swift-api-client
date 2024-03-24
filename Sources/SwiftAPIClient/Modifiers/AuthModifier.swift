@@ -56,7 +56,7 @@ public struct AuthModifier {
 	/// Creates an authentication modifier for adding a `Authorization` header.
 	public static func header(_ value: String) -> AuthModifier {
 		AuthModifier {
-            $0.headerFields[.authorization] = value
+			$0.headerFields[.authorization] = value
 		}
 	}
 }
@@ -70,8 +70,8 @@ public extension AuthModifier {
 	/// For example, to authorize as demo / p@55w0rd the client would send
 	static func basic(username: String, password: String) -> AuthModifier {
 		AuthModifier {
-            let field = HTTPField.authorization(username: username, password: password)
-            $0.headerFields[field.name] = field.value
+			let field = HTTPField.authorization(username: username, password: password)
+			$0.headerFields[field.name] = field.value
 		}
 	}
 
@@ -80,10 +80,10 @@ public extension AuthModifier {
 	/// An API key is a token that a client provides when making API calls
 	static func apiKey(_ key: String, field: String = "X-API-Key") -> AuthModifier {
 		AuthModifier {
-            guard let name = HTTPField.Name(field) else {
-                throw Errors.custom("Invalid field name: \(field)")
-            }
-            $0.headerFields[name] = key
+			guard let name = HTTPField.Name(field) else {
+				throw Errors.custom("Invalid field name: \(field)")
+			}
+			$0.headerFields[name] = key
 		}
 	}
 
@@ -95,8 +95,8 @@ public extension AuthModifier {
 	/// The client must send this token in the Authorization header when making requests to protected resources
 	static func bearer(token: String) -> AuthModifier {
 		AuthModifier {
-            let field = HTTPField.authorization(bearerToken: token)
-            $0.headerFields[field.name] = field.value
+			let field = HTTPField.authorization(bearerToken: token)
+			$0.headerFields[field.name] = field.value
 		}
 	}
 }

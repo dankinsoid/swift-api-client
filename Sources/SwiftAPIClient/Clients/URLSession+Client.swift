@@ -22,9 +22,9 @@ public extension HTTPClient {
 				let (data, response) = try await configs.urlSession.data(for: request, body: body)
                 return (data, response)
 			} else {
-                guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
-                    throw Errors.custom("Invalid request")
-                }
+				guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
+					throw Errors.custom("Invalid request")
+				}
 				return try await asyncMethod { completion in
                     configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
 				}
@@ -38,11 +38,11 @@ public extension HTTPDownloadClient {
 
 	static var urlSession: Self {
 		HTTPDownloadClient { request, configs in
-            guard let urlRequest = URLRequest(httpRequest: request) else {
-                throw Errors.custom("Invalid request")
-            }
+			guard let urlRequest = URLRequest(httpRequest: request) else {
+				throw Errors.custom("Invalid request")
+			}
 			return try await asyncMethod { completion in
-                configs.urlSession.downloadTask(with: urlRequest, completionHandler: completion)
+				configs.urlSession.downloadTask(with: urlRequest, completionHandler: completion)
 			}
 		}
 	}
@@ -82,7 +82,7 @@ private func asyncMethod<T, S: URLSessionTask>(
 	try await completionToThrowsAsync { continuation, handler in
 		let task = method { t, response, error in
 			if let t, let response {
-                continuation.resume(returning: (t, response.http))
+				continuation.resume(returning: (t, response.http))
 			} else {
 				if (error as? NSError)?.code == NSURLErrorCancelled {
 					continuation.resume(throwing: CancellationError())

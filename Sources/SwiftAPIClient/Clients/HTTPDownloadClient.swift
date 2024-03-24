@@ -70,7 +70,7 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 
 	static var httpDownload: APIClientCaller {
 		.http { request, _, configs in
-            try await configs.httpDownloadClient.download(request, configs)
+			try await configs.httpDownloadClient.download(request, configs)
 		} validate: { _, _, _ in
 		} data: { _ in
 			nil

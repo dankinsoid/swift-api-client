@@ -11,7 +11,7 @@ public extension HTTPField {
 	///
 	/// - Returns:         The header
 	static func accept(_ value: ContentType) -> HTTPField {
-        HTTPField(name: .accept, value: value.rawValue)
+		HTTPField(name: .accept, value: value.rawValue)
 	}
 
 	/// Returns a `Basic` `Authorization` header using the `username` and `password` provided.
@@ -70,7 +70,7 @@ public extension HTTPField {
 	///
 	/// - Returns:         The header.
 	static func contentEncoding(_ value: String) -> HTTPField {
-        HTTPField(name: .contentEncoding, value: value)
+		HTTPField(name: .contentEncoding, value: value)
 	}
 
 	/// Returns a `Content-Type` header.
@@ -90,7 +90,7 @@ public extension HTTPField {
 	/// - Parameter value: The `Sec-WebSocket-Protocol` value.
 	/// - Returns:         The header.
 	static func websocketProtocol(_ value: String) -> HTTPField {
-        HTTPField(name: .secWebSocketProtocol, value: value)
+		HTTPField(name: .secWebSocketProtocol, value: value)
 	}
 }
 
@@ -100,11 +100,11 @@ public extension HTTPFields {
 
 	/// The default set of `HTTPFields` used by Alamofire. Includes `Accept-Encoding`, `Accept-Language`, and
 	/// `User-Agent`.
-    static let `default`: HTTPFields = HTTPFields([
-        .defaultAcceptEncoding,
-        .defaultAcceptLanguage,
-        .defaultUserAgent
-    ])
+	static let `default` = HTTPFields([
+		.defaultAcceptEncoding,
+		.defaultAcceptLanguage,
+		.defaultUserAgent,
+	])
 }
 
 public extension HTTPField {

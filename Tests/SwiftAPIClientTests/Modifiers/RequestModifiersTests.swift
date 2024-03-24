@@ -19,7 +19,7 @@ final class RequestModifiersTests: XCTestCase {
 	func testMethodSetting() throws {
 		let modifiedClient = client.method(.post)
 
-        try XCTAssertEqual(modifiedClient.request().method, .post)
+		try XCTAssertEqual(modifiedClient.request().method, .post)
 	}
 
 	func testHeadersAdding() throws {
@@ -28,8 +28,8 @@ final class RequestModifiersTests: XCTestCase {
 			.contentType(.application(.json))
 		)
 
-        try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/json")
-        try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
+		try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/json")
+		try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
 	}
 
 	func testHeaderRemoving() throws {
@@ -37,7 +37,7 @@ final class RequestModifiersTests: XCTestCase {
 			.headers(.accept(.application(.json)))
 			.removeHeader(.accept)
 
-        try XCTAssertNil(modifiedClient.request().headerFields[.accept])
+		try XCTAssertNil(modifiedClient.request().headerFields[.accept])
 	}
 
 	func testHeaderUpdating() throws {
@@ -47,15 +47,15 @@ final class RequestModifiersTests: XCTestCase {
 			.headers(HTTPField.accept(.application(.json)))
 			.headers(HTTPField.accept(.application(.xml)), removeCurrent: true)
 
-        try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/xml")
+		try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/xml")
 	}
 
 	func testBodySetting() throws {
 		let modifiedClient = client.body(["name": "John"])
-        let body = try modifiedClient.withConfigs { try $0.body?($0) }
-        XCTAssertNotNil(body)
-        XCTAssertEqual(body, try? JSONSerialization.data(withJSONObject: ["name": "John"]))
-        try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
+		let body = try modifiedClient.withConfigs { try $0.body?($0) }
+		XCTAssertNotNil(body)
+		XCTAssertEqual(body, try? JSONSerialization.data(withJSONObject: ["name": "John"]))
+		try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
 	}
 
 	func testQueryParametersAdding() throws {
@@ -63,11 +63,11 @@ final class RequestModifiersTests: XCTestCase {
 
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
-    
-    func testURLWithQueryParameters() throws {
-        let request = HTTPRequest(url:  URL(string: "https://example.com")!)
-        XCTAssertEqual(request.url!.absoluteString, "https://example.com")
-    }
+
+	func testURLWithQueryParameters() throws {
+		let request = HTTPRequest(url: URL(string: "https://example.com")!)
+		XCTAssertEqual(request.url!.absoluteString, "https://example.com")
+	}
 
 	func testBaseURLSetting() throws {
 		let modifiedClient = client.query("test", "value").baseURL(URL(string: "http://test.net")!)
@@ -105,6 +105,6 @@ final class RequestModifiersTests: XCTestCase {
 
 	func testTimeoutIntervalSetting() throws {
 		let modifiedClient = client.timeoutInterval(30)
-        XCTAssertEqual(modifiedClient.withConfigs(\.timeoutInterval), 30)
+		XCTAssertEqual(modifiedClient.withConfigs(\.timeoutInterval), 30)
 	}
 }

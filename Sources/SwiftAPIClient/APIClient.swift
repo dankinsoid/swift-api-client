@@ -62,8 +62,8 @@ public struct APIClient {
 	public func configs(_ configs: @escaping (inout Configs) -> Void) -> APIClient {
 		var result = self
 		result.modifyConfigs = { [modifyConfigs] in
-            modifyConfigs(&$0)
-            configs(&$0)
+			modifyConfigs(&$0)
+			configs(&$0)
 		}
 		return result
 	}

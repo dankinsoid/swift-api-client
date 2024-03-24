@@ -23,7 +23,7 @@ final class APIClientTests: XCTestCase {
 	}
 
 	func testModifyRequest() throws {
-        let method: HTTPRequest.Method = .patch
+		let method: HTTPRequest.Method = .patch
 		let client = APIClient.test
 			.modifyRequest { request in
 				request.method = method

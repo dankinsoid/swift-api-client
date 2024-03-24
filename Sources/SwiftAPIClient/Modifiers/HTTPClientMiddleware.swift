@@ -4,7 +4,7 @@ public protocol HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequest,
-        body: Data?,
+		body: Data?,
 		configs: APIClient.Configs,
 		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse)
@@ -41,13 +41,13 @@ private struct HTTPClientArrayMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequest,
-        body: Data?,
+		body: Data?,
 		configs: APIClient.Configs,
 		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		var next = next
 		for middleware in middlewares {
-            next = { [next] in try await middleware.execute(request: $0, body: $1, configs: $2, next: next) }
+			next = { [next] in try await middleware.execute(request: $0, body: $1, configs: $2, next: next) }
 		}
 		return try await next(request, body, configs)
 	}

@@ -102,7 +102,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 				let response: HTTPResponse
 				let start = Date()
 				do {
-                    (value, response) = try await configs.httpClientMiddleware.execute(request: request, body: body, configs: configs, next: task)
+					(value, response) = try await configs.httpClientMiddleware.execute(request: request, body: body, configs: configs, next: task)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs.loggingComponents.isEmpty {

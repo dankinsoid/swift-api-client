@@ -14,7 +14,7 @@ public extension APIClient {
 	/// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
-        expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
+		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
 		request: ((APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?))? = nil,
 		refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
 		auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
@@ -50,12 +50,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		self.refresh = refresh
 		self.request = request
 		self.auth = auth
-        self.expiredStatusCodes = expiredStatusCodes
+		self.expiredStatusCodes = expiredStatusCodes
 	}
 
 	public func execute<T>(
 		request: HTTPRequest,
-        body: Data?,
+		body: Data?,
 		configs: APIClient.Configs,
 		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {

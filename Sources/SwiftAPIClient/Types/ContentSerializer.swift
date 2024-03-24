@@ -5,19 +5,19 @@ public struct ContentSerializer<T> {
 
 	/// A closure that serializes a value of type `T` into `Data`.
 	public var serialize: (_ value: T, _ configs: APIClient.Configs) throws -> Data
-    /// A closure that return a content type of serialized data.
-    public var contentType: (_ configs: APIClient.Configs) -> ContentType
+	/// A closure that return a content type of serialized data.
+	public var contentType: (_ configs: APIClient.Configs) -> ContentType
 
 	/// Initializes a new `ContentSerializer` with a custom serialization closure.
 	/// - Parameters:
-    ///  - serialize: A closure that takes a value and network configurations and returns serialized data.
-    ///  - contentType: A closure that return a content type of serialized data.
+	///  - serialize: A closure that takes a value and network configurations and returns serialized data.
+	///  - contentType: A closure that return a content type of serialized data.
 	public init(
 		_ serialize: @escaping (T, APIClient.Configs) throws -> Data,
-        contentType: @escaping (_ configs: APIClient.Configs) -> ContentType
+		contentType: @escaping (_ configs: APIClient.Configs) -> ContentType
 	) {
 		self.serialize = serialize
-        self.contentType = contentType
+		self.contentType = contentType
 	}
 }
 
@@ -33,8 +33,8 @@ public extension ContentSerializer where T: Encodable {
 	static func encodable(_: T.Type) -> Self {
 		ContentSerializer { value, configs in
 			try configs.bodyEncoder.encode(value)
-        } contentType: { configs in
-            configs.bodyEncoder.contentType
-        }
+		} contentType: { configs in
+			configs.bodyEncoder.contentType
+		}
 	}
 }

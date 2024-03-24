@@ -68,7 +68,7 @@ public extension LoggingComponents {
 
 	func requestMessage(
 		for request: HTTPRequest,
-        data: Data?,
+		data: Data?,
 		uuid: UUID,
 		fileIDLine: FileIDLine
 	) -> String {
@@ -82,7 +82,7 @@ public extension LoggingComponents {
 			message = "[\(uuid.uuidString)]\(contains(.location) ? " " : "\n")" + message
 		}
 		if contains(.method) {
-            message += " \(request.method.rawValue)"
+			message += " \(request.method.rawValue)"
 		}
 		if let url = request.url, !intersection(.url).isEmpty {
 			message += " \(urlString(url))"
@@ -101,7 +101,7 @@ public extension LoggingComponents {
 		if isMultiline {
 			message += "\n--> END"
 			if contains(.method) {
-                message += " \(request.method.rawValue)"
+				message += " \(request.method.rawValue)"
 			}
 		}
 		return message
@@ -128,7 +128,7 @@ public extension LoggingComponents {
 		uuid: UUID,
 		statusCode: HTTPResponse.Status? = nil,
 		data: Data?,
-        headers: HTTPFields = [:],
+		headers: HTTPFields = [:],
 		duration: TimeInterval? = nil,
 		error: Error? = nil
 	) -> String {
@@ -137,14 +137,14 @@ public extension LoggingComponents {
 		if contains(.uuid) {
 			message = "[\(uuid.uuidString)]\n" + message
 		}
-        if statusCode?.kind == .successful, error == nil {
+		if statusCode?.kind == .successful, error == nil {
 			message.append("✅")
 		} else {
 			message.append("🛑")
 		}
 		var isMultiline = false
 		if let statusCode, contains(.statusCode) {
-            message += " \(statusCode.code) \(statusCode.reasonPhrase)"
+			message += " \(statusCode.code) \(statusCode.reasonPhrase)"
 		}
 		var inBrackets: [String] = []
 		if let duration, contains(.duration) {

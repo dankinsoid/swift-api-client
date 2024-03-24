@@ -52,7 +52,7 @@ extension APIClient {
 	) async throws -> Data {
 		try await httpTest {
 			let data = try test($0, $1, $2)
-            return (data, HTTPResponse(status: .ok))
+			return (data, HTTPResponse(status: .ok))
 		}
 	}
 }
