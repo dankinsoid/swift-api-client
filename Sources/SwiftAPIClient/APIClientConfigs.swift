@@ -55,6 +55,14 @@ public extension APIClient {
 	}
 }
 
+public extension TaskLocal<APIClient.Configs> {
+
+	/// Binds the task-local to the specific value for the duration of the asynchronous operation.
+	func withValue<T>(_ modify: (APIClient.Configs) -> APIClient.Configs, operation: () async throws -> T) async rethrows -> T {
+		try await withValue(modify(.global), operation: operation)
+	}
+}
+
 /// Provides a default value for a given configuration, which can differ between live, test, and preview environments.
 /// - Parameters:
 ///   - live: An autoclosure returning the value for the live environment.
