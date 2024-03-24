@@ -7,8 +7,9 @@ import FoundationNetworking
 extension HTTPClient {
 
 	static func test() -> HTTPClient {
-		HTTPClient { request, configs in
-			try configs.testHTTPClient(request, configs)
+		HTTPClient { request, _, configs in
+			print("teeeeest")
+			return try configs.testHTTPClient(request, configs)
 		}
 	}
 }
@@ -43,7 +44,7 @@ extension APIClient {
 			try test($0, $1)
 		}
 		.httpClient(.test())
-		.call(.http, as: .identity)
+		.call(.http)
 	}
 
 	@discardableResult

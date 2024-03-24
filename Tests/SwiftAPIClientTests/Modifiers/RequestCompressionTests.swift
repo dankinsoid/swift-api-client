@@ -1,4 +1,3 @@
-
 #if canImport(zlib)
 import Foundation
 @testable import SwiftAPIClient
@@ -11,8 +10,9 @@ final class APIClientCompressionTests: XCTestCase {
 
 	@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 	func testThatRequestCompressorProperlyCalculatesAdler32() async throws {
-		let client = APIClient(baseURL: URL(string: "https://example.com")!).compressRequest()
+		let client = APIClient.test.compressRequest()
 		let body: Data = try await client
+			.post
 			.body(Data([0]))
 			.httpTest { request, _ in
 				request.httpBody!

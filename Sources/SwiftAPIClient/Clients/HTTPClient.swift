@@ -7,13 +7,19 @@ import FoundationNetworking
 public struct HTTPClient {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URLRequest and network configurations.
-	public var data: (URLRequest, APIClient.Configs) async throws -> (Data, HTTPURLResponse)
+	public var data: (URLRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPURLResponse)
 
 	/// Initializes a new `HTTPClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a `URLRequest` and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
-	public init(_ data: @escaping (URLRequest, APIClient.Configs) async throws -> (Data, HTTPURLResponse)) {
+	public init(_ data: @escaping (URLRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPURLResponse)) {
 		self.data = data
 	}
+}
+
+public enum RequestBody: Hashable {
+
+	case file(URL)
+	case data(Data)
 }
 
 public extension APIClient {
@@ -43,30 +49,29 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 		.http { request, configs in
 			var request = request
 			if request.httpBodyStream != nil {
-				configs.logger.warning("httpBodyStream is not supported, use `.body(file:) modifier")
+				configs.logger.warning(".httpBodyStream is not supported, use .body(file:) modifier.")
 			}
 			let isUpload = request.httpBody != nil || configs.file != nil
 			if request.httpMethod == nil {
-				request.httpMethod = isUpload ? HTTPMethod.post.rawValue : HTTPMethod.get.rawValue
+				request.method = isUpload ? .post : .get
+			}
+			if isUpload, request.method == .get {
+				configs.logger.warning("It is not allowed to add a body in GET request.")
 			}
 
 			if request.httpBody != nil, configs.file != nil {
-				configs.logger.warning("Both body data and body file are set for the request \(request).")
+				configs.logger.warning("Both body data and body file are set for the request \(request.url?.absoluteString ?? "").")
 			}
 
-			let task: UploadTask?
-			if let body = request.httpBody {
-				task = .data(body)
+			let body: RequestBody?
+			if let httpBody = request.httpBody {
+				body = .data(httpBody)
 			} else if let file = configs.file?(configs) {
-				task = .file(file)
+				body = .file(file)
 			} else {
-				task = nil
+				body = nil
 			}
-			if let task {
-				return try await configs.httpUploadClient.upload(request, task, configs)
-			} else {
-				return try await configs.httpClient.data(request, configs)
-			}
+			return try await configs.httpClient.data(request, body, configs)
 		}
 	}
 }
