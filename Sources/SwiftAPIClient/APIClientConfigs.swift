@@ -9,6 +9,18 @@ public extension APIClient {
 	/// A struct representing the configuration settings for a `APIClient`.
 	struct Configs {
 
+		/// Global APIClient configs. Use it add some configs externally.
+		///
+		/// ```swift
+		/// let url = try await APIClient.Configs.$global.withValue {
+		///   $0.trackDownload { progress in ... }
+		/// } operation: {
+		///   try await api().download(file: fileURL)
+		/// }
+		/// ```
+		@TaskLocal
+		public static var global = APIClient.Configs()
+
 		private var values: [PartialKeyPath<APIClient.Configs>: Any] = [:]
 
 		/// Initializes a new configuration set for `APIClient`.
