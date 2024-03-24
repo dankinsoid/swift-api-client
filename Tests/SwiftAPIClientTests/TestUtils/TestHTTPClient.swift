@@ -8,8 +8,7 @@ extension HTTPClient {
 
 	static func test() -> HTTPClient {
 		HTTPClient { request, _, configs in
-			print("teeeeest")
-			return try configs.testHTTPClient(request, configs)
+            try configs.testHTTPClient(request, configs)
 		}
 	}
 }
