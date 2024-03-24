@@ -87,6 +87,7 @@ Executing an operation on the client involves:
 
 All built-in extensions utilize these modifiers.
 ## Built-in `APIClient` Extensions
+The full list is available [in docs](https://dankinsoid.github.io/swift-api-client/documentation/swiftapiclient/apiclient).
 ### Request building
 Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.
 ```swift
@@ -257,7 +258,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.47.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "0.47.1")
   ],
   targets: [
     .target(
