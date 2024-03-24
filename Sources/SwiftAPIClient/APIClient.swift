@@ -125,8 +125,9 @@ public struct APIClient {
 	/// - Rethrows: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) throws -> T) rethrows -> T {
-		var configs = Configs.global
-		modifyConfigs(&configs)
+		var configs = Configs()
+		var client = Self.globalModifier(self)
+		client.modifyConfigs(&configs)
 		return try operation(configs)
 	}
 
@@ -135,14 +136,65 @@ public struct APIClient {
 	/// - Rethrows: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) async throws -> T) async rethrows -> T {
-		var configs = Configs.global
-		modifyConfigs(&configs)
+		var configs = Configs()
+		var client = Self.globalModifier(self)
+		client.modifyConfigs(&configs)
 		return try await operation(configs)
 	}
 
 	private func createRequest() throws -> (URLRequest, Configs) {
-		var configs = Configs.global
-		modifyConfigs(&configs)
-		return try (_createRequest(configs), configs)
+		var configs = Configs()
+		var client = Self.globalModifier(self)
+		client.modifyConfigs(&configs)
+		return try (client._createRequest(configs), configs)
 	}
+}
+
+public extension APIClient {
+
+	/// Set modifiers during the operation.
+	///
+	/// ```swift
+	/// let url = try APIClient.withModifiers {
+	///   $0.trackDownload { progress in ... }
+	/// } operation: {
+	///   try api().download(file: fileURL)
+	/// }
+	/// ```
+	static func withModifiers<T>(
+		_ modifiers: @escaping (APIClient) -> APIClient,
+		operation: () throws -> T
+	) rethrows -> T {
+		let current = APIClient.globalModifier
+		return try APIClient.$globalModifier.withValue(
+			{ modifiers(current($0)) },
+			operation: operation
+		)
+	}
+
+	/// Set modifiers during the operation.
+	///
+	/// ```swift
+	/// let url = try await APIClient.withModifiers {
+	///   $0.trackDownload { progress in ... }
+	/// } operation: {
+	///   try await api().download(file: fileURL)
+	/// }
+	/// ```
+	static func withModifiers<T>(
+		_ modifiers: @escaping (APIClient) -> APIClient,
+		operation: () async throws -> T
+	) async rethrows -> T {
+		let current = APIClient.globalModifier
+		return try await APIClient.$globalModifier.withValue(
+			{ modifiers(current($0)) },
+			operation: operation
+		)
+	}
+}
+
+private extension APIClient {
+
+	@TaskLocal
+	static var globalModifier: (APIClient) -> APIClient = { $0 }
 }
