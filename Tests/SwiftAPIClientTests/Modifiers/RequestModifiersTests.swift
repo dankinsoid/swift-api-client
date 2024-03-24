@@ -64,15 +64,16 @@ final class RequestModifiersTests: XCTestCase {
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
 
-	func testURLWithQueryParameters() throws {
-		let request = HTTPRequest(url: URL(string: "https://example.com")!)
-		XCTAssertEqual(request.url!.absoluteString, "https://example.com/")
-	}
-
 	func testBaseURLSetting() throws {
 		let modifiedClient = client.query("test", "value").baseURL(URL(string: "http://test.net")!)
-
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net/?test=value")
+	}
+
+	func testRemoveSlaahIfNeeded() throws {
+		let modifiedClient = client.query("test", "value").modifyRequest {
+			$0.path = $0.path?.replacingOccurrences(of: "/?", with: "?")
+		}
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?test=value")
 	}
 
 	func testSchemeSetting() throws {
