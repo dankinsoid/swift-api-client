@@ -37,7 +37,7 @@ final class APIClientTests: XCTestCase {
 		let result = try client.withRequest { request, _ in
 			request.url?.absoluteString
 		}
-		XCTAssertEqual(result, "https://example.com")
+		XCTAssertEqual(result, "https://example.com/")
 	}
 
 	func testWithConfigs() throws {

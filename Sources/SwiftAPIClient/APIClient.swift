@@ -126,7 +126,7 @@ public struct APIClient {
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) throws -> T) rethrows -> T {
 		var configs = Configs()
-    var client = Self.globalModifier(self)
+		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
 		return try operation(configs)
 	}
@@ -137,14 +137,14 @@ public struct APIClient {
 	/// - Returns: The result of the closure of type `T`.
 	public func withConfigs<T>(_ operation: (Configs) async throws -> T) async rethrows -> T {
 		var configs = Configs()
-		var client = Self.globalModifier(self)
+		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
 		return try await operation(configs)
 	}
 
 	private func createRequest() throws -> (HTTPRequest, Configs) {
 		var configs = Configs()
-    var client = Self.globalModifier(self)
+		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
 		return try (client._createRequest(configs), configs)
 	}

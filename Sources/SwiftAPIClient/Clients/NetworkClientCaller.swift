@@ -10,7 +10,7 @@ public struct APIClientCaller<Response, Value, Result> {
 	private let _call: (
 		UUID,
 		HTTPRequest,
-		Data?,
+		RequestBody?,
 		APIClient.Configs,
 		@escaping (Response, () throws -> Void) throws -> Value
 	) throws -> Result
@@ -24,7 +24,7 @@ public struct APIClientCaller<Response, Value, Result> {
 		call: @escaping (
 			_ uuid: UUID,
 			_ request: HTTPRequest,
-			_ body: Data?,
+			_ body: RequestBody?,
 			_ configs: APIClient.Configs,
 			_ serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
 		) throws -> Result,
@@ -43,7 +43,7 @@ public struct APIClientCaller<Response, Value, Result> {
 	public func call(
 		uuid: UUID,
 		request: HTTPRequest,
-		body: Data?,
+		body: RequestBody?,
 		configs: APIClient.Configs,
 		serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
 	) throws -> Result {
@@ -185,9 +185,19 @@ public extension APIClient {
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				let body = try configs.body?(configs)
+
+				let bodyData = try configs.body?(configs)
+				let body: RequestBody?
+				if let bodyData {
+					body = .data(bodyData)
+				} else if let file = configs.file?(configs) {
+					body = .file(file)
+				} else {
+					body = nil
+				}
+
 				if !configs.loggingComponents.isEmpty {
-					let message = configs.loggingComponents.requestMessage(for: request, data: body, uuid: uuid, fileIDLine: fileIDLine)
+					let message = configs.loggingComponents.requestMessage(for: request, body: body, uuid: uuid, fileIDLine: fileIDLine)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
 

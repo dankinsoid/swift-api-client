@@ -55,9 +55,9 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 
 	public func execute<T>(
 		request: HTTPRequest,
-		body: Data?,
+		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		guard configs.isAuthEnabled else {
 			return try await next(request, body, configs)

@@ -26,9 +26,16 @@ public extension APIClient {
 	/// - Returns: An instance of `APIClient` with updated path.
 	func path(_ components: [any CustomStringConvertible]) -> APIClient {
 		modifyRequest {
-			for component in components {
-				$0.url?.appendPathComponent(component.description)
-			}
+			guard !components.isEmpty else { return }
+			var fullPath = $0.path.map { FullPath($0) } ?? FullPath(path: [])
+			fullPath.append(
+				path: components.flatMap {
+					$0.description.components(separatedBy: ["/"]).filter { !$0.isEmpty }.map {
+						$0.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? $0
+					}
+				}
+			)
+			$0.path = fullPath.description
 		}
 	}
 }
@@ -185,25 +192,16 @@ public extension APIClient {
 	/// - Returns: An instance of `APIClient` with set query parameters.
 	func query(_ items: @escaping (Configs) throws -> [URLQueryItem]) -> APIClient {
 		modifyRequest { req, configs in
-			if
-				let url = req.url,
-				var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-			{
-				if components.percentEncodedQueryItems == nil {
-					components.percentEncodedQueryItems = []
-				}
-				try components.percentEncodedQueryItems?.append(
-					contentsOf: items(configs).map {
-						URLQueryItem(
-							name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
-							value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986)
-						)
-					}
+			let items = try items(configs).map {
+				URLQueryItem(
+					name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
+					value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986)
 				)
-				req.url = components.url ?? url
-			} else {
-				configs.logger.error("Invalid request: \(req)")
 			}
+			guard !items.isEmpty else { return }
+			var fullPath = req.path.map { FullPath($0) } ?? FullPath(path: [])
+			fullPath.queryItems += items
+			req.path = fullPath.description
 		}
 	}
 
@@ -268,10 +266,11 @@ public extension APIClient {
 	///
 	/// - Note: The path, query, and fragment of the original URL are retained, while those of the new URL are ignored.
 	func baseURL(_ newBaseURL: URL) -> APIClient {
-		modifyURLComponents { components in
-			components.scheme = newBaseURL.scheme
-			components.host = newBaseURL.host
-			components.port = newBaseURL.port
+		modifyRequest {
+			$0.scheme = newBaseURL.scheme
+			$0.authority = newBaseURL.host.map {
+				$0 + (newBaseURL.port.map { ":\($0)" } ?? "")
+			}
 		}
 	}
 
@@ -280,8 +279,8 @@ public extension APIClient {
 	/// - Parameter scheme: The new scheme to set.
 	/// - Returns: An instance of `APIClient` with the updated scheme.
 	func scheme(_ scheme: String) -> APIClient {
-		modifyURLComponents { components in
-			components.scheme = scheme
+		modifyRequest {
+			$0.scheme = scheme
 		}
 	}
 
@@ -290,8 +289,13 @@ public extension APIClient {
 	/// - Parameter host: The new host to set.
 	/// - Returns: An instance of `APIClient` with the updated host.
 	func host(_ host: String) -> APIClient {
-		modifyURLComponents { components in
-			components.host = host
+		modifyRequest {
+			guard var authority = $0._authority else {
+				$0.authority = host
+				return
+			}
+			authority.host = host
+			$0._authority = authority
 		}
 	}
 
@@ -300,38 +304,55 @@ public extension APIClient {
 	/// - Parameter port: The new port to set.
 	/// - Returns: An instance of `APIClient` with the updated port.
 	func port(_ port: Int?) -> APIClient {
-		modifyURLComponents { components in
-			components.port = port
+		modifyRequest {
+			guard var authority = $0._authority else {
+				if let port {
+					$0.authority = ":\(port)"
+				}
+				return
+			}
+			authority.port = port
+			$0._authority = authority
 		}
 	}
-}
 
-public extension APIClient {
-
-	/// Modifies the URL the request via URLComponents.
+	/// Sets the userinfo for the request.
 	///
-	/// - Parameter modifier: A closure that takes the current URL components and modifies them.
-	/// - Returns: An instance of `APIClient` with the modified URL components.
-	func modifyURLComponents(_ modifier: @escaping (inout URLComponents) throws -> Void) -> APIClient {
-		modifyRequest { req, configs in
-			guard let url = req.url else {
-				configs.logger.error("Failed to get URL of request")
+	/// - Parameter userinfo: The new userinfo to set.
+	/// - Returns: An instance of `APIClient` with the updated port.
+	func userinfo(_ userinfo: String?) -> APIClient {
+		modifyRequest {
+			guard var authority = $0._authority else {
+				if let userinfo {
+					$0.authority = "\(userinfo)@"
+				}
 				return
 			}
+			authority.userinfo = userinfo
+			$0._authority = authority
+		}
+	}
 
-			guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-				configs.logger.error("Failed to get components of \(url.absoluteString)")
-				return
-			}
+	/// Sets the authority for the request. Authority is a part of the URL that includes the userinfo, host and the port.
+	///
+	/// - Parameter authority: The new authority to set.
+	/// - Returns: An instance of `APIClient` with the updated port.
+	func authority(_ authority: String) -> APIClient {
+		modifyRequest {
+			$0.authority = authority
+		}
+	}
 
-			try modifier(&components)
-
-			guard let newURL = components.url else {
-				configs.logger.error("Failed to get URL from components")
-				return
-			}
-
-			req.url = newURL
+	/// Sets the fragment for the request url.
+	///
+	/// - Parameter fragment: The new fragment to set.
+	/// - Returns: An instance of `APIClient` with the updated port.
+	func fragment(_ fragment: String?) -> APIClient {
+		modifyRequest {
+			guard fragment != nil || $0.path != nil else { return }
+			var fullPath = $0.path.map { FullPath($0) } ?? FullPath(path: [])
+			fullPath.fragment = fragment
+			$0.path = fullPath.description
 		}
 	}
 }

@@ -8,11 +8,11 @@ public struct RequestValidator {
 
 	/// A closure that validates a `URLRequest`.
 	/// - Throws: An error if validation fails.
-	public var validate: (_ request: HTTPRequest, _ body: Data?, APIClient.Configs) throws -> Void
+	public var validate: (_ request: HTTPRequest, _ body: RequestBody?, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `RequestValidator` with a custom validation closure.
 	/// - Parameter validate: A closure that takes a `URLRequest` and throws an error if validation fails.
-	public init(validate: @escaping (_ request: HTTPRequest, _ body: Data?, APIClient.Configs) throws -> Void) {
+	public init(validate: @escaping (_ request: HTTPRequest, _ body: RequestBody?, APIClient.Configs) throws -> Void) {
 		self.validate = validate
 	}
 }
@@ -41,9 +41,9 @@ private struct RequestValidatorMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequest,
-		body: Data?,
+		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		try validator.validate(request, body, configs)
 		return try await next(request, body, configs)

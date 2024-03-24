@@ -68,7 +68,7 @@ public extension LoggingComponents {
 
 	func requestMessage(
 		for request: HTTPRequest,
-		data: Data?,
+		body: RequestBody?,
 		uuid: UUID,
 		fileIDLine: FileIDLine
 	) -> String {
@@ -87,15 +87,19 @@ public extension LoggingComponents {
 		if let url = request.url, !intersection(.url).isEmpty {
 			message += " \(urlString(url))"
 		}
-		if contains(.bodySize), let body = data {
+		if contains(.bodySize), let body = body?.data {
 			message += " (\(body.count)-byte body)"
 		}
 		if contains(.headers), !request.headerFields.isEmpty {
 			message += "\n\(request.headerFields.multilineDescription)"
 			isMultiline = true
 		}
-		if contains(.body), let body = data, let bodyString = String(data: body, encoding: .utf8) {
+		if contains(.body), let body = body?.data, let bodyString = String(data: body, encoding: .utf8) {
 			message += "\n\(bodyString)"
+			isMultiline = true
+		}
+		if contains(.body), let body = body?.fileURL {
+			message += "\n\(body.relativePath)"
 			isMultiline = true
 		}
 		if isMultiline {

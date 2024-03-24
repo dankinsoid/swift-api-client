@@ -20,6 +20,20 @@ public enum RequestBody: Hashable {
 
 	case file(URL)
 	case data(Data)
+
+	public var data: Data? {
+		if case let .data(data) = self {
+			return data
+		}
+		return nil
+	}
+
+	public var fileURL: URL? {
+		if case let .file(fileURL) = self {
+			return fileURL
+		}
+		return nil
+	}
 }
 
 public extension APIClient {
@@ -46,30 +60,10 @@ public extension APIClient.Configs {
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static var http: APIClientCaller {
-		.http { request, configs in
-			var request = request
-			if request.httpBodyStream != nil {
-				configs.logger.warning(".httpBodyStream is not supported, use .body(file:) modifier.")
-			}
-			let isUpload = request.httpBody != nil || configs.file != nil
-			if request.httpMethod == nil {
-				request.method = isUpload ? .post : .get
-			}
+		.http { request, body, configs in
+			let isUpload = body != nil
 			if isUpload, request.method == .get {
 				configs.logger.warning("It is not allowed to add a body in GET request.")
-			}
-
-			if request.httpBody != nil, configs.file != nil {
-				configs.logger.warning("Both body data and body file are set for the request \(request.url?.absoluteString ?? "").")
-			}
-
-			let body: RequestBody?
-			if let httpBody = request.httpBody {
-				body = .data(httpBody)
-			} else if let file = configs.file?(configs) {
-				body = .file(file)
-			} else {
-				body = nil
 			}
 			return try await configs.httpClient.data(request, body, configs)
 		}
@@ -79,7 +73,7 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static func http(
-		task: @escaping @Sendable (HTTPRequest, Data?, APIClient.Configs) async throws -> (Data, HTTPResponse)
+		task: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) -> APIClientCaller {
 		.http(task: task) {
 			try $2.httpResponseValidator.validate($1, $0, $2)
@@ -92,7 +86,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response ==
 extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 
 	static func http(
-		task: @escaping @Sendable (HTTPRequest, Data?, APIClient.Configs) async throws -> (Response, HTTPResponse),
+		task: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Response, HTTPResponse),
 		validate: @escaping (Response, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (Response) -> Data?
 	) -> APIClientCaller {

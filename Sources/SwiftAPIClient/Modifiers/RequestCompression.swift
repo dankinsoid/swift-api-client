@@ -40,16 +40,16 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequest,
-		body: Data?,
+		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, Data?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		// No need to compress unless we have body data. No support for compressing streams.
 		guard let body else {
 			return try await next(request, nil, configs)
 		}
 
-		guard shouldCompressBodyData(body) else {
+		guard let data = body.data, shouldCompressBodyData(data) else {
 			return try await next(request, body, configs)
 		}
 
@@ -67,7 +67,7 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 
 		var urlRequest = request
 		urlRequest.headerFields[.contentEncoding] = "deflate"
-		return try await next(urlRequest, deflate(body), configs)
+		return try await next(urlRequest, .data(deflate(data)), configs)
 	}
 }
 

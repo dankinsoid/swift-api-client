@@ -13,7 +13,7 @@ final class RequestModifiersTests: XCTestCase {
 
 		let modifiedClient = client.path("users", "123")
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/users/123")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/users/123/")
 	}
 
 	func testMethodSetting() throws {
@@ -61,18 +61,18 @@ final class RequestModifiersTests: XCTestCase {
 	func testQueryParametersAdding() throws {
 		let modifiedClient = client.query("page", "some parameter ❤️")
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
 
 	func testURLWithQueryParameters() throws {
 		let request = HTTPRequest(url: URL(string: "https://example.com")!)
-		XCTAssertEqual(request.url!.absoluteString, "https://example.com")
+		XCTAssertEqual(request.url!.absoluteString, "https://example.com/")
 	}
 
 	func testBaseURLSetting() throws {
 		let modifiedClient = client.query("test", "value").baseURL(URL(string: "http://test.net")!)
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net?test=value")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net/?test=value")
 	}
 
 	func testSchemeSetting() throws {
@@ -91,16 +91,6 @@ final class RequestModifiersTests: XCTestCase {
 		let modifiedClient = client.port(8080)
 
 		try XCTAssertEqual(modifiedClient.request().url?.port, 8080)
-	}
-
-	func testURLComponentsModification() throws {
-		let modifiedClient = client.modifyURLComponents { components in
-			components.scheme = "http"
-			components.host = "api.example.com"
-			components.port = 8080
-		}
-
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://api.example.com:8080")
 	}
 
 	func testTimeoutIntervalSetting() throws {

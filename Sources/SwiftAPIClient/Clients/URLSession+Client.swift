@@ -10,23 +10,23 @@ public extension HTTPClient {
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
 	static var urlSession: Self {
 		HTTPClient { request, body, configs in
+			guard let urlRequest = URLRequest(request: request, configs: configs) else {
+				throw Errors.custom("Invalid request")
+			}
 			#if os(Linux)
-            guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
-                throw Errors.custom("Invalid request")
-            }
-            return try await asyncMethod { completion in
-                configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
-            }
+			guard let urlRequest = URLRequest(request: urlRequest, body: body, configs: configs) else {
+				throw Errors.custom("Invalid request")
+			}
+			return try await asyncMethod { completion in
+				configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
+			}
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
-				let (data, response) = try await configs.urlSession.data(for: request, body: body)
-                return (data, response)
+				let (data, response) = try await configs.urlSession.data(for: urlRequest, body: body)
+				return (data, response.http)
 			} else {
-				guard let urlRequest = URLRequest(request: request, body: body, configs: configs) else {
-					throw Errors.custom("Invalid request")
-				}
 				return try await asyncMethod { completion in
-                    configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
+					configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
 				}
 			}
 			#endif
@@ -38,7 +38,7 @@ public extension HTTPDownloadClient {
 
 	static var urlSession: Self {
 		HTTPDownloadClient { request, configs in
-			guard let urlRequest = URLRequest(httpRequest: request) else {
+			guard let urlRequest = URLRequest(request: request, configs: configs) else {
 				throw Errors.custom("Invalid request")
 			}
 			return try await asyncMethod { completion in

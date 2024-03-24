@@ -15,7 +15,7 @@ final class APIClientCompressionTests: XCTestCase {
 			.post
 			.body(Data([0]))
 			.httpTest { _, body, _ in
-				body!
+				body!.data!
 			}
 		// From https://en.wikipedia.org/wiki/Adler-32
 		XCTAssertEqual(body, Data([0x78, 0x5E, 0x63, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01]))
