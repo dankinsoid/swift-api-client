@@ -36,6 +36,7 @@ jobs:
         run: |
           swift package resolve;
 
+          xcodebuild -resolvePackageDependencies;
           xcodebuild docbuild -scheme swift-api-client -derivedDataPath /tmp/docbuild -destination 'generic/platform=iOS';
           
           $(xcrun --find docc) process-archive \
