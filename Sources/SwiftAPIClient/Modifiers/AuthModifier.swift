@@ -36,17 +36,17 @@ public extension APIClient {
 /// A struct representing an authentication modifier for network requests.
 public struct AuthModifier {
 
-	/// A closure that modifies a `URLRequest` for authentication.
+	/// A closure that modifies a URL request for authentication.
 	public let modifier: (inout HTTPRequest, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
-	/// - Parameter modifier: A closure that modifies a `URLRequest` and `APIClient.Configs` for authentication.
+	/// - Parameter modifier: A closure that modifies a URL request and `APIClient.Configs` for authentication.
 	public init(modifier: @escaping (inout HTTPRequest, APIClient.Configs) throws -> Void) {
 		self.modifier = modifier
 	}
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
-	/// - Parameter modifier: A closure that modifies a `URLRequest` for authentication.
+	/// - Parameter modifier: A closure that modifies a URL request for authentication.
 	public init(modifier: @escaping (inout HTTPRequest) throws -> Void) {
 		self.init { request, _ in
 			try modifier(&request)

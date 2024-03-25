@@ -3,15 +3,15 @@ import Foundation
 import FoundationNetworking
 #endif
 
-/// A struct for validating `URLRequest` instances.
+/// A struct for validating URL request instances.
 public struct RequestValidator {
 
-	/// A closure that validates a `URLRequest`.
+	/// A closure that validates an URL request.
 	/// - Throws: An error if validation fails.
 	public var validate: (_ request: HTTPRequest, _ body: RequestBody?, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `RequestValidator` with a custom validation closure.
-	/// - Parameter validate: A closure that takes a `URLRequest` and throws an error if validation fails.
+	/// - Parameter validate: A closure that takes an URL request and throws an error if validation fails.
 	public init(validate: @escaping (_ request: HTTPRequest, _ body: RequestBody?, APIClient.Configs) throws -> Void) {
 		self.validate = validate
 	}
@@ -28,7 +28,7 @@ public extension RequestValidator {
 public extension APIClient {
 
 	/// Sets a custom request validator for the network client.
-	/// - Parameter validator: The `RequestValidator` to be used for validating `URLRequest` instances.
+	/// - Parameter validator: The `RequestValidator` to be used for validating URL request instances.
 	/// - Returns: An instance of `APIClient` configured with the specified request validator.
 	func requestValidator(_ validator: RequestValidator) -> APIClient {
 		httpClientMiddleware(RequestValidatorMiddleware(validator: validator))

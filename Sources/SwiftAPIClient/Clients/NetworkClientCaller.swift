@@ -36,7 +36,7 @@ public struct APIClientCaller<Response, Value, Result> {
 
 	/// Performs the network call with the provided request, configurations, and serialization closure.
 	/// - Parameters:
-	///   - request: The `URLRequest` for the network call.
+	///   - request: The URL request for the network call.
 	///   - configs: The configurations for the network call.
 	///   - serialize: A closure that serializes the response.
 	/// - Returns: The result of the network call.
@@ -231,28 +231,5 @@ public extension APIClient {
 			}
 			throw error
 		}
-	}
-
-	/// Sets a closure to be executed before making a network call.
-	///
-	/// - Parameters:
-	///   - closure: The closure to be executed before making a network call. It takes in an `inout URLRequest` and `APIClient.Configs` as parameters and can modify the request.
-	/// - Returns: The `APIClient` instance.
-	func beforeCall(_ closure: @escaping (inout URLRequest, APIClient.Configs) throws -> Void) -> APIClient {
-		configs {
-			let beforeCall = $0.beforeCall
-			$0.beforeCall = { request, configs in
-				try beforeCall(&request, configs)
-				try closure(&request, configs)
-			}
-		}
-	}
-}
-
-public extension APIClient.Configs {
-
-	var beforeCall: (inout URLRequest, APIClient.Configs) throws -> Void {
-		get { self[\.beforeCall] ?? { _, _ in } }
-		set { self[\.beforeCall] = newValue }
 	}
 }

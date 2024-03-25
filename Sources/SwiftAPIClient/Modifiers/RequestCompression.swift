@@ -7,7 +7,7 @@ import FoundationNetworking
 
 public extension APIClient {
 
-	/// Compresses outgoing `URLRequest` bodies using the `deflate` `Content-Encoding` and adds the
+	/// Compresses outgoing URL request bodies using the `deflate` `Content-Encoding` and adds the
 	/// appropriate header.
 	///
 	/// - Note: Most requests to most APIs are small and so would only be slowed down by applying this adapter. Measure the
@@ -86,7 +86,7 @@ private func adler32Checksum(of data: Data) -> UInt32 {
 	}
 }
 
-/// Type that determines the action taken when the `URLRequest` already has a `Content-Encoding` header.
+/// Type that determines the action taken when the URL request already has a `Content-Encoding` header.
 public enum DuplicateHeaderBehavior {
 
 	/// Throws a `DuplicateHeaderError`. The default.

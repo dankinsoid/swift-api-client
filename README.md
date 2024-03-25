@@ -33,7 +33,7 @@
 - Facilitation of testing and mocking.
 
 ## Usage
-The core of the library is the `APIClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with `URLRequest`.
+The core of the library is the `APIClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with URL request.
 
 The branching and configuration injection/overriding capabilities of APIClient, extending to all its child instances, facilitate the effortless recycling of networking logic and tasks, thereby eliminating the need for copy-pasting.
 
@@ -78,7 +78,7 @@ try await johnClient.delete()
 
 ## What is `APIClient`
 
-`APIClient` is a struct combining a closure for creating a URLRequest and a typed dictionary of configurations `APIClient.Configs`. There are two primary ways to extend a `APIClient`:
+`APIClient` is a struct combining a closure for creating a URL request and a typed dictionary of configurations `APIClient.Configs`. There are two primary ways to extend a `APIClient`:
 - `modifyRequest` modifiers.
 - `configs` modifiers.
 
@@ -89,7 +89,7 @@ All built-in extensions utilize these modifiers.
 ## Built-in `APIClient` Extensions
 The full list is available [in docs](https://dankinsoid.github.io/swift-api-client/documentation/swiftapiclient/apiclient).
 ### Request building
-Numerous methods exist for modifying a `URLRequest` such as `query`, `body`, `header`, `headers`, `method`, `path`, `timeout`, `cachePolicy`, `body`, `bodyStream` and more.
+Numerous methods exist for modifying a URL request such as `query`, `body`, `header`, `headers`, `method`, `path`, `body` and more.
 ```swift
 let client = APIClient(url: baseURL)
   .method(.post)
@@ -258,7 +258,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.0.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.1.0")
   ],
   targets: [
     .target(

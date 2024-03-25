@@ -10,7 +10,7 @@ public struct APIClient {
 	private var modifyConfigs: (inout Configs) -> Void = { _ in }
 
 	/// Initializes a new network client with a closure that creates a URLRequest.
-	/// - Parameter createRequest: A closure that takes `Configs` and returns a `URLRequest`.
+	/// - Parameter createRequest: A closure that takes `Configs` and returns a `HTTPRequest`.
 	public init(
 		createRequest: @escaping (Configs) throws -> HTTPRequest
 	) {
@@ -98,7 +98,7 @@ public struct APIClient {
 	}
 
 	/// Executes an operation with the current URLRequest and configurations.
-	/// - Parameter operation: A closure that takes `URLRequest` and `Configs` and returns a generic type `T`.
+	/// - Parameter operation: A closure that takes an URL request and `Configs` and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withRequest<T>(_ operation: (HTTPRequest, Configs) throws -> T) throws -> T {
@@ -107,7 +107,7 @@ public struct APIClient {
 	}
 
 	/// Asynchronously executes an operation with the current URLRequest and configurations.
-	/// - Parameter operation: A closure that takes `URLRequest` and `Configs`, and returns a generic type `T`.
+	/// - Parameter operation: A closure that takes an URL request and `Configs`, and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
 	public func withRequest<T>(_ operation: (HTTPRequest, Configs) async throws -> T) async throws -> T {
@@ -115,7 +115,7 @@ public struct APIClient {
 		return try await operation(request, configs)
 	}
 
-	/// Build `URLRequest`
+	/// Build `HTTPRequest`
 	public func request() throws -> HTTPRequest {
 		try withRequest { request, _ in request }
 	}

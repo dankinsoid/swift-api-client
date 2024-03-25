@@ -5,11 +5,11 @@ import FoundationNetworking
 
 public struct HTTPDownloadClient {
 
-	/// A closure that asynchronously retrieves data and an HTTP response for a given URLRequest and network configurations.
+	/// A closure that asynchronously retrieves data and an HTTP response for a given URL request and network configurations.
 	public var download: (HTTPRequest, APIClient.Configs) async throws -> (URL, HTTPResponse)
 
-	/// Initializes a new `HTTPUploadClient` with a custom data retrieval closure.
-	/// - Parameter data: A closure that takes a `URLRequest` and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
+	/// Initializes a new `HTTPDownloadClient` with a custom data retrieval closure.
+	/// - Parameter data: A closure that takes a URL request and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
 	public init(
 		_ download: @escaping (HTTPRequest, APIClient.Configs) async throws -> (URL, HTTPResponse))
 	{
