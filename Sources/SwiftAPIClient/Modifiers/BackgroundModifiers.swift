@@ -18,19 +18,20 @@ public extension APIClient {
 
 private struct BackgroundTaskMiddleware: HTTPClientMiddleware {
 
-	func execute<T>(
-		request: URLRequest,
-		configs: APIClient.Configs,
-		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
-	) async throws -> (T, HTTPURLResponse) {
+    func execute<T>(
+        request: HTTPRequest,
+        body: RequestBody?,
+        configs: APIClient.Configs,
+        next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+    ) async throws -> (T, HTTPResponse) {
 		let id = await UIApplication.shared.beginBackgroundTask(
 			withName: "Background Task for \(request.url?.absoluteString ?? "")"
 		)
 		guard id != .invalid else {
-			return try await next(request, configs)
+			return try await next(request, body, configs)
 		}
 		do {
-			let result = try await next(request, configs)
+			let result = try await next(request, body, configs)
 			await UIApplication.shared.endBackgroundTask(id)
 			return result
 		} catch {
@@ -42,19 +43,20 @@ private struct BackgroundTaskMiddleware: HTTPClientMiddleware {
 
 private struct RetryOnEnterForegroundMiddleware: HTTPClientMiddleware {
 
-	func execute<T>(
-		request: URLRequest,
-		configs: APIClient.Configs,
-		next: (URLRequest, APIClient.Configs) async throws -> (T, HTTPURLResponse)
-	) async throws -> (T, HTTPURLResponse) {
-		func makeRequest() async throws -> (T, HTTPURLResponse) {
+    func execute<T>(
+        request: HTTPRequest,
+        body: RequestBody?,
+        configs: APIClient.Configs,
+        next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+    ) async throws -> (T, HTTPResponse) {
+		func makeRequest() async throws -> (T, HTTPResponse) {
 			let wasInBackground = WasInBackgroundService()
 			var isInBackground = await UIApplication.shared.applicationState == .background
 			if !isInBackground {
 				await wasInBackground.start()
 			}
 			do {
-				return try await next(request, configs)
+				return try await next(request, body, configs)
 			} catch {
 				isInBackground = await UIApplication.shared.applicationState == .background
 				if !isInBackground, await wasInBackground.wasInBackground {
