@@ -28,8 +28,8 @@ public extension PetStore {
 	@Path
 	struct Pet {
 
-		@PUT("/") public func update(_: PetModel) -> PetModel {}
-		@POST("/") public func add(_: PetModel) -> PetModel {}
+		@PUT("/") public func update(_ body: PetModel) -> PetModel {}
+		@POST("/") public func add(_ body: PetModel) -> PetModel {}
 		@GET public func findByStatus(@Query _ status: PetStatus) -> [PetModel] {}
 		@GET public func findByTags(@Query _ tags: [String]) -> [PetModel] {}
 
@@ -56,7 +56,7 @@ public extension PetStore {
 		}
 
 		@GET public func inventory() -> [String: Int] { client.auth(enabled: true) }
-		@POST public func order(_: OrderModel) -> OrderModel {}
+		@POST public func order(_ body: OrderModel) -> OrderModel {}
 
 		@Path("order", "{id}")
 		public struct Order {
@@ -78,8 +78,8 @@ extension PetStore {
 			self.client = client.auth(enabled: false)
 		}
 
-		@POST public func create(_: UserModel) -> UserModel {}
-		@POST public func createWithList(_: [UserModel]) {}
+		@POST public func create(_ body: UserModel) -> UserModel {}
+		@POST public func createWithList(_ body: [UserModel]) {}
 		@GET public func login(username: String, password: String) -> String {
 			client.headers(.authorization(username: username, password: password))
 		}
@@ -91,7 +91,7 @@ extension PetStore {
 
 			#GET(UserModel)
 			#DELETE(UserModel)
-			@PUT("/") public func update(_: UserModel) -> UserModel {}
+			@PUT("/") public func update(_ body: UserModel) -> UserModel {}
 		}
 	}
 }

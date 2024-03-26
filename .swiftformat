@@ -7,6 +7,8 @@
 --disable sortDeclarations
 --disable blankLinesAtStartOfScope
 --disable opaqueGenericParameters
+--disable unusedArguments
+--disable enumnamespaces
 --redundanttype inferred
 --header ""
 --enable organizeDeclarations
