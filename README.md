@@ -288,7 +288,7 @@ struct Pet {
 
     /// POST /pet/{id}/uploadImage
     @POST public func uploadImage(_ body: Data, @Query additionalMetadata: String? = nil) {}
-		}
+  }
 }
 ```
 Macros are not necessary for using `swift-api-client`; they are just syntax sugar. In general, it's not recommended to use a lot of macros for large projects when compilation time becomes a problem; core library syntax is minimalistic enough.
