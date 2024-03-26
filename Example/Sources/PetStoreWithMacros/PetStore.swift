@@ -59,7 +59,7 @@ public extension PetStore {
 		@POST public func order(_: OrderModel) -> OrderModel {}
 
 		@Path("order", "{id}")
-		public enum Order {
+		public struct Order {
 
 			#GET(OrderModel)
 			#DELETE(OrderModel)
