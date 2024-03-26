@@ -30,7 +30,7 @@ public macro API() = #externalMacro(module: "SwiftAPIClientMacros", type: "Swift
 #endif
 
 @propertyWrapper
-public struct APIParameterWrapper<Value> {
+public struct _APIParameterWrapper<Value> {
 
     public var wrappedValue: Value
 
@@ -49,14 +49,18 @@ public struct API {
     @Path
     public struct Pet {
 
-        @GET public func get(@Query status: Int, @Body body: Data) {}
+        @POST public func findByStatus(
+            @Query first: String,
+            @Query second: String,
+            body: (first: String, second: Int)
+        ) -> Bool {}
     }
 }
 
 func test() async throws {
     let api = API(url: URL(string: "")!)
     
-    try await api.pet.get(id: 0, status: 0, body: Data())
+//    try await api.pet.findByStatus("")
 }
 
 @resultBuilder

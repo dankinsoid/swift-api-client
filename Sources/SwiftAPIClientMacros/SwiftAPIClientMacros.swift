@@ -46,18 +46,34 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
         }
         funcDecl.attributes = []
 
+        var params = FunctionParameterListSyntax()
         if !attribute.pathArguments.isEmpty {
-            funcDecl.signature.parameterClause.parameters = attribute.pathArguments.map {
+            params += attribute.pathArguments.map {
                 "\(raw: $0.0): \(raw: $0.1), "
-            } + funcDecl.signature.parameterClause.parameters
+            }
         }
-        if !funcDecl.signature.parameterClause.parameters.isEmpty {
-            funcDecl.signature.parameterClause.parameters.append(", ")
+        var queryParams: ([String], [(String, String)]) = ([], [])
+        var bodyParams: ([String], [(String, String)]) = ([], [])
+        for var param in funcDecl.signature.parameterClause.parameters {
+            
+            let name = (param.secondName ?? param.firstName).trimmed.text
+            if param.attributes.contains("Body"), attribute.method == ".get" {
+                throw MacroError("Body parameter is not allowed with GET method")
+            }
+            try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
+            try scanParameters(name: name, type: "Body", param: &param, into: &bodyParams)
+
+            param.trailingComma = .commaToken()
+            param.leadingTrivia = .newline
+            params.append(param)
         }
-        funcDecl.signature.parameterClause.parameters += [
-            "fileID: String = #fileID, ",
-            "line: UInt = #line"
+
+        params += [
+            "\nfileID: String = #fileID,",
+            "\nline: UInt = #line"
         ]
+        funcDecl.signature.parameterClause.rightParen.leadingTrivia = .newline
+        funcDecl.signature.parameterClause.parameters = params
         var body = funcDecl.body ?? CodeBlockSyntax(statements: [])
         if body.statements.isEmpty {
             body.statements = ["\(raw: callModifier)client"]
@@ -68,6 +84,41 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
             body.statements += ["    \(raw: pathString(path: attribute.path, arguments: attribute.pathArguments))"]
         }
         body.statements += ["    .method(\(raw: attribute.method))"]
+        
+        body.statements += queryParams.0.map { "    .query(\(raw: $0))" }
+        if !queryParams.1.isEmpty {
+            body.statements.append("    .query([\(raw: queryParams.1.map { "\"\($0.0)\": \($0.1)" }.joined(separator: ", "))])")
+        }
+        
+        if bodyParams.0.count > 1 || !bodyParams.1.isEmpty && !bodyParams.0.isEmpty {
+            throw MacroError("Body parameters merging is not supported yet")
+        }
+        if !bodyParams.1.isEmpty {
+            body.statements.append("    .body([\(raw: bodyParams.1.map { "\"\($0.0)\": \($0.1)" }.joined(separator: ", "))])")
+        } else if !bodyParams.0.isEmpty {
+            body.statements.append("    .body(\(raw: bodyParams.0[0]))")
+        }
+
+        if let tuple = funcDecl.signature.returnClause?.type.as(TupleTypeSyntax.self) {
+            let props: [(String, String)] = try tuple.elements.map {
+                guard let label = ($0.firstName ?? $0.secondName) else {
+                    throw MacroError("Tuple elements must have labels")
+                }
+                return (label.text, $0.type.trimmed.description)
+            }
+            let name = "\(funcDecl.name.text.firstUppercased)Response"
+            funcDecl.signature.returnClause = ReturnClauseSyntax(type: TypeSyntax(stringLiteral: name))
+            result.append(
+                """
+                public struct \(raw: name): Codable {
+                    \(raw: props.map { "public var \($0.0): \($0.1)" }.joined(separator: "\n"))
+                    public init(\(raw: props.map { "\($0.0): \($0.1)\($0.1.isOptional ? " = nil" : "")" }.joined(separator: ", "))) {
+                        \(raw: props.map { "self.\($0.0) = \($0.0)" }.joined(separator: "\n"))
+                    }
+                }
+                """
+            )
+        }
         
         var serializer = attribute.serializer ?? "decodable"
         if attribute.serializer == nil {
@@ -82,7 +133,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
         }
         body.statements += ["    .call(.\(raw: attribute.caller), as: Serializer.\(raw: serializer), fileID: fileID, line: line)"]
         funcDecl.body = body
-        result.append(DeclSyntax(funcDecl))
+        result.insert(DeclSyntax(funcDecl), at: 0)
         return result
     }
 }
@@ -117,9 +168,9 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
         let path = path(node: node, name: structDecl.name)
         let pathArguments = pathArguments(path: path)
         let isVar = pathArguments.isEmpty
-        let pathName = path.filter({ !$0.hasPrefix("{") }).last ?? ""
+        let pathName = path.compactMap { $0.hasPrefix("{") ? nil : $0.firstUppercased }.joined().firstLowercased
         let name = path.count > pathArguments.count ? pathName : "callAsFunction"
-        let args = pathArguments.map { "\($0.0): \($0.1)" }.joined(separator: ", ")
+        let args = pathArguments.map { "_ \($0.0): \($0.1)" }.joined(separator: ", ")
 
         var client = "client"
         if !path.isEmpty {
@@ -128,6 +179,7 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 
         return [
             """
+            /// /\(raw: path.joined(separator: "/"))
             \(raw: accessControl)\(raw: isVar ? "var" : "func") \(raw: name)\(raw: isVar ? ":" : "(\(args)) ->") \(raw: structDecl.name) {
                 \(raw: structDecl.name)(client: \(raw: client))
             }
@@ -146,15 +198,15 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
             throw MacroError("\(node.attributeName.description) macro can only be attached to a struct")
         }
     }
-    
+
     private static func structExpansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: StructDeclSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         var result: [DeclSyntax] = [
-            "public typealias Body<Value> = APIParameterWrapper<Value>",
-            "public typealias Query<Value> = APIParameterWrapper<Value>",
+            "public typealias Body<Value> = _APIParameterWrapper<Value>",
+            "public typealias Query<Value> = _APIParameterWrapper<Value>",
             "public var client: APIClient"
         ]
         var hasRightInit = false
@@ -217,10 +269,11 @@ extension AttributeSyntax {
             return nil
         }
         guard let arguments = arguments?.as(LabeledExprListSyntax.self) else {
+            let pathItems = path(arguments: [], name: pathName)
             return CallAttribute(
                 method: "." + name.lowercased(),
-                path: [],
-                pathArguments: [],
+                path: pathItems,
+                pathArguments: pathArguments(path: pathItems),
                 caller: "http",
                 serializer: nil
             )
@@ -241,6 +294,22 @@ extension AttributeSyntax {
             caller: "http",
             serializer: nil
         )
+    }
+}
+
+extension AttributeListSyntax {
+
+    @discardableResult
+    mutating func remove(_ name: String) -> Bool {
+        if let i = firstIndex(where: { $0.as(AttributeSyntax.self)?.attributeName.trimmed.description == name }) {
+            remove(at: i)
+            return true
+        }
+        return false
+    }
+    
+    func contains(_ name: String) -> Bool {
+        contains(where: { $0.as(AttributeSyntax.self)?.attributeName.trimmed.description == name })
     }
 }
 
@@ -299,6 +368,29 @@ private func pathArguments(
     name: TokenSyntax
 ) -> [(String, String, Int)] {
     pathArguments(path: path(node: node, name: name))
+}
+
+private func scanParameters(
+    name: String,
+    type: String,
+    param: inout FunctionParameterListSyntax.Element,
+    into list: inout ([String], [(String, String)])
+) throws {
+    if param.attributes.remove(type.firstUppercased) {
+        list.1.append((name, name))
+    }
+    if param.firstName.trimmed.text.firstLowercased == type.firstLowercased {
+        if let tuple = param.type.as(TupleTypeSyntax.self) {
+            list.1 += try tuple.elements.map {
+                guard let label = ($0.firstName ?? $0.secondName) else {
+                    throw MacroError("Tuple elements must have labels")
+                }
+                return (label.text, "\(name).\(label.text)")
+            }
+        } else {
+            list.0.append(name)
+        }
+    }
 }
 
 #endif
