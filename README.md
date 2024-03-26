@@ -19,6 +19,7 @@
   - [Logging](#logging)
 - [`APIClient.Configs`](#apiclientconfigs)
   - [Configs Modifications Order](#configs-modifications-order)
+- [Macros](#macros)
 - [Introducing `swift-api-client-addons`](#introducing-swift-api-client-addons)
 - [Installation](#installation)
 - [Author](#author)
@@ -74,6 +75,17 @@ try await johnClient.body(updatedUser).put()
 
 // DELETE /user/{userID}
 try await johnClient.delete()
+```
+
+Also, you can use macros for API declaration:
+```swift
+/// /pet
+@Path
+struct Pet {
+
+  /// GET /pet/findByStatus
+  @GET func findByStatus(@Query _ status: PetStatus) -> [PetModel] {}
+}
 ```
 
 ## What is `APIClient`
@@ -240,6 +252,46 @@ let configs = try client
   }
 print(configs.intValue) // 3
 ```
+
+## Macros
+`swift-api-client` provides a set of macros for easier API declarations.
+Example:
+```swift
+/// /pet
+@Path
+struct Pet {
+
+  /// PUT /pet
+  @PUT("/") public func update(_ body: PetModel) -> PetModel {}
+
+  /// POST /pet
+  @POST("/") public func add(_ body: PetModel) -> PetModel {}
+
+  /// GET /pet/findByStatus
+  @GET public func findByStatus(@Query _ status: PetStatus) -> [PetModel] {}
+
+  /// GET /pet/findByTags
+  @GET public func findByTags(@Query _ tags: [String]) -> [PetModel] {}
+
+  /// /pet/{id}
+  @Path("{id}")
+  public struct PetByID {
+
+    /// GET /pet/{id}
+    #GET(PetModel)
+
+    /// DELETE /pet/{id}
+    #DELETE
+
+    /// POST /pet/{id}
+    @POST("/") public func update(@Query name: String?, @Query status: PetStatus?) -> PetModel {}
+
+    /// POST /pet/{id}/uploadImage
+    @POST public func uploadImage(_ body: Data, @Query additionalMetadata: String? = nil) {}
+		}
+}
+```
+Macros are not necessary for using `swift-api-client`; they are just syntax sugar. In general, it's not recommended to use a lot of macros for large projects when compilation time becomes a problem; core library syntax is minimalistic enough.
 
 ## Introducing `swift-api-client-addons`
 
