@@ -13,6 +13,7 @@ var package = Package(
 	],
 	products: [
 		.library(name: "PetStore", targets: ["PetStore"]),
+		.library(name: "PetStoreWithMacros", targets: ["PetStoreWithMacros"]),
 	],
 	dependencies: [
 		.package(path: "../"),
@@ -20,6 +21,12 @@ var package = Package(
 	targets: [
 		.target(
 			name: "PetStore",
+			dependencies: [
+				.product(name: "SwiftAPIClient", package: "swift-api-client"),
+			]
+		),
+		.target(
+			name: "PetStoreWithMacros",
 			dependencies: [
 				.product(name: "SwiftAPIClient", package: "swift-api-client"),
 			]

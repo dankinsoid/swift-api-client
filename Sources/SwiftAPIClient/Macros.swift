@@ -4,8 +4,8 @@ import HTTPTypes
 
 @attached(peer, names: arbitrary)
 public macro Call(
-    _ method: HTTPRequest.Method,
-    _ path: String...
+	_ method: HTTPRequest.Method,
+	_ path: String...
 ) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientCallMacro")
 
 @attached(peer, names: arbitrary)
@@ -27,50 +27,51 @@ public macro Path(_ path: String...) = #externalMacro(module: "SwiftAPIClientMac
 @attached(memberAttribute)
 @attached(member, names: arbitrary)
 public macro API() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientPathMacro")
-#endif
+
+@freestanding(declaration, names: arbitrary)
+public macro GET<T>(_ type: T.Type = T.self) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+@freestanding(declaration, names: arbitrary)
+public macro GET() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+
+@freestanding(declaration, names: arbitrary)
+public macro POST<T>(_ type: T.Type = T.self) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+@freestanding(declaration, names: arbitrary)
+public macro POST() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+
+@freestanding(declaration, names: arbitrary)
+public macro PUT<T>(_ type: T.Type = T.self) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+@freestanding(declaration, names: arbitrary)
+public macro PUT() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+
+@freestanding(declaration, names: arbitrary)
+public macro DELETE<T>(_ type: T.Type = T.self) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+@freestanding(declaration, names: arbitrary)
+public macro DELETE() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+
+@freestanding(declaration, names: arbitrary)
+public macro PATCH<T>(_ type: T.Type = T.self) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
+@freestanding(declaration, names: arbitrary)
+public macro PATCH() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientFreestandingMacro")
 
 @propertyWrapper
 public struct _APIParameterWrapper<Value> {
 
-    public var wrappedValue: Value
+	public var wrappedValue: Value
 
-    public init(wrappedValue: Value) {
-        self.wrappedValue = wrappedValue
-    }
-}
-
-@API 
-public struct API {
-
-    public init(url: URL) {
-        client = APIClient(baseURL: url)
-    }
-
-    @Path
-    public struct Pet {
-
-        @POST public func findByStatus(
-            @Query first: String,
-            @Query second: String,
-            body: (first: String, second: Int)
-        ) -> Bool {}
-    }
-}
-
-func test() async throws {
-    let api = API(url: URL(string: "")!)
-    
-//    try await api.pet.findByStatus("")
+	public init(wrappedValue: Value) {
+		self.wrappedValue = wrappedValue
+	}
 }
 
 @resultBuilder
 public enum APICallFakeBuilder {
 
-    public static func buildBlock<T>() -> T {
-        fatalError()
-    }
+	public static func buildBlock<T>() -> T {
+		fatalError()
+	}
 
-    public static func buildBlock<T>(_ component: APIClient) -> T {
-        fatalError()
-    }
+	public static func buildBlock<T>(_: APIClient) -> T {
+		fatalError()
+	}
 }
+#endif
