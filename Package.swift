@@ -1,6 +1,7 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.9
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
+import CompilerPluginSupport
 import PackageDescription
 
 var package = Package(
@@ -17,11 +18,13 @@ var package = Package(
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
 		.package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.3"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "509.0.2"),
 	],
 	targets: [
 		.target(
 			name: "SwiftAPIClient",
 			dependencies: [
+                .target(name: "SwiftAPIClientMacros"),
 				.product(name: "Logging", package: "swift-log"),
 				.product(name: "HTTPTypes", package: "swift-http-types"),
 				.product(name: "HTTPTypesFoundation", package: "swift-http-types"),
@@ -31,5 +34,12 @@ var package = Package(
 			name: "SwiftAPIClientTests",
 			dependencies: [.target(name: "SwiftAPIClient")]
 		),
+        .macro(
+            name: "SwiftAPIClientMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+            ]
+        ),
 	]
 )

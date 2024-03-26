@@ -32,58 +32,37 @@ public struct PetStore {
 
 public extension PetStore {
 
-	var pet: Pet {
-		Pet(client: client("pet"))
-	}
-
+  @Path
 	struct Pet {
+	
+		@GET func findByStatus(status: PetStatus) async throws -> PetModel {}
 
-		var client: APIClient
-
-		public func update(_ pet: PetModel) async throws -> PetModel {
-			try await client.body(pet).put()
+		/// GET /pet/findByStatus
+		func findByStatus(_ status: PetStatus, fileID: String = #fileID, line: UInt = #line) async throws -> PetModel {
+			try await client.query(["status": status]).post(fileID: fileID, line: line)
 		}
 
-		public func add(_ pet: PetModel) async throws -> PetModel {
-			try await client.body(pet).post()
+    @POST("/") func add(@Body pet _: PetModel) async throws {}
+
+		/// POST /pet
+		func add(_ pet: PetModel, fileID: String = #fileID, line: UInt = #line) async throws -> PetModel {
+			try await client.body(petModel).post(fileID: fileID, line: line)
 		}
 
-		public func findBy(status: PetStatus) async throws -> [PetModel] {
-			try await client("findByStatus").query("status", status).call()
-		}
+		@GET func findByStatus(status: PetStatus) -> [PetModel] {}
+		@GET func findByTags(tags: [String]) -> [PetModel] {}
 
-		public func findBy(tags: [String]) async throws -> [PetModel] {
-			try await client("findByTags").query("tags", tags).call()
-		}
-
-		public func callAsFunction(_ id: String) -> PetByID {
-			PetByID(client: client.path(id))
-		}
-
+		@Path("{id}")
 		public struct PetByID {
 
-			var client: APIClient
+			@GET func get() async throws -> PetModel
 
-			public func get() async throws -> PetModel {
-				try await client()
-			}
+			@GET(PetModel)
+			@POST(_ update: (@Query(name: String?, status: PetStatus?)) -> PetModel)
+			@DELETE(PetModel)
 
-			public func update(name: String?, status: PetStatus?) async throws -> PetModel {
-				try await client
-					.query(["name": name, "status": status])
-					.post()
-			}
-
-			public func delete() async throws -> PetModel {
-				try await client.delete()
-			}
-
-			public func uploadImage(_ image: Data, additionalMetadata: String? = nil) async throws {
-				try await client("uploadImage")
-					.query("additionalMetadata", additionalMetadata)
-					.body(image)
-					.headers(.contentType(.application(.octetStream)))
-					.post()
+			@POST(uploadImage: (@Body _ image: Data, @Query additionalMetadata: String? = nil) -> Void) {
+				client.headers(.contentType(.application(.octetStream)))
 			}
 		}
 	}
@@ -93,37 +72,17 @@ public extension PetStore {
 
 public extension PetStore {
 
-	var store: Store {
-		Store(client: client("store").auth(enabled: false))
-	}
-
+	@Path("store")
 	struct Store {
 
-		var client: APIClient
+		@GET(inventory: [String: Int]) { $0.auth(enabled: true) }
+		@POST(order: (@Body _ model: OrderModel) -> OrderModel)
 
-		public func inventory() async throws -> [String: Int] {
-			try await client("inventory").auth(enabled: true).call()
-		}
-
-		public func order(_ model: OrderModel) async throws -> OrderModel {
-			try await client("order").body(model).post()
-		}
-
-		public func order(_ id: String) -> Order {
-			Order(client: client.path("order", id))
-		}
-
+		@Path("order", ":id")
 		public struct Order {
 
-			var client: APIClient
-
-			public func find() async throws -> OrderModel {
-				try await client()
-			}
-
-			public func delete() async throws -> OrderModel {
-				try await client.delete()
-			}
+			@GET public func find() async throws -> OrderModel
+			@DELETE public func delete() async throws -> OrderModel
 		}
 	}
 }
@@ -132,51 +91,20 @@ public extension PetStore {
 
 public extension PetStore {
 
-	var user: User {
-		User(client: client("user").auth(enabled: false))
-	}
-
+	@Path("user") { $0.auth(enabled: false)) }
 	struct User {
 
-		var client: APIClient
+		@POST public func create(@Body _ model: UserModel) async throws -> UserModel
+		@POST("createWithList") public func createWith(@Body _ list: [UserModel]) async throws
+		@GET("login", \SomeType.login) public func login(@Query username: String, @Query password: String) async throws -> String
+		@GET("logout") public func logout() async throws
 
-		public func create(_ model: UserModel) async throws -> UserModel {
-			try await client.body(model).post()
-		}
-
-		public func createWith(list: [UserModel]) async throws {
-			try await client("createWithList").body(list).post()
-		}
-
-		public func login(username: String, password: String) async throws -> String {
-			try await client("login")
-				.query(LoginQuery(username: username, password: password))
-				.call()
-		}
-
-		public func logout() async throws {
-			try await client("logout").call()
-		}
-
-		public func callAsFunction(_ username: String) -> UserByUsername {
-			UserByUsername(client: client.path(username))
-		}
-
+		@Path(":username")
 		public struct UserByUsername {
 
-			var client: APIClient
-
-			public func get() async throws -> UserModel {
-				try await client()
-			}
-
-			public func update(_ model: UserModel) async throws -> UserModel {
-				try await client.body(model).put()
-			}
-
-			public func delete() async throws -> UserModel {
-				try await client.delete()
-			}
+			@GET public func get() async throws -> UserModel
+			@PUT public func update(_ model: UserModel) async throws -> UserModel
+			@DELETE public func delete() async throws -> UserModel
 		}
 	}
 }

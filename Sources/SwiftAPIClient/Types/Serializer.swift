@@ -1,6 +1,7 @@
 import Foundation
 
 /// A generic struct for serializing network responses into specified types.
+@dynamicMemberLookup
 public struct Serializer<Response, T> {
 
 	/// A closure that serializes a network response into a specified type.
@@ -11,6 +12,17 @@ public struct Serializer<Response, T> {
 	public init(_ serialize: @escaping (Response, APIClient.Configs) throws -> T) {
 		self.serialize = serialize
 	}
+
+    /// Maps the serialized object to another type.
+    public func map<U>(_ transform: @escaping (T, APIClient.Configs) throws -> U) -> Serializer<Response, U> {
+        Serializer<Response, U> { response, configs in
+            try transform(serialize(response, configs), configs)
+        }
+    }
+
+    public subscript<U>(dynamicMember keyPath: KeyPath<T, U>) -> Serializer<Response, U> {
+        map { value, _ in value[keyPath: keyPath] }
+    }
 }
 
 public extension Serializer where Response == T {
@@ -26,6 +38,19 @@ public extension Serializer where Response == Data, T == Data {
 	static var data: Self {
 		Self { data, _ in data }
 	}
+}
+
+public extension Serializer where Response == Data, T == String {
+    
+    /// A static property to get a `Serializer` that directly returns the response `Data`.
+    static var string: Self {
+        Self { data, _ in
+            guard let string = String(data: data, encoding: .utf8) else {
+                throw Errors.custom("Invalid UTF8 data")
+            }
+            return string
+        }
+    }
 }
 
 public extension Serializer where Response == Data, T == Void {
