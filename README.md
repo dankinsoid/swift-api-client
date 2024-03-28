@@ -290,10 +290,12 @@ struct Pet {
   public struct PetByID {
 
     /// GET /pet/{id}
-    #GET(PetModel)
+    @GET
+    func get() -> PetModel {}
 
     /// DELETE /pet/{id}
-    #DELETE
+    @DELETE("/")
+    func delete() {}
 
     /// POST /pet/{id}
     @POST("/") public func update(@Query name: String?, @Query status: PetStatus?) -> PetModel {}
