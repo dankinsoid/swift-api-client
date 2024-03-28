@@ -106,6 +106,21 @@ public extension APIClient {
 	func header(_ field: HTTPField.Name, _ value: String, removeCurrent: Bool = false) -> APIClient {
 		headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
 	}
+    
+    /// Adds or updates a specific HTTP header for the request.
+    /// - Parameters:
+    ///   - field: The key of the header to add or update.
+    ///   - value: The value for the header.
+    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+    /// - Returns: An instance of `APIClient` with modified header.
+    @_disfavoredOverload
+    func header(_ field: HTTPField.Name, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> APIClient {
+        if let value {
+            return headers(HTTPField(name: field, value: value.description), removeCurrent: removeCurrent)
+        } else {
+            return self
+        }
+    }
 }
 
 // MARK: - Body modifiers

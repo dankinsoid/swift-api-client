@@ -142,6 +142,11 @@ public struct APIClient {
 		return try await operation(configs)
 	}
 
+    /// Modifies the client using the provided closure.
+    public func modifier(_ modifier: (Self) throws -> Self) rethrows -> Self {
+        try modifier(self)
+    }
+
 	private func createRequest() throws -> (HTTPRequest, Configs) {
 		var configs = Configs()
 		let client = Self.globalModifier(self)
