@@ -17,21 +17,6 @@ struct SwiftAPIClientMacrosPlugin: CompilerPlugin {
 	]
 }
 
-public struct SwiftAPIClientFreestandingMacro: DeclarationMacro {
-
-	public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-		let name = node.macro.text.lowercased()
-		var type = node.argumentList.first?.expression.trimmed.description ?? ""
-		if type.hasSuffix(".self") {
-			type.removeLast(5)
-		}
-		if !type.isEmpty {
-			type = " -> \(type)"
-		}
-		return ["public func \(raw: name)() async throws\(raw: type) { try await client.\(raw: name)() }"]
-	}
-}
-
 public struct SwiftAPIClientCallMacro: PeerMacro {
 
 	public static func expansion(
@@ -70,18 +55,14 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		}
 		var queryParams: ([String], [(String, String)]) = ([], [])
 		var bodyParams: ([String], [(String, String)]) = ([], [])
-		for var param in funcDecl.signature.parameterClause.parameters {
+		for param in funcDecl.signature.parameterClause.parameters {
 
 			let name = (param.secondName ?? param.firstName).trimmed.text
-			if param.attributes.contains("Body"), attribute.method == ".get" {
+            if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
 				throw MacroError("Body parameter is not allowed with GET method")
 			}
-			try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
-			try scanParameters(name: name, type: "Body", param: &param, into: &bodyParams)
-
-			param.trailingComma = .commaToken()
-			param.leadingTrivia = .newline
-			params.append(param)
+            params += try scanParameters(name: name, type: "Query", param: param, into: &queryParams)
+            params += try scanParameters(name: name, type: "Body", param: param, into: &bodyParams)
 		}
 
 		params += [
@@ -116,17 +97,14 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		}
 
 		if let tuple = funcDecl.signature.returnClause?.type.as(TupleTypeSyntax.self) {
-			let props: [(String, String)] = try tuple.elements.map {
-				guard let label = ($0.firstName ?? $0.secondName) else {
-					throw MacroError("Tuple elements must have labels")
-				}
-				return (label.text, $0.type.trimmed.description)
+			let props: [(String, String)] = tuple.elements.map {
+				($0.labelName, $0.type.trimmed.description)
 			}
 			let name = "\(funcDecl.name.text.firstUppercased)Response"
 			funcDecl.signature.returnClause = ReturnClauseSyntax(type: TypeSyntax(stringLiteral: name))
 			result.append(
 				"""
-				public struct \(raw: name): Codable {
+				public struct \(raw: name): Codable, Equatable {
 				    \(raw: props.map { "public var \($0.0): \($0.1)" }.joined(separator: "\n"))
 				    public init(\(raw: props.map { "\($0.0): \($0.1)\($0.1.isOptional ? " = nil" : "")" }.joined(separator: ", "))) {
 				        \(raw: props.map { "self.\($0.0) = \($0.0)" }.joined(separator: "\n"))
@@ -147,7 +125,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 			default: serializer
 			}
 		}
-		body.statements += ["    .call(.\(raw: attribute.caller), as: Serializer.\(raw: serializer), fileID: fileID, line: line)"]
+		body.statements += ["    .call(.\(raw: attribute.caller), as: .\(raw: serializer), fileID: fileID, line: line)"]
 		funcDecl.body = body
 		result.insert(DeclSyntax(funcDecl), at: 0)
 		return result
@@ -184,9 +162,11 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		let path = path(node: node, name: structDecl.name)
 		let pathArguments = pathArguments(path: path)
 		let isVar = pathArguments.isEmpty
-		let pathName = path.compactMap { $0.hasPrefix("{") ? nil : $0.firstUppercased }.joined().firstLowercased
+        let pathName = structDecl.name.trimmed.text.firstLowercased
 		let name = path.count > pathArguments.count ? pathName : "callAsFunction"
-		let args = pathArguments.map { "_ \($0.0): \($0.1)" }.joined(separator: ", ")
+        let args = pathArguments.enumerated()
+            .map { "\($0.offset == 0 ? "_ " : "")\($0.element.0): \($0.element.1)" }
+            .joined(separator: ", ")
 
 		var client = "client"
 		if !path.isEmpty {
@@ -220,15 +200,15 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingMembersOf declaration: StructDeclSyntax,
 		in context: some MacroExpansionContext
 	) throws -> [DeclSyntax] {
+        let isPath = node.description.contains("Path")
+
 		var result: [DeclSyntax] = [
 			"public typealias Body<Value> = _APIParameterWrapper<Value>",
 			"public typealias Query<Value> = _APIParameterWrapper<Value>",
-			"public var client: APIClient",
+            "\(raw: isPath ? "private let" : "public var") client: APIClient",
 		]
 		var hasRightInit = false
 		var hasOtherInits = false
-
-		let isPath = node.description.contains("Path")
 
 		for member in declaration.memberBlock.members {
 			if let initDecl = member.decl.as(InitializerDeclSyntax.self) {
@@ -257,6 +237,21 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		}
 		return result
 	}
+}
+
+public struct SwiftAPIClientFreestandingMacro: DeclarationMacro {
+    
+    public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+        let name = node.macro.text.lowercased()
+        var type = node.argumentList.first?.expression.trimmed.description ?? ""
+        if type.hasSuffix(".self") {
+            type.removeLast(5)
+        }
+        if !type.isEmpty {
+            type = " -> \(type)"
+        }
+        return ["public func \(raw: name)() async throws\(raw: type) { try await client.\(raw: name)() }"]
+    }
 }
 
 struct CallAttribute {
@@ -370,7 +365,7 @@ private func path<C: Collection<LabeledExprListSyntax.Element>>(
 private func pathString(path: [String], arguments: [(String, String, Int)]) -> String {
 	let string = path.enumerated().map { offset, item in
 		if let arg = arguments.first(where: { $0.2 == offset }) {
-			return arg.0
+			return "\"\\(\(arg.0))\""
 		} else {
 			return "\"\(item)\""
 		}
@@ -389,26 +384,54 @@ private func pathArguments(
 private func scanParameters(
 	name: String,
 	type: String,
-	param: inout FunctionParameterListSyntax.Element,
+    param: FunctionParameterListSyntax.Element,
 	into list: inout ([String], [(String, String)])
-) throws {
+) throws -> [FunctionParameterListSyntax.Element] {
+    var param = param
+    param.trailingComma = .commaToken()
+    param.leadingTrivia = .newline
 	if param.attributes.remove(type.firstUppercased) {
 		list.1.append((name, name))
-		return
+		return [param]
 	}
 	//    let typeName = param.firstName.text.count > 1 ? param.firstName.text : name
 	if name.firstLowercased == type.firstLowercased {
 		if let tuple = param.type.as(TupleTypeSyntax.self) {
-			list.1 += try tuple.elements.map {
-				guard let label = ($0.firstName ?? $0.secondName) else {
-					throw MacroError("Tuple elements must have labels")
-				}
-				return (label.text, "\(name).\(label.text)")
-			}
+            var result: [FunctionParameterListSyntax.Element] = []
+            for element in tuple.elements {
+                guard !element.type.is(TupleTypeSyntax.self) else {
+                    throw MacroError("Tuple within tuple is not supported yet")
+                }
+                let label = element.labelName
+                let secondName = "\(name.firstLowercased)\(label.firstUppercased)"
+                list.1.append((label, secondName))
+                
+                result.append(
+                    FunctionParameterSyntax(
+                        leadingTrivia: .newline,
+                        firstName: .identifier(label),
+                        secondName: .identifier(secondName),
+                        type: element.type,
+                        trailingComma: .commaToken()
+                    )
+                )
+            }
+            return result
 		} else {
 			list.0.append(name)
 		}
+        return [param]
 	}
+    return []
 }
 
+private extension TupleTypeElementListSyntax.Element {
+    
+    var labelName: String {
+        (firstName ?? secondName)?.text ?? type
+            .trimmed.description
+            .firstLowercased
+            .removeCharacters(in: ["?", ".", "<", ">"])
+    }
+}
 #endif

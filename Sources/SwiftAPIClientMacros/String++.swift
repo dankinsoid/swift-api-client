@@ -13,4 +13,8 @@ extension String {
 	var isOptional: Bool {
 		hasSuffix("?") || hasPrefix("Optional<") && hasSuffix(">")
 	}
+    
+    func removeCharacters(in set: CharacterSet) -> String {
+        components(separatedBy: set).joined()
+    }
 }

@@ -36,8 +36,8 @@ public extension PetStore {
 		@Path("{id}")
 		public struct PetByID {
 
-			#GET(PetModel)
-			#DELETE
+            @GET("/") public func get() -> PetModel {}
+            @DELETE("/") public func delete() {}
 			@POST("/") public func update(@Query name: String?, @Query status: PetStatus?) -> PetModel {}
 			@POST public func uploadImage(_ body: Data, @Query additionalMetadata: String? = nil) {}
 		}
@@ -61,8 +61,8 @@ public extension PetStore {
 		@Path("order", "{id}")
 		public struct Order {
 
-			#GET(OrderModel)
-			#DELETE(OrderModel)
+            @GET("/") public func get() -> OrderModel {}
+            @DELETE("/") public func delete() {}
 		}
 	}
 }
@@ -89,8 +89,8 @@ extension PetStore {
 		@Path("{username}")
 		public struct UserByUsername {
 
-			#GET(UserModel)
-			#DELETE(UserModel)
+            @GET("/") public func get() -> UserModel {}
+            @DELETE("/") public func delete() {}
 			@PUT("/") public func update(_ body: UserModel) -> UserModel {}
 		}
 	}

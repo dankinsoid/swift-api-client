@@ -83,8 +83,17 @@ Also, you can use macros for API declaration:
 @Path
 struct Pet {
 
+  /// PUT /pet
+  @PUT("/") public func update(_ body: PetModel) -> PetModel {}
+
+  /// POST /pet
+  @POST("/") public func add(_ body: PetModel) -> PetModel {}
+
   /// GET /pet/findByStatus
-  @GET func findByStatus(@Query _ status: PetStatus) -> [PetModel] {}
+  @GET public func findByStatus(@Query _ status: PetStatus) -> [PetModel] {}
+
+  /// GET /pet/findByTags
+  @GET public func findByTags(@Query _ tags: [String]) -> [PetModel] {}
 }
 ```
 
@@ -255,6 +264,9 @@ print(configs.intValue) // 3
 
 ## Macros
 `swift-api-client` provides a set of macros for easier API declarations.
+- `API` macro that generates an API client struct.
+- `Path` macro that generates an API client scope for the path.
+- `Cal(_ method:)`, `GET`, `POST`, `PUT`, etc macros for declaring API methods.
 Example:
 ```swift
 /// /pet
@@ -291,7 +303,7 @@ struct Pet {
   }
 }
 ```
-Macros are not necessary for using `swift-api-client`; they are just syntax sugar. In general, it's not recommended to use a lot of macros for large projects when compilation time becomes a problem; core library syntax is minimalistic enough.
+Macros are not necessary for using `swift-api-client`; they are just syntax sugar.
 
 ## Introducing `swift-api-client-addons`
 
