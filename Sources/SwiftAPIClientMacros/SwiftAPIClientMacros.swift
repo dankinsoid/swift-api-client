@@ -152,17 +152,22 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingPeersOf declaration: some DeclSyntaxProtocol,
 		in context: some SwiftSyntaxMacros.MacroExpansionContext
 	) throws -> [DeclSyntax] {
-		guard let structDecl = declaration.as(StructDeclSyntax.self) else {
-			return []
-		}
-		let accessControl = structDecl.modifiers.first(as: { $0.as(AccessorDeclSyntax.self) }).map {
+        let structDecl = declaration.as(StructDeclSyntax.self)
+        guard structDecl != nil || declaration.is(ExtensionDeclSyntax.self) else {
+            throw MacroError("Path macro can be applied only to struct or extension")
+        }
+        guard let declName = structDecl?.name, node.description.contains("Path") else {
+            return []
+        }
+		let accessControl = structDecl?.modifiers.first(as: { $0.as(AccessorDeclSyntax.self) }).map {
 			"\($0) "
 		} ?? ""
-
-		let path = path(node: node, name: structDecl.name)
+        
+        
+		let path = path(node: node, name: declName)
 		let pathArguments = pathArguments(path: path)
 		let isVar = pathArguments.isEmpty
-        let pathName = structDecl.name.trimmed.text.firstLowercased
+        let pathName = declName.trimmed.text.firstLowercased
 		let name = path.count > pathArguments.count ? pathName : "callAsFunction"
         let args = pathArguments.enumerated()
             .map { "\($0.offset == 0 ? "_ " : "")\($0.element.0): \($0.element.1)" }
@@ -176,8 +181,8 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		return [
 			"""
 			/// /\(raw: path.joined(separator: "/"))
-			\(raw: accessControl)\(raw: isVar ? "var" : "func") \(raw: name)\(raw: isVar ? ":" : "(\(args)) ->") \(raw: structDecl.name) {
-			    \(raw: structDecl.name)(client: \(raw: client))
+			\(raw: accessControl)\(raw: isVar ? "var" : "func") \(raw: name)\(raw: isVar ? ":" : "(\(args)) ->") \(raw: declName) {
+			    \(raw: declName)(client: \(raw: client))
 			}
 			""",
 		]
@@ -188,10 +193,13 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingMembersOf declaration: some DeclGroupSyntax,
 		in context: some MacroExpansionContext
 	) throws -> [DeclSyntax] {
+        guard !declaration.is(ExtensionDeclSyntax.self) else {
+            return []
+        }
 		if let structDecl = declaration.as(StructDeclSyntax.self) {
 			return try structExpansion(of: node, providingMembersOf: structDecl, in: context)
 		} else {
-			throw MacroError("\(node.attributeName.description) macro can only be attached to a struct")
+			throw MacroError("\(node.attributeName.description) macro can only be attached to a struct or extension")
 		}
 	}
 
@@ -205,7 +213,7 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		var result: [DeclSyntax] = [
 			"public typealias Body<Value> = _APIParameterWrapper<Value>",
 			"public typealias Query<Value> = _APIParameterWrapper<Value>",
-            "\(raw: isPath ? "private let" : "public var") client: APIClient",
+            "public var client: APIClient",
 		]
 		var hasRightInit = false
 		var hasOtherInits = false

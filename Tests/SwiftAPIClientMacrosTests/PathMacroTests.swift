@@ -23,7 +23,7 @@ final class PathMacroTests: XCTestCase {
       
         public typealias Query<Value> = _APIParameterWrapper<Value>
       
-        private var client: APIClient
+        public var client: APIClient
       
         fileprivate init(client: APIClient) {
             self.client = client
@@ -54,7 +54,7 @@ final class PathMacroTests: XCTestCase {
       
         public typealias Query<Value> = _APIParameterWrapper<Value>
       
-        private var client: APIClient
+        public var client: APIClient
       
         fileprivate init(client: APIClient) {
             self.client = client
@@ -85,7 +85,7 @@ final class PathMacroTests: XCTestCase {
       
         public typealias Query<Value> = _APIParameterWrapper<Value>
       
-        private var client: APIClient
+        public var client: APIClient
       
         fileprivate init(client: APIClient) {
             self.client = client
@@ -121,7 +121,7 @@ final class PathMacroTests: XCTestCase {
       
         public typealias Query<Value> = _APIParameterWrapper<Value>
       
-        private var client: APIClient
+        public var client: APIClient
       
         fileprivate init(client: APIClient) {
             self.client = client
