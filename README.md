@@ -290,7 +290,7 @@ struct Pet {
   public struct PetByID {
 
     /// GET /pet/{id}
-    @GET
+    @GET("/")
     func get() -> PetModel {}
 
     /// DELETE /pet/{id}
