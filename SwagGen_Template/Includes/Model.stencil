@@ -1,4 +1,4 @@
-{% macro propertyType property %}{% if property.type == "DateTime" or property.type == "DateDay" %}Date{% else %}{% if property.raw.format == "timestamp" %}Date{% else %}{{ property.type }}{% endif %}{% endif %}{% if property.optional or property.raw.nullable %}?{% endif %}{% endmacro %}
+{% macro propertyType property %}{% if options.customSchemes[property.raw.format] %}{{ options.customSchemes[property.raw.format] }}{% elif property.type == "DateTime" or property.type == "DateDay" or property.raw.format == "timestamp" %}Date{% else %}{{ property.type }}{% endif %}{% if property.optional or property.raw.nullable %}?{% endif %}{% endmacro %}
 {% macro propertyName property %}{% if property.value|hasPrefix:"_" %}_{{ property.name }}{% else %}{{ property.name }}{% endif %}{% endmacro %}
 {% if options.excludeTypes[type] == true %}
     
