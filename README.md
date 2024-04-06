@@ -141,7 +141,6 @@ Defines request execution with several built-in callers for various request type
 - `.http` for HTTP requests using `try await` syntax.
 - `.httpPublisher` for HTTP requests with Combine syntax.
 - `.httpDownload` for HTTP download requests using `try await` syntax.
-- `.httpUpload` for HTTP upload requests using `try await` syntax.
 - `.mock` for mock requests using `try await` syntax.
 
 All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession`. It's possible to customize the current `.httpClient` instance.
