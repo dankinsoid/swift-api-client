@@ -7,6 +7,7 @@ import Foundation
 public struct APIClient {
 
 	private var _createRequest: (Configs) throws -> HTTPRequest
+    private var _modifyRequest: (inout HTTPRequest, Configs) throws -> Void = { _, _ in }
 	private var modifyConfigs: (inout Configs) -> Void = { _ in }
 
 	/// Initializes a new network client with a closure that creates a URLRequest.
@@ -68,10 +69,10 @@ public struct APIClient {
 		return result
 	}
 
-	/// Modifies the URLRequest using the provided closure.
+	/// Modifies the URL request using the provided closure.
 	///   - location: When the request should be modified.
-	///   - modifier: A closure that takes `inout URLRequest` and modifies the URLRequest.
-	/// - Returns: An instance of `APIClient` with a modified URLRequest.
+	///   - modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
+	/// - Returns: An instance of `APIClient` with a modified URL request.
 	public func modifyRequest(
 		_ modifier: @escaping (inout HTTPRequest) throws -> Void
 	) -> APIClient {
@@ -80,11 +81,11 @@ public struct APIClient {
 		}
 	}
 
-	/// Modifies the URLRequest using the provided closure, with access to current configurations.
+	/// Modifies the URL request using the provided closure, with access to current configurations.
 	/// - Parameter:
 	///   - location: When the request should be modified.
-	///   - modifier: A closure that takes `inout URLRequest` and `Configs`, and modifies the URLRequest.
-	/// - Returns: An instance of `APIClient` with a modified URLRequest.
+	///   - modifier: A closure that takes `inout HTTPRequest` and `Configs`, and modifies the URL request.
+	/// - Returns: An instance of `APIClient` with a modified URL request.
 	public func modifyRequest(
 		_ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
 	) -> APIClient {
@@ -97,7 +98,21 @@ public struct APIClient {
 		return result
 	}
 
-	/// Executes an operation with the current URLRequest and configurations.
+    /// Modifies the URL request using the provided closure before the request is executed.
+    /// - Parameter modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
+    /// - Returns: An instance of `APIClient` with a modified URLRequest.
+    public func finalizeRequest(
+        _ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
+    ) -> APIClient {
+        var result = self
+        result._modifyRequest = { [_modifyRequest] req, configs in
+            try _modifyRequest(&req, configs)
+            try modifier(&req, configs)
+        }
+        return result
+    }
+
+	/// Executes an operation with the current URL request and configurations.
 	/// - Parameter operation: A closure that takes an URL request and `Configs` and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
@@ -106,7 +121,7 @@ public struct APIClient {
 		return try operation(request, configs)
 	}
 
-	/// Asynchronously executes an operation with the current URLRequest and configurations.
+	/// Asynchronously executes an operation with the current URL request and configurations.
 	/// - Parameter operation: A closure that takes an URL request and `Configs`, and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
@@ -151,7 +166,9 @@ public struct APIClient {
 		var configs = Configs()
 		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
-		return try (client._createRequest(configs), configs)
+        var request = try client._createRequest(configs)
+        try client._modifyRequest(&request, configs)
+		return (request, configs)
 	}
 }
 

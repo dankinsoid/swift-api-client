@@ -18,7 +18,7 @@ public extension APIClient {
 	/// - Parameter authModifier: An `AuthModifier` that modifies the request for authentication.
 	/// - Returns: An instance of `APIClient` configured with the specified authentication modifier.
 	func auth(_ authModifier: AuthModifier) -> APIClient {
-		modifyRequest { request, configs in
+		finalizeRequest { request, configs in
 			if configs.isAuthEnabled {
 				try authModifier.modifier(&request, configs)
 			}
@@ -99,4 +99,18 @@ public extension AuthModifier {
 			$0.headerFields[field.name] = field.value
 		}
 	}
+}
+
+private struct AuthMiddleware: HTTPClientMiddleware {
+
+    let modifier: AuthModifier
+
+    func execute<T>(
+        request: HTTPTypes.HTTPRequest,
+        body: RequestBody?,
+        configs: APIClient.Configs,
+        next: (HTTPTypes.HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPTypes.HTTPResponse)
+    ) async throws -> (T, HTTPTypes.HTTPResponse) {
+        
+    }
 }
