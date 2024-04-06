@@ -28,7 +28,7 @@ extension {{ options.name }} {
     **{{ method|uppercase }}** {{ path }}
     */
 		{% set funcName %}{% if options.groupingType == "path" %}{{ method|lowercase|escapeReservedKeywords }}{% elif options.groupingType == "tag" and tag %}{{ type|replace:tagType,""|lowerFirstLetter }}{% else %}{{ type|lowerFirstLetter }}{% endif %}{% endset %}
-    public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line) async throws -> {{ successType|default:"Void" }} {
+    public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }} {{ param.value }}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line) async throws -> {{ successType|default:"Void" }} {
         try await client
             {% if options.groupingType != "path" %}
             .path("{{ path|replace:"{","\("|replace:"}",")" }}")
@@ -37,7 +37,7 @@ extension {{ options.name }} {
             {% if queryParams %}
             .query([
                 {% for param in queryParams %}
-                "{{ param.value }}": {{ param.value }}{% ifnot forloop.last %},{% endif %}
+                "{{ param.value }}": {{ param.name }}{% ifnot forloop.last %},{% endif %}
                 {% endfor %}
             ])
             {% endif %}

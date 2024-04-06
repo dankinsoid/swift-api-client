@@ -100,17 +100,3 @@ public extension AuthModifier {
 		}
 	}
 }
-
-private struct AuthMiddleware: HTTPClientMiddleware {
-
-    let modifier: AuthModifier
-
-    func execute<T>(
-        request: HTTPTypes.HTTPRequest,
-        body: RequestBody?,
-        configs: APIClient.Configs,
-        next: (HTTPTypes.HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPTypes.HTTPResponse)
-    ) async throws -> (T, HTTPTypes.HTTPResponse) {
-        
-    }
-}
