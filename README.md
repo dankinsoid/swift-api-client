@@ -159,6 +159,10 @@ The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be 
 #### Some execution modifiers
 - `.retry(limit:)` for retrying a request a specified number of times.
 - `.throttle(interval:)` for throttling requests with a specified interval.
+- `.timeout(_:)` for setting an execution timeout.
+- `.waitForConnection()` for waiting for a connection before executing a request.
+- `.backgroundTask()` for executing a request in the background task.
+- `.retryIfFailedInBackground()` for retrying a request if it fails in the background.
 
 ### Encoding and Decoding
 There are several built-in configurations for encoding and decoding:
@@ -323,7 +327,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.5.2")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.5.3")
   ],
   targets: [
     .target(
