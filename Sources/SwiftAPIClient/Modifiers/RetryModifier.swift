@@ -19,7 +19,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 		request: HTTPRequest,
 		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		var count = 0
 		func needRetry() -> Bool {

@@ -16,7 +16,7 @@ var package = Package(
 	],
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.5.3"),
-		.package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.3")
+		.package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.3"),
 	],
 	targets: [
 		.target(
@@ -30,6 +30,6 @@ var package = Package(
 		.testTarget(
 			name: "SwiftAPIClientTests",
 			dependencies: [.target(name: "SwiftAPIClient")]
-		)
+		),
 	]
 )

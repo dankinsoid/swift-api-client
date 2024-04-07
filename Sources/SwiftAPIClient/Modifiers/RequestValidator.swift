@@ -43,7 +43,7 @@ private struct RequestValidatorMiddleware: HTTPClientMiddleware {
 		request: HTTPRequest,
 		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		try validator.validate(request, body, configs)
 		return try await next(request, body, configs)

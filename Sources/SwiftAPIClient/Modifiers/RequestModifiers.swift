@@ -106,21 +106,21 @@ public extension APIClient {
 	func header(_ field: HTTPField.Name, _ value: String, removeCurrent: Bool = false) -> APIClient {
 		headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
 	}
-    
-    /// Adds or updates a specific HTTP header for the request.
-    /// - Parameters:
-    ///   - field: The key of the header to add or update.
-    ///   - value: The value for the header.
-    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
-    /// - Returns: An instance of `APIClient` with modified header.
-    @_disfavoredOverload
-    func header(_ field: HTTPField.Name, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> APIClient {
-        if let value {
-            return headers(HTTPField(name: field, value: value.description), removeCurrent: removeCurrent)
-        } else {
-            return self
-        }
-    }
+
+	/// Adds or updates a specific HTTP header for the request.
+	/// - Parameters:
+	///   - field: The key of the header to add or update.
+	///   - value: The value for the header.
+	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+	/// - Returns: An instance of `APIClient` with modified header.
+	@_disfavoredOverload
+	func header(_ field: HTTPField.Name, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> APIClient {
+		if let value {
+			return headers(HTTPField(name: field, value: value.description), removeCurrent: removeCurrent)
+		} else {
+			return self
+		}
+	}
 }
 
 // MARK: - Body modifiers
@@ -369,35 +369,5 @@ public extension APIClient {
 			fullPath.fragment = fragment
 			$0.path = fullPath.description
 		}
-	}
-}
-
-// MARK: - Timeout modifiers
-
-public extension APIClient {
-
-	/// Sets the URLRequest timeoutInterval property.
-	///
-	/// - Parameter timeout: The timeout interval to set for the request.
-	/// - Returns: An instance of `APIClient` with the specified timeout interval.
-	///
-	/// If during a connection attempt the request remains idle for longer than the timeout interval, the request is considered to have timed out.
-	/// The default timeout interval is 60 seconds.
-	/// As a general rule, you should not use short timeout intervals. Instead, you should provide an easy way for the user to cancel a long-running operation.
-	func timeoutInterval(_ timeout: TimeInterval) -> APIClient {
-		configs(\.timeoutInterval, timeout)
-	}
-}
-
-public extension APIClient.Configs {
-
-	/// The timeout interval of the request.
-	///
-	/// If during a connection attempt the request remains idle for longer than the timeout interval, the request is considered to have timed out.
-	/// The default timeout interval is 60 seconds.
-	/// As a general rule, you should not use short timeout intervals. Instead, you should provide an easy way for the user to cancel a long-running operation.
-	var timeoutInterval: TimeInterval {
-		get { self[\.timeoutInterval] ?? 60 }
-		set { self[\.timeoutInterval] = newValue }
 	}
 }

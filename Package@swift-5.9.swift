@@ -41,12 +41,12 @@ var package = Package(
 				.product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
 			]
 		),
-        .testTarget(
-            name: "SwiftAPIClientMacrosTests",
-            dependencies: [
-                .target(name: "SwiftAPIClientMacros"),
-                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
-            ]
-        ),
+		.testTarget(
+			name: "SwiftAPIClientMacrosTests",
+			dependencies: [
+				.target(name: "SwiftAPIClientMacros"),
+				.product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+			]
+		),
 	]
 )

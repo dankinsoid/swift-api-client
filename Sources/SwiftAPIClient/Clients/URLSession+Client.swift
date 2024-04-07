@@ -22,7 +22,9 @@ public extension HTTPClient {
 			}
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
-				let (data, response) = try await configs.urlSession.data(for: urlRequest, body: body)
+				let (data, response) = try await customErrors {
+					try await configs.urlSession.data(for: urlRequest, body: body)
+				}
 				return (data, response.http)
 			} else {
 				return try await asyncMethod { completion in
@@ -79,22 +81,42 @@ private func asyncMethod<T, S: URLSessionTask>(
 		@escaping @Sendable (T?, URLResponse?, Error?) -> Void
 	) -> S
 ) async throws -> (T, HTTPResponse) {
-	try await completionToThrowsAsync { continuation, handler in
-		let task = method { t, response, error in
-			if let t, let response {
-				continuation.resume(returning: (t, response.http))
-			} else {
-				if (error as? NSError)?.code == NSURLErrorCancelled {
-					continuation.resume(throwing: CancellationError())
+	try await customErrors {
+		try await completionToThrowsAsync { continuation, handler in
+			let task = method { t, response, error in
+				if let t, let response {
+					continuation.resume(returning: (t, response.http))
 				} else {
 					continuation.resume(throwing: error ?? Errors.unknown)
 				}
 			}
+			handler.onCancel {
+				task.cancel()
+			}
+			task.resume()
 		}
-		handler.onCancel {
-			task.cancel()
+	}
+}
+
+private func customErrors<T>(_ operation: () async throws -> T) async throws -> T {
+	do {
+		return try await operation()
+	} catch let error as URLError {
+		switch error.code {
+		case .cancelled:
+			throw CancellationError()
+		case .timedOut:
+			throw TimeoutError()
+		default:
+			throw error
 		}
-		task.resume()
+	} catch let error as NSError {
+		if error.code == NSURLErrorCancelled {
+			throw CancellationError()
+		}
+		throw error
+	} catch {
+		throw error
 	}
 }
 

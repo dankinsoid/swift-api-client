@@ -57,7 +57,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		request: HTTPRequest,
 		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		guard configs.isAuthEnabled else {
 			return try await next(request, body, configs)

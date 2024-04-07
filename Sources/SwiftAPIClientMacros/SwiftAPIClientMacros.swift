@@ -58,11 +58,11 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		for param in funcDecl.signature.parameterClause.parameters {
 
 			let name = (param.secondName ?? param.firstName).trimmed.text
-            if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
+			if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
 				throw MacroError("Body parameter is not allowed with GET method")
 			}
-            params += try scanParameters(name: name, type: "Query", param: param, into: &queryParams)
-            params += try scanParameters(name: name, type: "Body", param: param, into: &bodyParams)
+			params += try scanParameters(name: name, type: "Query", param: param, into: &queryParams)
+			params += try scanParameters(name: name, type: "Body", param: param, into: &bodyParams)
 		}
 
 		params += [
@@ -152,26 +152,25 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingPeersOf declaration: some DeclSyntaxProtocol,
 		in context: some SwiftSyntaxMacros.MacroExpansionContext
 	) throws -> [DeclSyntax] {
-        let structDecl = declaration.as(StructDeclSyntax.self)
-        guard structDecl != nil || declaration.is(ExtensionDeclSyntax.self) else {
-            throw MacroError("Path macro can be applied only to struct or extension")
-        }
-        guard let declName = structDecl?.name, node.description.contains("Path") else {
-            return []
-        }
+		let structDecl = declaration.as(StructDeclSyntax.self)
+		guard structDecl != nil || declaration.is(ExtensionDeclSyntax.self) else {
+			throw MacroError("Path macro can be applied only to struct or extension")
+		}
+		guard let declName = structDecl?.name, node.description.contains("Path") else {
+			return []
+		}
 		let accessControl = structDecl?.modifiers.first(as: { $0.as(AccessorDeclSyntax.self) }).map {
 			"\($0) "
 		} ?? ""
-        
-        
+
 		let path = path(node: node, name: declName)
 		let pathArguments = pathArguments(path: path)
 		let isVar = pathArguments.isEmpty
-        let pathName = declName.trimmed.text.firstLowercased
+		let pathName = declName.trimmed.text.firstLowercased
 		let name = path.count > pathArguments.count ? pathName : "callAsFunction"
-        let args = pathArguments.enumerated()
-            .map { "\($0.offset == 0 ? "_ " : "")\($0.element.0): \($0.element.1)" }
-            .joined(separator: ", ")
+		let args = pathArguments.enumerated()
+			.map { "\($0.offset == 0 ? "_ " : "")\($0.element.0): \($0.element.1)" }
+			.joined(separator: ", ")
 
 		var client = "client"
 		if !path.isEmpty {
@@ -193,9 +192,9 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingMembersOf declaration: some DeclGroupSyntax,
 		in context: some MacroExpansionContext
 	) throws -> [DeclSyntax] {
-        guard !declaration.is(ExtensionDeclSyntax.self) else {
-            return []
-        }
+		guard !declaration.is(ExtensionDeclSyntax.self) else {
+			return []
+		}
 		if let structDecl = declaration.as(StructDeclSyntax.self) {
 			return try structExpansion(of: node, providingMembersOf: structDecl, in: context)
 		} else {
@@ -208,12 +207,12 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		providingMembersOf declaration: StructDeclSyntax,
 		in context: some MacroExpansionContext
 	) throws -> [DeclSyntax] {
-        let isPath = node.description.contains("Path")
+		let isPath = node.description.contains("Path")
 
 		var result: [DeclSyntax] = [
 			"public typealias Body<Value> = _APIParameterWrapper<Value>",
 			"public typealias Query<Value> = _APIParameterWrapper<Value>",
-            "public var client: APIClient",
+			"public var client: APIClient",
 		]
 		var hasRightInit = false
 		var hasOtherInits = false
@@ -248,18 +247,18 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 }
 
 public struct SwiftAPIClientFreestandingMacro: DeclarationMacro {
-    
-    public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-        let name = node.macro.text.lowercased()
-        var type = node.argumentList.first?.expression.trimmed.description ?? ""
-        if type.hasSuffix(".self") {
-            type.removeLast(5)
-        }
-        if !type.isEmpty {
-            type = " -> \(type)"
-        }
-        return ["public func \(raw: name)() async throws\(raw: type) { try await client.\(raw: name)() }"]
-    }
+
+	public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
+		let name = node.macro.text.lowercased()
+		var type = node.argumentList.first?.expression.trimmed.description ?? ""
+		if type.hasSuffix(".self") {
+			type.removeLast(5)
+		}
+		if !type.isEmpty {
+			type = " -> \(type)"
+		}
+		return ["public func \(raw: name)() async throws\(raw: type) { try await client.\(raw: name)() }"]
+	}
 }
 
 struct CallAttribute {
@@ -392,12 +391,12 @@ private func pathArguments(
 private func scanParameters(
 	name: String,
 	type: String,
-    param: FunctionParameterListSyntax.Element,
+	param: FunctionParameterListSyntax.Element,
 	into list: inout ([String], [(String, String)])
 ) throws -> [FunctionParameterListSyntax.Element] {
-    var param = param
-    param.trailingComma = .commaToken()
-    param.leadingTrivia = .newline
+	var param = param
+	param.trailingComma = .commaToken()
+	param.leadingTrivia = .newline
 	if param.attributes.remove(type.firstUppercased) {
 		list.1.append((name, name))
 		return [param]
@@ -405,41 +404,41 @@ private func scanParameters(
 	//    let typeName = param.firstName.text.count > 1 ? param.firstName.text : name
 	if name.firstLowercased == type.firstLowercased {
 		if let tuple = param.type.as(TupleTypeSyntax.self) {
-            var result: [FunctionParameterListSyntax.Element] = []
-            for element in tuple.elements {
-                guard !element.type.is(TupleTypeSyntax.self) else {
-                    throw MacroError("Tuple within tuple is not supported yet")
-                }
-                let label = element.labelName
-                let secondName = "\(name.firstLowercased)\(label.firstUppercased)"
-                list.1.append((label, secondName))
-                
-                result.append(
-                    FunctionParameterSyntax(
-                        leadingTrivia: .newline,
-                        firstName: .identifier(label),
-                        secondName: .identifier(secondName),
-                        type: element.type,
-                        trailingComma: .commaToken()
-                    )
-                )
-            }
-            return result
+			var result: [FunctionParameterListSyntax.Element] = []
+			for element in tuple.elements {
+				guard !element.type.is(TupleTypeSyntax.self) else {
+					throw MacroError("Tuple within tuple is not supported yet")
+				}
+				let label = element.labelName
+				let secondName = "\(name.firstLowercased)\(label.firstUppercased)"
+				list.1.append((label, secondName))
+
+				result.append(
+					FunctionParameterSyntax(
+						leadingTrivia: .newline,
+						firstName: .identifier(label),
+						secondName: .identifier(secondName),
+						type: element.type,
+						trailingComma: .commaToken()
+					)
+				)
+			}
+			return result
 		} else {
 			list.0.append(name)
 		}
-        return [param]
+		return [param]
 	}
-    return []
+	return []
 }
 
 private extension TupleTypeElementListSyntax.Element {
-    
-    var labelName: String {
-        (firstName ?? secondName)?.text ?? type
-            .trimmed.description
-            .firstLowercased
-            .removeCharacters(in: ["?", ".", "<", ">"])
-    }
+
+	var labelName: String {
+		(firstName ?? secondName)?.text ?? type
+			.trimmed.description
+			.firstLowercased
+			.removeCharacters(in: ["?", ".", "<", ">"])
+	}
 }
 #endif

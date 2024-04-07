@@ -42,7 +42,7 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 		request: HTTPRequest,
 		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		// No need to compress unless we have body data. No support for compressing streams.
 		guard let body else {

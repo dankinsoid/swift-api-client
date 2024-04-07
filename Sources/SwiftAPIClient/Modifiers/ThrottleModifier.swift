@@ -65,7 +65,7 @@ private struct RequestsThrottleMiddleware<ID: Hashable>: HTTPClientMiddleware {
 		request: HTTPRequest,
 		body: RequestBody?,
 		configs: APIClient.Configs,
-		next: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		let interval = configs.throttleInterval
 		guard interval > 0 else {

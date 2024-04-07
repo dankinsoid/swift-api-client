@@ -248,7 +248,7 @@ public macro DELETE(_ path: String...) = #externalMacro(module: "SwiftAPIClientM
 ///     .auth(enabled: true)
 /// }
 /// ```
-/// - Warning: If you use swiftformat disable unusedArguments rule: `--disable unusedArguments` or `//swiftformat:disable:unusedArguments` 
+/// - Warning: If you use swiftformat disable unusedArguments rule: `--disable unusedArguments` or `//swiftformat:disable:unusedArguments`
 @attached(peer, names: arbitrary)
 public macro PATCH(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientCallMacro")
 

@@ -7,11 +7,11 @@ import FoundationNetworking
 public struct HTTPClient {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URL request and network configurations.
-	public var data: (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
+	public var data: @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
 
 	/// Initializes a new `HTTPClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a URL request and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
-	public init(_ data: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)) {
+	public init(_ data: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)) {
 		self.data = data
 	}
 }

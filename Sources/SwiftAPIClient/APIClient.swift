@@ -7,7 +7,7 @@ import Foundation
 public struct APIClient {
 
 	private var _createRequest: (Configs) throws -> HTTPRequest
-    private var _modifyRequest: (inout HTTPRequest, Configs) throws -> Void = { _, _ in }
+	private var _modifyRequest: (inout HTTPRequest, Configs) throws -> Void = { _, _ in }
 	private var modifyConfigs: (inout Configs) -> Void = { _ in }
 
 	/// Initializes a new network client with a closure that creates a URLRequest.
@@ -98,19 +98,19 @@ public struct APIClient {
 		return result
 	}
 
-    /// Modifies the URL request using the provided closure before the request is executed.
-    /// - Parameter modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
-    /// - Returns: An instance of `APIClient` with a modified URLRequest.
-    public func finalizeRequest(
-        _ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
-    ) -> APIClient {
-        var result = self
-        result._modifyRequest = { [_modifyRequest] req, configs in
-            try _modifyRequest(&req, configs)
-            try modifier(&req, configs)
-        }
-        return result
-    }
+	/// Modifies the URL request using the provided closure before the request is executed.
+	/// - Parameter modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
+	/// - Returns: An instance of `APIClient` with a modified URLRequest.
+	public func finalizeRequest(
+		_ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
+	) -> APIClient {
+		var result = self
+		result._modifyRequest = { [_modifyRequest] req, configs in
+			try _modifyRequest(&req, configs)
+			try modifier(&req, configs)
+		}
+		return result
+	}
 
 	/// Executes an operation with the current URL request and configurations.
 	/// - Parameter operation: A closure that takes an URL request and `Configs` and returns a generic type `T`.
@@ -157,17 +157,17 @@ public struct APIClient {
 		return try await operation(configs)
 	}
 
-    /// Modifies the client using the provided closure.
-    public func modifier(_ modifier: (Self) throws -> Self) rethrows -> Self {
-        try modifier(self)
-    }
+	/// Modifies the client using the provided closure.
+	public func modifier(_ modifier: (Self) throws -> Self) rethrows -> Self {
+		try modifier(self)
+	}
 
 	private func createRequest() throws -> (HTTPRequest, Configs) {
 		var configs = Configs()
 		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
-        var request = try client._createRequest(configs)
-        try client._modifyRequest(&request, configs)
+		var request = try client._createRequest(configs)
+		try client._modifyRequest(&request, configs)
 		return (request, configs)
 	}
 }

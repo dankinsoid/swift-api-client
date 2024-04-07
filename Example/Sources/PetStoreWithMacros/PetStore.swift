@@ -88,7 +88,7 @@ extension PetStore {
 
 		@Path("{username}")
 		public struct UserByUsername {
-			
+
 			@GET("/") public func get() -> UserModel {}
 			@DELETE("/") public func delete() {}
 			@PUT("/") public func update(_ body: UserModel) -> UserModel {}

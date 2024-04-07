@@ -95,7 +95,7 @@ final class RequestModifiersTests: XCTestCase {
 	}
 
 	func testTimeoutIntervalSetting() throws {
-		let modifiedClient = client.timeoutInterval(30)
+		let modifiedClient = client.timeout(30)
 		XCTAssertEqual(modifiedClient.withConfigs(\.timeoutInterval), 30)
 	}
 }
