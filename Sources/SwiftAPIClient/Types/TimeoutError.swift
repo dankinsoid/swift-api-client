@@ -43,8 +43,8 @@ public func withTimeout<T, C: Clock>(
 ) async throws -> T where C.Duration == Duration {
 	try await withTimeout(
 		timeout,
-		seconds: { Double($0.components.seconds) + Double($0.components.attoseconds) * pow(10, -18) },
-		sleep: { try await clock.sleep(for: $0, tolerance: tolerance) },
+		seconds: { Double($0.components.seconds) + (Double($0.components.attoseconds) * pow(10, -18)) },
+        sleep: { try await clock.sleep(until: clock.now.advanced(by: $0), tolerance: tolerance) },
 		fileID: fileID,
 		line: line,
 		operation: operation

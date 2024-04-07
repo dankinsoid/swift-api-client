@@ -76,7 +76,7 @@ public extension APIClient {
 		self.timeout(
 			timeout,
             seconds: { Double($0.components.seconds) + Double($0.components.attoseconds) * pow(10.0, -18.0) },
-			sleep: { try await clock.sleep(for: $0, tolerance: tolerance) },
+            sleep: { try await clock.sleep(until: clock.now.advanced(by: $0), tolerance: tolerance) },
 			fileID: fileID,
 			line: line
 		)
