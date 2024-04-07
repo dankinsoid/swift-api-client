@@ -22,7 +22,7 @@ class WithTimeoutTests: XCTestCase {
     func test_withTimeout_timeout() async {
         do {
             _ = try await withTimeout(.nanoseconds(2)) {
-                try await Task.sleep(until: .now.advanced(by: .milliseconds(4)))
+                try await Task.sleep(until: ContinuousClock().now.advanced(by: .milliseconds(4)))
                 return 42
             }
             XCTFail("Expected timeout error")
@@ -33,7 +33,7 @@ class WithTimeoutTests: XCTestCase {
 
     func test_withTimeout_success() async throws {
         _ = try await withTimeout(.milliseconds(4)) {
-            try await Task.sleep(until: .now.advanced(by: .nanoseconds(2)))
+            try await Task.sleep(until: ContinuousClock().now.advanced(by: .nanoseconds(2)))
             return 42
         }
     }
