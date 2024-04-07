@@ -41,7 +41,6 @@ The branching and configuration injection/overriding capabilities of APIClient, 
 While a full example is available in the [Example folder](/Example/), here is a simple usage example:
 ```swift
 let client = APIClient(url: baseURL)
-  .auth(.bearer(token))
   .bodyDecoder(.json(dateDecodingStrategy: .iso8601))
   .bodyEncoder(.json(dateEncodingStrategy: .iso8601))
   .errorDecoder(.decodable(APIError.self))
