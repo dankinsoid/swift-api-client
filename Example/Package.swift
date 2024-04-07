@@ -25,6 +25,12 @@ var package = Package(
 				.product(name: "SwiftAPIClient", package: "swift-api-client"),
 			]
 		),
+        .testTarget(
+            name: "PetStoreTests",
+            dependencies: [
+                .target(name: "PetStore")
+            ]
+        ),
 		.target(
 			name: "PetStoreWithMacros",
 			dependencies: [

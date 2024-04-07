@@ -55,19 +55,30 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		}
 		var queryParams: ([String], [(String, String)]) = ([], [])
 		var bodyParams: ([String], [(String, String)]) = ([], [])
-		for param in funcDecl.signature.parameterClause.parameters {
-
+        var fileIDName = "fileID"
+        var lineName = "line"
+		for var param in funcDecl.signature.parameterClause.parameters {
 			let name = (param.secondName ?? param.firstName).trimmed.text
 			if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
 				throw MacroError("Body parameter is not allowed with GET method")
 			}
-			params += try scanParameters(name: name, type: "Query", param: param, into: &queryParams)
-			params += try scanParameters(name: name, type: "Body", param: param, into: &bodyParams)
+            if param.defaultValue?.value.description == "#fileID" {
+                fileIDName = name
+            } else if param.defaultValue?.value.description == "#line" {
+                lineName = name
+            } else {
+                let count = params.count
+                params += try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
+                params += try scanParameters(name: name, type: "Body", param: &param, into: &bodyParams)
+                if count == params.count {
+                    params.append(param)
+                }
+            }
 		}
 
 		params += [
-			"\nfileID: String = #fileID,",
-			"\nline: UInt = #line",
+            "\n\(raw: fileIDName): String = #fileID,",
+			"\n\(raw: lineName): UInt = #line",
 		]
 		funcDecl.signature.parameterClause.rightParen.leadingTrivia = .newline
 		funcDecl.signature.parameterClause.parameters = params
@@ -391,10 +402,9 @@ private func pathArguments(
 private func scanParameters(
 	name: String,
 	type: String,
-	param: FunctionParameterListSyntax.Element,
+	param: inout FunctionParameterListSyntax.Element,
 	into list: inout ([String], [(String, String)])
 ) throws -> [FunctionParameterListSyntax.Element] {
-	var param = param
 	param.trailingComma = .commaToken()
 	param.leadingTrivia = .newline
 	if param.attributes.remove(type.firstUppercased) {

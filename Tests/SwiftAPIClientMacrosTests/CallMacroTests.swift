@@ -361,4 +361,35 @@ final class CallMacroTests: XCTestCase {
 			indentationWidth: .spaces(2)
 		)
 	}
+    
+    func testCallMacroFuncWithArguments() {
+        assertMacroExpansion(
+            """
+            @GET
+            func login(username: String, password: String) {
+                client.auth(.basic(username: username, password: password))
+            }
+            """,
+            expandedSource: """
+            func login(username: String, password: String) {
+                client.auth(.basic(username: username, password: password))
+            }
+            
+            func login(
+              username: String,
+              password: String,
+              fileID: String = #fileID,
+              line: UInt = #line
+            ) async throws {
+              try await
+                  client.auth(.basic(username: username, password: password))
+                  .path("login")
+                  .method(.get)
+                  .call(.http, as: .void, fileID: fileID, line: line)
+            }
+            """,
+            macros: macros,
+            indentationWidth: .spaces(2)
+        )
+    }
 }
