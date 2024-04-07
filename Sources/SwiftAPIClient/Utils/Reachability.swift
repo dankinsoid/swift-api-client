@@ -358,9 +358,9 @@ private extension Reachability {
 		let notify = { [weak self] in
 			guard let self else { return }
 			let connection = self.connection
-			lock.lock()
+            self.lock.lock()
 			let subscriptions = self.subscriptions
-			lock.unlock()
+            self.lock.unlock()
 			for subscription in subscriptions {
 				subscription.value(connection)
 			}

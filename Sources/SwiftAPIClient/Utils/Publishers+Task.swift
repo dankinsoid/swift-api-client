@@ -4,17 +4,17 @@ import Foundation
 
 extension Publishers {
 
-	struct Task<Output, Failure: Error>: Publisher {
+	public struct Run<Output, Failure: Error>: Publisher {
 
 		fileprivate let task: ((Result<Output, Failure>) -> Void) async -> Void
 
-		init(_ task: @escaping ((Result<Output, Failure>) -> Void) async -> Void) {
+        public init(_ task: @escaping ((Result<Output, Failure>) -> Void) async -> Void) {
 			self.task = task
 		}
 
-		func receive<S: Subscriber>(subscriber: S) where Failure == S.Failure, Output == S.Input {
+        public func receive<S: Subscriber>(subscriber: S) where Failure == S.Failure, Output == S.Input {
 			Publishers.Create<Output, Failure> { onOutput, onCompletion, cancellationHandler in
-				let concurrencyTask = _Concurrency.Task {
+				let concurrencyTask = Task {
 					await task {
 						switch $0 {
 						case let .success(output):
@@ -40,7 +40,7 @@ extension Publishers {
 	}
 }
 
-extension Publishers.Task where Failure == Never {
+public extension Publishers.Run where Failure == Never {
 
 	init(_ task: @escaping () async -> Output) {
 		self.init { send in
@@ -57,7 +57,7 @@ extension Publishers.Task where Failure == Never {
 	}
 }
 
-extension Publishers.Task where Failure == Error {
+public extension Publishers.Run where Failure == Error {
 
 	init(_ task: @escaping (_ send: (Output) -> Void) async throws -> Void) {
 		self.init { send in

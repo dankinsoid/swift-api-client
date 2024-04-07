@@ -6,7 +6,7 @@ public extension APIClientCaller where Result == AnyPublisher<Value, Error>, Res
 
 	static var httpPublisher: APIClientCaller {
 		APIClientCaller<Response, Value, AsyncThrowingValue<Value>>.http.map { value in
-			Publishers.Task {
+			Publishers.Run {
 				try await value()
 			}
 			.eraseToAnyPublisher()

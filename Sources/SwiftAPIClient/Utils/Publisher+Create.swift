@@ -42,26 +42,26 @@ extension Publishers {
 				let failure = create.events(
 					{ [weak self] output in
 						guard let self else { return }
-						_Concurrency.Task {
+						Task {
 							_ = await self.subscriber?.receive(output)
 						}
 					},
 					{ [weak self] completion in
 						guard let self else { return }
-						_Concurrency.Task {
+						Task {
 							await self.subscriber?.receive(completion: completion)
 							await self._cancel()
 						}
 					},
 					{ [weak self] onCancel in
 						guard let self else { return }
-						_Concurrency.Task {
+						Task {
 							await self.onCancel(onCancel)
 						}
 					}
 				)
 				if let failure, !(failure is Never) {
-					_Concurrency.Task {
+					Task {
 						await subscriber?.receive(completion: .failure(failure))
 						await _cancel()
 					}
@@ -71,7 +71,7 @@ extension Publishers {
 			nonisolated func request(_: Subscribers.Demand) {}
 
 			nonisolated func cancel() {
-				_Concurrency.Task {
+				Task {
 					await self._cancel()
 				}
 			}

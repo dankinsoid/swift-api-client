@@ -323,7 +323,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.5.1")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.5.2")
   ],
   targets: [
     .target(
