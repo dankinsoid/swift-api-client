@@ -3,7 +3,7 @@ import Foundation
 import XCTest
 
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-class WithTimeoutTests: XCTestCase {
+final class WithTimeoutTests: XCTestCase {
 
     func test_withTimeout_fast() async throws {
         let result = try await withTimeout(1) { 42 }
@@ -21,9 +21,9 @@ class WithTimeoutTests: XCTestCase {
 
     func test_withTimeout_timeout() async {
         do {
-            _ = try await withTimeout(.nanoseconds(2)) {
-                try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .milliseconds(4)))
-                return 42
+            _ = try await withTimeout(.milliseconds(1)) {
+                try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .milliseconds(10)))
+                return
             }
             XCTFail("Expected timeout error")
         } catch {
@@ -32,9 +32,9 @@ class WithTimeoutTests: XCTestCase {
     }
 
     func test_withTimeout_success() async throws {
-        _ = try await withTimeout(.milliseconds(4)) {
-            try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .nanoseconds(2)))
-            return 42
+        _ = try await withTimeout(.milliseconds(10)) {
+            try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .milliseconds(1)))
+            return
         }
     }
 }
