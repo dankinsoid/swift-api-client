@@ -63,7 +63,7 @@ final class SearchViewModel: @unchecked Sendable {
 			return
 		}
 		do {
-			let response = try await WeatherClient().search(name: state.searchQuery)
+            let response = try await WeatherClient().search(name: state.searchQuery)
 			try Task.checkCancellation()
 			state.results = response.results ?? []
 		} catch {

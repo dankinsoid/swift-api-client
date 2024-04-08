@@ -11,6 +11,7 @@ struct WeatherClient {
 			.queryEncoder(.urlQuery(arrayEncodingStrategy: .commaSeparator))
 	}
 
+    /// **GET** https://api.open-meteo.com/v1/forecast
 	@GET
 	func forecast(
 		@Query latitude: Double,
@@ -19,6 +20,7 @@ struct WeatherClient {
 		@Query timezone: String = TimeZone.autoupdatingCurrent.identifier
 	) async throws -> Forecast {}
 
+    /// **GET** https://geocoding-api.open-meteo.com/v1/search
 	@GET
 	func search(@Query name: String) async throws -> GeocodingSearch {
 		client.configs(\.weatherURL, .geocoding)
