@@ -19,9 +19,10 @@ final class WithTimeoutTests: XCTestCase {
         }
     }
 
+#if swift(>=5.9)
     func test_withTimeout_timeout() async {
         do {
-            _ = try await withTimeout(.milliseconds(50)) {
+            _ = try await withTimeout(.milliseconds(5)) {
                 try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .seconds(1)))
                 return
             }
@@ -33,8 +34,9 @@ final class WithTimeoutTests: XCTestCase {
 
     func test_withTimeout_success() async throws {
         _ = try await withTimeout(.seconds(1)) {
-            try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .milliseconds(50)))
+            try await ContinuousClock().sleep(until: ContinuousClock().now.advanced(by: .milliseconds(5)))
             return
         }
     }
+#endif
 }
