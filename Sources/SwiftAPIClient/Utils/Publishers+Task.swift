@@ -2,17 +2,17 @@
 import Combine
 import Foundation
 
-extension Publishers {
+public extension Publishers {
 
-	public struct Run<Output, Failure: Error>: Publisher {
+	struct Run<Output, Failure: Error>: Publisher {
 
 		fileprivate let task: ((Result<Output, Failure>) -> Void) async -> Void
 
-        public init(_ task: @escaping ((Result<Output, Failure>) -> Void) async -> Void) {
+		public init(_ task: @escaping ((Result<Output, Failure>) -> Void) async -> Void) {
 			self.task = task
 		}
 
-        public func receive<S: Subscriber>(subscriber: S) where Failure == S.Failure, Output == S.Input {
+		public func receive<S: Subscriber>(subscriber: S) where Failure == S.Failure, Output == S.Input {
 			Publishers.Create<Output, Failure> { onOutput, onCompletion, cancellationHandler in
 				let concurrencyTask = Task {
 					await task {

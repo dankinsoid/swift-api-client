@@ -16,7 +16,7 @@ var package = Package(
 		.library(name: "PetStoreWithMacros", targets: ["PetStoreWithMacros"]),
 	],
 	dependencies: [
-		.package(path: "../"),
+		.package(path: "../../"),
 	],
 	targets: [
 		.target(

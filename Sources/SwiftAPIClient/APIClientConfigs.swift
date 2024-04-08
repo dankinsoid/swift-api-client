@@ -7,7 +7,7 @@ import FoundationNetworking
 public extension APIClient {
 
 	/// A struct representing the configuration settings for a `APIClient`.
-	struct Configs {
+	struct Configs: @unchecked Sendable {
 
 		private var values: [PartialKeyPath<APIClient.Configs>: Any] = [:]
 

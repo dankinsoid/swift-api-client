@@ -55,29 +55,29 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		}
 		var queryParams: ([String], [(String, String)]) = ([], [])
 		var bodyParams: ([String], [(String, String)]) = ([], [])
-        var fileIDName = "fileID"
-        var lineName = "line"
+		var fileIDName = "fileID"
+		var lineName = "line"
 		for var param in funcDecl.signature.parameterClause.parameters {
 			let name = (param.secondName ?? param.firstName).trimmed.text
 			if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
 				throw MacroError("Body parameter is not allowed with GET method")
 			}
-            if param.defaultValue?.value.description == "#fileID" {
-                fileIDName = name
-            } else if param.defaultValue?.value.description == "#line" {
-                lineName = name
-            } else {
-                let count = params.count
-                params += try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
-                params += try scanParameters(name: name, type: "Body", param: &param, into: &bodyParams)
-                if count == params.count {
-                    params.append(param)
-                }
-            }
+			if param.defaultValue?.value.description == "#fileID" {
+				fileIDName = name
+			} else if param.defaultValue?.value.description == "#line" {
+				lineName = name
+			} else {
+				let count = params.count
+				params += try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
+				params += try scanParameters(name: name, type: "Body", param: &param, into: &bodyParams)
+				if count == params.count {
+					params.append(param)
+				}
+			}
 		}
 
 		params += [
-            "\n\(raw: fileIDName): String = #fileID,",
+			"\n\(raw: fileIDName): String = #fileID,",
 			"\n\(raw: lineName): UInt = #line",
 		]
 		funcDecl.signature.parameterClause.rightParen.leadingTrivia = .newline

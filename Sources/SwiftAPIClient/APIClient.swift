@@ -4,7 +4,7 @@ import Foundation
 #endif
 
 /// A network client for handling url requests with configurable request and configuration handling.
-public struct APIClient {
+public struct APIClient: @unchecked Sendable {
 
 	private var _createRequest: (Configs) throws -> HTTPRequest
 	private var _modifyRequest: (inout HTTPRequest, Configs) throws -> Void = { _, _ in }
@@ -204,8 +204,8 @@ public extension APIClient {
 	/// }
 	/// ```
 	static func withModifiers<T>(
-		_ modifiers: @escaping (APIClient) -> APIClient,
-		operation: () async throws -> T
+		_ modifiers: @escaping @Sendable (APIClient) -> APIClient,
+		operation: @Sendable () async throws -> T
 	) async rethrows -> T {
 		let current = APIClient.globalModifier
 		return try await APIClient.$globalModifier.withValue(
@@ -218,5 +218,5 @@ public extension APIClient {
 private extension APIClient {
 
 	@TaskLocal
-	static var globalModifier: (APIClient) -> APIClient = { $0 }
+	static var globalModifier: @Sendable (APIClient) -> APIClient = { $0 }
 }
