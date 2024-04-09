@@ -13,8 +13,8 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 
 		// Then
 		let request = try client.request()
-		let body = try client.withConfigs { try $0.body?($0) }
-		XCTAssertEqual(request.headerFields[.contentType], "application/x-www-form-urlencoded; charset=utf-8")
+        let body = try client.request().body?.data
+		XCTAssertEqual(request.headers[.contentType], "application/x-www-form-urlencoded; charset=utf-8")
 		XCTAssertEqual(body, Data("property=property".utf8))
 	}
 
@@ -27,9 +27,8 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 
 		// Then
 		let request = try client.request()
-		let body = try client.withConfigs { try $0.body?($0) }
-		XCTAssertEqual(request.headerFields[.contentType], "type")
-		XCTAssertEqual(body, Data("property=property".utf8))
+		XCTAssertEqual(request.headers[.contentType], "type")
+        XCTAssertEqual(request.body?.data, Data("property=property".utf8))
 	}
 }
 

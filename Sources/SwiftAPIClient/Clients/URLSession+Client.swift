@@ -9,10 +9,15 @@ public extension HTTPClient {
 	/// Creates an `HTTPClient` that uses a specified `URLSession` for network requests.
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
 	static var urlSession: Self {
-		HTTPClient { request, body, configs in
-			guard let urlRequest = URLRequest(request: request, configs: configs) else {
+		HTTPClient { request, configs in
+            guard
+                let url = request.url,
+                let httpRequest = request.request,
+                var urlRequest = URLRequest(httpRequest: httpRequest)
+            else {
 				throw Errors.custom("Invalid request")
 			}
+            urlRequest.url = url
 			#if os(Linux)
 			guard let urlRequest = URLRequest(request: urlRequest, body: body, configs: configs) else {
 				throw Errors.custom("Invalid request")
@@ -23,12 +28,12 @@ public extension HTTPClient {
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
 				let (data, response) = try await customErrors {
-					try await configs.urlSession.data(for: urlRequest, body: body)
+                    try await configs.urlSession.data(for: urlRequest, body: request.body)
 				}
 				return (data, response.http)
 			} else {
 				return try await asyncMethod { completion in
-					configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
+                    configs.urlSession.uploadTask(with: urlRequest, body: request.body, completionHandler: completion)
 				}
 			}
 			#endif

@@ -157,10 +157,9 @@ private struct TimeoutMiddleware<D>: HTTPClientMiddleware {
 	let line: UInt
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		try await withTimeout(
 			timeout,
@@ -169,7 +168,7 @@ private struct TimeoutMiddleware<D>: HTTPClientMiddleware {
 			fileID: fileID,
 			line: line
 		) {
-			try await next(request, body, configs)
+			try await next(request, configs)
 		}
 	}
 }

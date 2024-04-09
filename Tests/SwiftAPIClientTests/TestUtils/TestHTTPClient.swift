@@ -7,16 +7,16 @@ import FoundationNetworking
 extension HTTPClient {
 
 	static func test() -> HTTPClient {
-		HTTPClient { request, body, configs in
-			try configs.testHTTPClient(request, body, configs)
+		HTTPClient { request, configs in
+			try configs.testHTTPClient(request, configs)
 		}
 	}
 }
 
 private extension APIClient.Configs {
 
-	var testHTTPClient: (HTTPRequest, RequestBody?, APIClient.Configs) throws -> (Data, HTTPResponse) {
-		get { self[\.testHTTPClient] ?? { _, _, _ in throw Unimplemented() } }
+	var testHTTPClient: (HTTPRequestComponents, APIClient.Configs) throws -> (Data, HTTPResponse) {
+		get { self[\.testHTTPClient] ?? { _, _ in throw Unimplemented() } }
 		set { self[\.testHTTPClient] = newValue }
 	}
 }
@@ -27,20 +27,20 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> Void = { _, _, _ in }
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> Void = { _, _ in }
 	) async throws -> Data {
 		try await httpTest {
-			try test($0, $1, $2)
+			try test($0, $1)
 			return Data()
 		}
 	}
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> (Data, HTTPResponse)
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> (Data, HTTPResponse)
 	) async throws -> Data {
 		try await configs(\.testHTTPClient) {
-			try test($0, $1, $2)
+			try test($0, $1)
 		}
 		.httpClient(.test())
 		.call(.http)
@@ -48,10 +48,10 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequest, RequestBody?, APIClient.Configs) throws -> Data
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> Data
 	) async throws -> Data {
 		try await httpTest {
-			let data = try test($0, $1, $2)
+			let data = try test($0, $1)
 			return (data, HTTPResponse(status: .ok))
 		}
 	}

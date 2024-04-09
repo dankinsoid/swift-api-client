@@ -66,17 +66,16 @@ private struct WaitForConnectionMiddleware: HTTPClientMiddleware {
 	let createReachibility: () async throws -> Reachability
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		let reachability = try await createReachibility()
 
 		func execute() async throws -> (T, HTTPResponse) {
 			try await wait(reachability: reachability)
 			do {
-				return try await next(request, body, configs)
+				return try await next(request, configs)
 			} catch {
 				try Task.checkCancellation()
 				if (error as? URLError)?.networkUnavailableReason != nil || reachability.connection == .unavailable && connection == nil {

@@ -7,16 +7,16 @@ import FoundationNetworking
 public struct HTTPClient {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URL request and network configurations.
-	public var data: @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
+	public var data: @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
 
 	/// Initializes a new `HTTPClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a URL request and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
-	public init(_ data: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)) {
+	public init(_ data: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)) {
 		self.data = data
 	}
 }
 
-public enum RequestBody: Hashable {
+public enum RequestBody: Hashable, Sendable {
 
 	case file(URL)
 	case data(Data)
@@ -60,12 +60,12 @@ public extension APIClient.Configs {
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static var http: APIClientCaller {
-		.http { request, body, configs in
-			let isUpload = body != nil
+		.http { request, configs in
+            let isUpload = request.body != nil
 			if isUpload, request.method == .get {
 				configs.logger.warning("It is not allowed to add a body in GET request.")
 			}
-			return try await configs.httpClient.data(request, body, configs)
+			return try await configs.httpClient.data(request, configs)
 		}
 	}
 }
@@ -73,7 +73,7 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static func http(
-		task: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Data, HTTPResponse)
+		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) -> APIClientCaller {
 		.http(task: task) {
 			try $2.httpResponseValidator.validate($1, $0, $2)
@@ -86,17 +86,17 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response ==
 extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 
 	static func http(
-		task: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (Response, HTTPResponse),
+		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Response, HTTPResponse),
 		validate: @escaping (Response, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (Response) -> Data?
 	) -> APIClientCaller {
-		APIClientCaller { uuid, request, body, configs, serialize in
+		APIClientCaller { uuid, request, configs, serialize in
 			{
 				let value: Response
 				let response: HTTPResponse
 				let start = Date()
 				do {
-					(value, response) = try await configs.httpClientMiddleware.execute(request: request, body: body, configs: configs, next: task)
+					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs, next: task)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs.loggingComponents.isEmpty {

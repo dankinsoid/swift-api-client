@@ -28,8 +28,8 @@ final class RequestModifiersTests: XCTestCase {
 			.contentType(.application(.json))
 		)
 
-		try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/json")
-		try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
+		try XCTAssertEqual(modifiedClient.request().headers[.accept], "application/json")
+		try XCTAssertEqual(modifiedClient.request().headers[.contentType], "application/json")
 	}
 
 	func testHeaderRemoving() throws {
@@ -37,7 +37,7 @@ final class RequestModifiersTests: XCTestCase {
 			.headers(.accept(.application(.json)))
 			.removeHeader(.accept)
 
-		try XCTAssertNil(modifiedClient.request().headerFields[.accept])
+		try XCTAssertNil(modifiedClient.request().headers[.accept])
 	}
 
 	func testHeaderUpdating() throws {
@@ -47,15 +47,15 @@ final class RequestModifiersTests: XCTestCase {
 			.headers(HTTPField.accept(.application(.json)))
 			.headers(HTTPField.accept(.application(.xml)), removeCurrent: true)
 
-		try XCTAssertEqual(modifiedClient.request().headerFields[.accept], "application/xml")
+		try XCTAssertEqual(modifiedClient.request().headers[.accept], "application/xml")
 	}
 
 	func testBodySetting() throws {
 		let modifiedClient = client.body(["name": "John"])
-		let body = try modifiedClient.withConfigs { try $0.body?($0) }
+        let body = try modifiedClient.request().body?.data
 		XCTAssertNotNil(body)
 		XCTAssertEqual(body, try? JSONSerialization.data(withJSONObject: ["name": "John"]))
-		try XCTAssertEqual(modifiedClient.request().headerFields[.contentType], "application/json")
+		try XCTAssertEqual(modifiedClient.request().headers[.contentType], "application/json")
 	}
 
 	func testQueryParametersAdding() throws {
@@ -69,9 +69,9 @@ final class RequestModifiersTests: XCTestCase {
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net/?test=value")
 	}
 
-	func testRemoveSlaahIfNeeded() throws {
+	func testRemoveSlashIfNeeded() throws {
 		let modifiedClient = client.query("test", "value").modifyRequest {
-			$0.path = $0.path?.replacingOccurrences(of: "/?", with: "?")
+            $0.urlComponents.path.removeLast()
 		}
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?test=value")
 	}

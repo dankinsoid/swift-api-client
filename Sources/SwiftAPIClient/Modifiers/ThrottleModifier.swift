@@ -17,7 +17,7 @@ public extension APIClient {
 	///  - id: A closure to uniquely identify the request.
 	///
 	/// If the interval is nil, then `configs.throttleInterval` is used. This allows setting the default interval for all requests via `.configs(\.throttleInterval, value)`.
-	func throttle<ID: Hashable>(interval: TimeInterval? = nil, id: @escaping (HTTPRequest) -> ID) -> APIClient {
+	func throttle<ID: Hashable>(interval: TimeInterval? = nil, id: @escaping (HTTPRequestComponents) -> ID) -> APIClient {
 		configs {
 			if let interval {
 				$0.throttleInterval = interval
@@ -59,23 +59,22 @@ private final actor RequestsThrottlerCache {
 private struct RequestsThrottleMiddleware<ID: Hashable>: HTTPClientMiddleware {
 
 	let cache: RequestsThrottlerCache
-	let id: (HTTPRequest) -> ID
+	let id: (HTTPRequestComponents) -> ID
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		let interval = configs.throttleInterval
 		guard interval > 0 else {
-			return try await next(request, body, configs)
+			return try await next(request, configs)
 		}
 		let requestID = id(request)
 		if let response: (T, HTTPResponse) = await cache.response(for: requestID) {
 			return response
 		}
-		let (value, httpResponse) = try await next(request, body, configs)
+		let (value, httpResponse) = try await next(request, configs)
 		await cache.setResponse(response: (value, httpResponse), for: requestID)
 		Task {
 			try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))

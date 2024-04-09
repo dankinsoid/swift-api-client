@@ -14,8 +14,8 @@ final class APIClientCompressionTests: XCTestCase {
 		let body: Data = try await client
 			.post
 			.body(Data([0]))
-			.httpTest { _, body, _ in
-				body!.data!
+			.httpTest { request, _ in
+                request.body!.data!
 			}
 		// From https://en.wikipedia.org/wiki/Adler-32
 		XCTAssertEqual(body, Data([0x78, 0x5E, 0x63, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01]))

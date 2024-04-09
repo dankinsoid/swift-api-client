@@ -54,13 +54,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 	}
 
 	public func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		guard configs.isAuthEnabled else {
-			return try await next(request, body, configs)
+			return try await next(request, configs)
 		}
 		var accessToken: String
 		var refreshToken = tokenCacheService[.refreshToken]
@@ -79,12 +78,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		}
 		var authorizedRequest = request
 		try auth(accessToken).modifier(&authorizedRequest, configs)
-		let result = try await next(authorizedRequest, body, configs)
+		let result = try await next(authorizedRequest, configs)
 		if expiredStatusCodes.contains(result.1.status) {
 			(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, refreshToken: refreshToken)
 			authorizedRequest = request
 			try auth(accessToken).modifier(&authorizedRequest, configs)
-			return try await next(authorizedRequest, body, configs)
+			return try await next(authorizedRequest, configs)
 		}
 		return result
 	}

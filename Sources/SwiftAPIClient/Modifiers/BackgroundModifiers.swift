@@ -19,19 +19,18 @@ public extension APIClient {
 private struct BackgroundTaskMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		let id = await UIApplication.shared.beginBackgroundTask(
 			withName: "Background Task for \(request.url?.absoluteString ?? "")"
 		)
 		guard id != .invalid else {
-			return try await next(request, body, configs)
+			return try await next(request, configs)
 		}
 		do {
-			let result = try await next(request, body, configs)
+			let result = try await next(request, configs)
 			await UIApplication.shared.endBackgroundTask(id)
 			return result
 		} catch {
@@ -44,10 +43,9 @@ private struct BackgroundTaskMiddleware: HTTPClientMiddleware {
 private struct RetryOnEnterForegroundMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		func makeRequest() async throws -> (T, HTTPResponse) {
 			let wasInBackground = WasInBackgroundService()
@@ -56,7 +54,7 @@ private struct RetryOnEnterForegroundMiddleware: HTTPClientMiddleware {
 				await wasInBackground.start()
 			}
 			do {
-				return try await next(request, body, configs)
+				return try await next(request, configs)
 			} catch {
 				isInBackground = await UIApplication.shared.applicationState == .background
 				if !isInBackground, await wasInBackground.wasInBackground {

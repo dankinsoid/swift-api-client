@@ -5,12 +5,6 @@ import FoundationNetworking
 
 public extension APIClient.Configs {
 
-	/// The closure that provides the file URL for the request.
-	var file: ((APIClient.Configs) -> URL)? {
-		get { self[\.file] }
-		set { self[\.file] = newValue }
-	}
-
 	/// The closure that is called when the upload progress is updated.
 	var uploadTracker: (_ totalBytesSent: Int64, _ totalBytesExpectedToSend: Int64) -> Void {
 		get { self[\.uploadTracker] ?? { _, _ in } }

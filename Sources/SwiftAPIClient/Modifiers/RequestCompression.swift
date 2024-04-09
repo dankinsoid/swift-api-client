@@ -39,21 +39,20 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 	let shouldCompressBodyData: (_ bodyData: Data) -> Bool
 
 	func execute<T>(
-		request: HTTPRequest,
-		body: RequestBody?,
+		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequest, RequestBody?, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		// No need to compress unless we have body data. No support for compressing streams.
-		guard let body else {
-			return try await next(request, nil, configs)
+		guard let body = request.body else {
+			return try await next(request, configs)
 		}
 
 		guard let data = body.data, shouldCompressBodyData(data) else {
-			return try await next(request, body, configs)
+			return try await next(request, configs)
 		}
 
-		if request.headerFields[.contentEncoding] != nil {
+		if request.headers[.contentEncoding] != nil {
 			switch duplicateHeaderBehavior {
 			case .error:
 				throw Errors.duplicateHeader(.contentEncoding)
@@ -61,13 +60,14 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 				// Header will be replaced once the body data is compressed.
 				break
 			case .skip:
-				return try await next(request, body, configs)
+				return try await next(request, configs)
 			}
 		}
 
 		var urlRequest = request
-		urlRequest.headerFields[.contentEncoding] = "deflate"
-		return try await next(urlRequest, .data(deflate(data)), configs)
+		urlRequest.headers[.contentEncoding] = "deflate"
+        urlRequest.body = try .data(deflate(data))
+		return try await next(urlRequest, configs)
 	}
 }
 

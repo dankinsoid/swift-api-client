@@ -37,17 +37,17 @@ public extension APIClient {
 public struct AuthModifier {
 
 	/// A closure that modifies a URL request for authentication.
-	public let modifier: (inout HTTPRequest, APIClient.Configs) throws -> Void
+	public let modifier: (inout HTTPRequestComponents, APIClient.Configs) throws -> Void
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
 	/// - Parameter modifier: A closure that modifies a URL request and `APIClient.Configs` for authentication.
-	public init(modifier: @escaping (inout HTTPRequest, APIClient.Configs) throws -> Void) {
+	public init(modifier: @escaping (inout HTTPRequestComponents, APIClient.Configs) throws -> Void) {
 		self.modifier = modifier
 	}
 
 	/// Initializes a new `AuthModifier` with a custom modifier closure.
 	/// - Parameter modifier: A closure that modifies a URL request for authentication.
-	public init(modifier: @escaping (inout HTTPRequest) throws -> Void) {
+	public init(modifier: @escaping (inout HTTPRequestComponents) throws -> Void) {
 		self.init { request, _ in
 			try modifier(&request)
 		}
@@ -56,7 +56,7 @@ public struct AuthModifier {
 	/// Creates an authentication modifier for adding a `Authorization` header.
 	public static func header(_ value: String) -> AuthModifier {
 		AuthModifier {
-			$0.headerFields[.authorization] = value
+			$0.headers[.authorization] = value
 		}
 	}
 }
@@ -71,7 +71,7 @@ public extension AuthModifier {
 	static func basic(username: String, password: String) -> AuthModifier {
 		AuthModifier {
 			let field = HTTPField.authorization(username: username, password: password)
-			$0.headerFields[field.name] = field.value
+			$0.headers[field.name] = field.value
 		}
 	}
 
@@ -83,7 +83,7 @@ public extension AuthModifier {
 			guard let name = HTTPField.Name(field) else {
 				throw Errors.custom("Invalid field name: \(field)")
 			}
-			$0.headerFields[name] = key
+			$0.headers[name] = key
 		}
 	}
 
@@ -96,7 +96,7 @@ public extension AuthModifier {
 	static func bearer(token: String) -> AuthModifier {
 		AuthModifier {
 			let field = HTTPField.authorization(bearerToken: token)
-			$0.headerFields[field.name] = field.value
+			$0.headers[field.name] = field.value
 		}
 	}
 }

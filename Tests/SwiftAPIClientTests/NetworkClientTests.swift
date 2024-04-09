@@ -12,11 +12,11 @@ final class APIClientTests: XCTestCase {
 		let url = URL(string: "https://example.com")!
 		let client = APIClient(baseURL: url)
 		let request = try client.request()
-		XCTAssertEqual(request, HTTPRequest(url: url))
+		XCTAssertEqual(request, HTTPRequestComponents(url: url))
 	}
 
 	func testInitWithRequest() throws {
-		let request = HTTPRequest(url: URL(string: "https://example.com")!)
+		let request = HTTPRequestComponents(url: URL(string: "https://example.com")!)
 		let client = APIClient(request: request)
 		let resultRequest = try client.request()
 		XCTAssertEqual(request, resultRequest)
@@ -37,7 +37,7 @@ final class APIClientTests: XCTestCase {
 		let result = try client.withRequest { request, _ in
 			request.url?.absoluteString
 		}
-		XCTAssertEqual(result, "https://example.com/")
+		XCTAssertEqual(result, "https://example.com")
 	}
 
 	func testWithConfigs() throws {

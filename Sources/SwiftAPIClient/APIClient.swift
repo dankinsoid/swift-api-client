@@ -4,16 +4,16 @@ import Foundation
 #endif
 
 /// A network client for handling url requests with configurable request and configuration handling.
-public struct APIClient: @unchecked Sendable {
+public struct APIClient: @unchecked Sendable, RequestBuilder {
 
-	private var _createRequest: (Configs) throws -> HTTPRequest
-	private var _modifyRequest: (inout HTTPRequest, Configs) throws -> Void = { _, _ in }
+	private var _createRequest: (Configs) throws -> HTTPRequestComponents
+	private var _modifyRequest: (inout HTTPRequestComponents, Configs) throws -> Void = { _, _ in }
 	private var modifyConfigs: (inout Configs) -> Void = { _ in }
 
 	/// Initializes a new network client with a closure that creates a URLRequest.
-	/// - Parameter createRequest: A closure that takes `Configs` and returns a `HTTPRequest`.
+	/// - Parameter createRequest: A closure that takes `Configs` and returns a `HTTPRequestComponents`.
 	public init(
-		createRequest: @escaping (Configs) throws -> HTTPRequest
+		createRequest: @escaping (Configs) throws -> HTTPRequestComponents
 	) {
 		_createRequest = createRequest
 	}
@@ -24,7 +24,7 @@ public struct APIClient: @unchecked Sendable {
 		baseURL: @escaping (Configs) throws -> URL
 	) {
 		self.init {
-			try HTTPRequest(url: baseURL($0))
+			try HTTPRequestComponents(url: baseURL($0))
 		}
 	}
 
@@ -33,18 +33,37 @@ public struct APIClient: @unchecked Sendable {
 	public init(
 		baseURL: URL
 	) {
-		self.init(request: HTTPRequest(url: baseURL))
+		self.init(request: HTTPRequestComponents(url: baseURL))
 	}
 
 	/// Initializes a new network client with a predefined URLRequest.
 	/// - Parameter request: The URLRequest to be used for all requests.
 	public init(
-		request: HTTPRequest
+		request: HTTPRequestComponents
 	) {
 		self.init { _ in
 			request
 		}
 	}
+
+    /// Initializes a new network client with an empty request components.
+    /// - Warning: You must specify the request components before making any requests.
+    public init() {
+        self.init { _ in
+            HTTPRequestComponents()
+        }
+    }
+    
+    /// Initializes a new network client with a URL string.
+    /// - Parameter string: The URL string to be used for creating requests.
+    public init(string: String) {
+        self.init { _ in
+            guard let url = URL(string: string) else {
+                throw Errors.custom("Invalid URL string: \(string)")
+            }
+            return HTTPRequestComponents(url: url)
+        }
+    }
 
 	/// Configures the client with specific configuration values.
 	/// - Parameters:
@@ -69,25 +88,13 @@ public struct APIClient: @unchecked Sendable {
 		return result
 	}
 
-	/// Modifies the URL request using the provided closure.
-	///   - location: When the request should be modified.
-	///   - modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
-	/// - Returns: An instance of `APIClient` with a modified URL request.
-	public func modifyRequest(
-		_ modifier: @escaping (inout HTTPRequest) throws -> Void
-	) -> APIClient {
-		modifyRequest { req, _ in
-			try modifier(&req)
-		}
-	}
-
 	/// Modifies the URL request using the provided closure, with access to current configurations.
 	/// - Parameter:
 	///   - location: When the request should be modified.
-	///   - modifier: A closure that takes `inout HTTPRequest` and `Configs`, and modifies the URL request.
+	///   - modifier: A closure that takes `inout HTTPRequestComponents` and `Configs`, and modifies the URL request.
 	/// - Returns: An instance of `APIClient` with a modified URL request.
 	public func modifyRequest(
-		_ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
+		_ modifier: @escaping (inout HTTPRequestComponents, Configs) throws -> Void
 	) -> APIClient {
 		var result = self
 		result._createRequest = { [_createRequest] configs in
@@ -99,10 +106,10 @@ public struct APIClient: @unchecked Sendable {
 	}
 
 	/// Modifies the URL request using the provided closure before the request is executed.
-	/// - Parameter modifier: A closure that takes `inout HTTPRequest` and modifies the URL request.
+	/// - Parameter modifier: A closure that takes `inout HTTPRequestComponents` and modifies the URL request.
 	/// - Returns: An instance of `APIClient` with a modified URLRequest.
 	public func finalizeRequest(
-		_ modifier: @escaping (inout HTTPRequest, Configs) throws -> Void
+		_ modifier: @escaping (inout HTTPRequestComponents, Configs) throws -> Void
 	) -> APIClient {
 		var result = self
 		result._modifyRequest = { [_modifyRequest] req, configs in
@@ -116,7 +123,7 @@ public struct APIClient: @unchecked Sendable {
 	/// - Parameter operation: A closure that takes an URL request and `Configs` and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
-	public func withRequest<T>(_ operation: (HTTPRequest, Configs) throws -> T) throws -> T {
+	public func withRequest<T>(_ operation: (HTTPRequestComponents, Configs) throws -> T) throws -> T {
 		let (request, configs) = try createRequest()
 		return try operation(request, configs)
 	}
@@ -125,13 +132,13 @@ public struct APIClient: @unchecked Sendable {
 	/// - Parameter operation: A closure that takes an URL request and `Configs`, and returns a generic type `T`.
 	/// - Throws: Rethrows any errors encountered within the closure.
 	/// - Returns: The result of the closure of type `T`.
-	public func withRequest<T>(_ operation: (HTTPRequest, Configs) async throws -> T) async throws -> T {
+	public func withRequest<T>(_ operation: (HTTPRequestComponents, Configs) async throws -> T) async throws -> T {
 		let (request, configs) = try createRequest()
 		return try await operation(request, configs)
 	}
 
-	/// Build `HTTPRequest`
-	public func request() throws -> HTTPRequest {
+	/// Build `HTTPRequestComponents`
+	public func request() throws -> HTTPRequestComponents {
 		try withRequest { request, _ in request }
 	}
 
@@ -162,7 +169,7 @@ public struct APIClient: @unchecked Sendable {
 		try modifier(self)
 	}
 
-	private func createRequest() throws -> (HTTPRequest, Configs) {
+	private func createRequest() throws -> (HTTPRequestComponents, Configs) {
 		var configs = Configs()
 		let client = Self.globalModifier(self)
 		client.modifyConfigs(&configs)
