@@ -113,13 +113,3 @@ extension SessionDelegateProxy: URLSessionDownloadDelegate {
 }
 
 extension SessionDelegateProxy: URLSessionStreamDelegate {}
-
-extension SessionDelegateProxy: URLSessionWebSocketDelegate {
-    
-    func urlSession(
-        _ session: URLSession,
-        webSocketTask: URLSessionWebSocketTask,
-        didOpenWithProtocol protocol: String?
-    ) {
-    }
-}
