@@ -45,9 +45,10 @@ public extension HTTPDownloadClient {
 
 	static var urlSession: Self {
 		HTTPDownloadClient { request, configs in
-			guard let urlRequest = URLRequest(request: request, configs: configs) else {
+            guard var urlRequest = request.urlRequest else {
 				throw Errors.custom("Invalid request")
 			}
+            urlRequest.timeoutInterval = configs.timeoutInterval
 			return try await asyncMethod { completion in
 				configs.urlSession.downloadTask(with: urlRequest, completionHandler: completion)
 			}
