@@ -1,5 +1,5 @@
 #if canImport(zlib)
-@preconcurrency import Foundation
+import Foundation
 import zlib
 #if canImport(FoundationNetworking)
 import FoundationNetworking

@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 /// Performs an operation with a timeout.
 ///

@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 /// A generic struct for serializing network responses into specified types.
 @dynamicMemberLookup

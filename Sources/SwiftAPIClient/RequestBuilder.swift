@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 import HTTPTypes
 
 public protocol RequestBuilder<Request, Configs> {

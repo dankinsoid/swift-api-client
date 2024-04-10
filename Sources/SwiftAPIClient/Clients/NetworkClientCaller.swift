@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 import Logging
 #if canImport(FoundationNetworking)
 import FoundationNetworking

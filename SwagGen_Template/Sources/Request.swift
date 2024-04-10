@@ -2,7 +2,7 @@
 
 {% else %}
 // swiftlint:disable all
-@preconcurrency import Foundation
+import Foundation
 import SwiftAPIClient
 
 {% set tagType %}{{ tag|swiftIdentifier }}{% endset %}

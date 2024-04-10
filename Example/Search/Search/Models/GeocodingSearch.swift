@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 import SwiftAPIClient
 
 struct GeocodingSearch: Decodable, Equatable, Sendable {

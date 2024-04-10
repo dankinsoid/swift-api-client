@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 /// A service for caching and retrieving secure data.
 public protocol SecureCacheService {

@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 /// A generic struct for serializing content into data and associated content type.
 public struct ContentSerializer<T> {

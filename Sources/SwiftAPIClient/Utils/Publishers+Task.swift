@@ -1,6 +1,6 @@
 #if canImport(Combine)
 import Combine
-@preconcurrency import Foundation
+import Foundation
 
 public extension Publishers {
 

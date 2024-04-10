@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 /// RFC 7528 multipart/form-data
 /// 4.  Definition of multipart/form-data

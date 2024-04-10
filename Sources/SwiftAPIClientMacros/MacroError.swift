@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 
 struct MacroError: LocalizedError, CustomStringConvertible {
 

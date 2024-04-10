@@ -1,5 +1,5 @@
 #if canImport(SystemConfiguration)
-@preconcurrency import Foundation
+import Foundation
 import SystemConfiguration
 
 /// `Reachability` can be used to monitor the network status of a device.

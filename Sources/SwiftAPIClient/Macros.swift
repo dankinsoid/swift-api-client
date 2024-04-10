@@ -1,5 +1,5 @@
 #if swift(>=5.9)
-@preconcurrency import Foundation
+import Foundation
 import HTTPTypes
 
 /// A macro that generates an HTTP call to the API client.

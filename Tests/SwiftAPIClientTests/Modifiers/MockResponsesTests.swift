@@ -1,4 +1,4 @@
-@preconcurrency import Foundation
+import Foundation
 @testable import SwiftAPIClient
 #if canImport(FoundationNetworking)
 import FoundationNetworking
