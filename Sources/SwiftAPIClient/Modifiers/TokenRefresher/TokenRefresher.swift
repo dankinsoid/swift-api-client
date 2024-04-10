@@ -2,6 +2,7 @@
 
 public extension APIClient {
 
+#if canImport(Security)
 	/// Adds a `TokenRefresherMiddleware` to the client.
 	/// `TokenRefresherMiddleware` is used to refresh the token when it expires.
 	/// - Parameters:
@@ -29,6 +30,35 @@ public extension APIClient {
 			)
 		)
 	}
+#else
+    /// Adds a `TokenRefresherMiddleware` to the client.
+    /// `TokenRefresherMiddleware` is used to refresh the token when it expires.
+    /// - Parameters:
+    /// - cacheService: The `SecureCacheService` to use for caching the token. Default to `.keychain`.
+    /// - expiredStatusCodes: The set of status codes that indicate an expired token. Default to `[401]`.
+    /// - request: The closure to use for requesting a new token and refresh token first time. Set to `nil` if you want to request and cache tokens manually.
+    /// - refresh: The closure to use for refreshing a new token with refresh token.
+    /// - auth: The closure that creates an `AuthModifier` for the new token. Default to `.bearer(token:)`.
+    ///
+    /// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
+    func tokenRefresher(
+        cacheService: SecureCacheService,
+        expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
+        request: ((APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?))? = nil,
+        refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
+        auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
+    ) -> Self {
+        httpClientMiddleware(
+            TokenRefresherMiddleware(
+                cacheService: cacheService,
+                expiredStatusCodes: expiredStatusCodes,
+                request: request.map { request in { try await request(self, $0) } },
+                refresh: { try await refresh($0, self, $1) },
+                auth: auth
+            )
+        )
+    }
+#endif
 }
 
 public struct TokenRefresherMiddleware: HTTPClientMiddleware {
