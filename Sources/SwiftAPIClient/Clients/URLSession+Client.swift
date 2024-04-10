@@ -19,11 +19,8 @@ public extension HTTPClient {
 			}
             urlRequest.url = url
 			#if os(Linux)
-			guard let urlRequest = URLRequest(request: urlRequest, body: body, configs: configs) else {
-				throw Errors.custom("Invalid request")
-			}
 			return try await asyncMethod { completion in
-				configs.urlSession.uploadTask(with: urlRequest, body: body, completionHandler: completion)
+				configs.urlSession.uploadTask(with: urlRequest, body: request.body, completionHandler: completion)
 			}
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
