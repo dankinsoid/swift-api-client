@@ -1,7 +1,7 @@
 @preconcurrency import Foundation
 import Logging
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 /// A generic structure for handling network requests and their responses.

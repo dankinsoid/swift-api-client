@@ -1,6 +1,6 @@
 @preconcurrency import Foundation
 #if canImport(FoundationNetworking)
-@_exported @preconcurrency import FoundationNetworking
+@_exported import FoundationNetworking
 #endif
 
 /// A network client for handling url requests with configurable request and configuration handling.

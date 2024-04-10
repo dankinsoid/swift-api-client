@@ -1,6 +1,6 @@
 @preconcurrency import Foundation
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 /// A struct representing an HTTP client capable of performing network requests.

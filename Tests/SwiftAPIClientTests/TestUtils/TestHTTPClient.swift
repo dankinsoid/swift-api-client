@@ -1,7 +1,7 @@
 @preconcurrency import Foundation
 import SwiftAPIClient
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 extension HTTPClient {

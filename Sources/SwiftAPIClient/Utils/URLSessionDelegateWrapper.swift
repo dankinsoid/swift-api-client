@@ -1,6 +1,6 @@
 @preconcurrency import Foundation
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)

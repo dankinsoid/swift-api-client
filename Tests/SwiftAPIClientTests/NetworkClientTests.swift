@@ -3,7 +3,7 @@ import Logging
 @testable import SwiftAPIClient
 import XCTest
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 final class APIClientTests: XCTestCase {

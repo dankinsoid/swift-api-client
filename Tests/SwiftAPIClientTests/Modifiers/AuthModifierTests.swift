@@ -2,7 +2,7 @@
 @testable import SwiftAPIClient
 import XCTest
 #if canImport(FoundationNetworking)
-@preconcurrency import FoundationNetworking
+import FoundationNetworking
 #endif
 
 final class AuthModifierTests: XCTestCase {
