@@ -279,6 +279,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	func baseURL(_ newBaseURL: URL) -> Self {
 		modifyRequest {
             $0.urlComponents.scheme = newBaseURL.scheme
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
             if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
                 if let host = newBaseURL.host(percentEncoded: false) {
                     $0.urlComponents.host = host
@@ -288,6 +289,11 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
                     $0.urlComponents.percentEncodedHost = host
                 }
             }
+#else
+            if let host = newBaseURL.host {
+                $0.urlComponents.percentEncodedHost = host
+            }
+#endif
             $0.urlComponents.port = newBaseURL.port
 		}
 	}

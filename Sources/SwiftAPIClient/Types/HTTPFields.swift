@@ -89,7 +89,7 @@ public extension HTTPField {
 	///
 	/// - Parameter value: The `Sec-WebSocket-Protocol` value.
 	/// - Returns:         The header.
-	static func websocketProtocol(_ value: String) -> HTTPField {
+	static func webSocketProtocol(_ value: String) -> HTTPField {
 		HTTPField(name: .secWebSocketProtocol, value: value)
 	}
 }

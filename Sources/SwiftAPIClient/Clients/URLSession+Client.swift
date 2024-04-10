@@ -125,5 +125,3 @@ private func customErrors<T>(_ operation: () async throws -> T) async throws -> 
 		throw error
 	}
 }
-
-private final class URLSessionDelegateProxy: NSObject, URLSessionDelegate {}

@@ -85,35 +85,54 @@ public struct HTTPRequestComponents: Sendable, Hashable {
     ) {
         if let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) {
             self.init(urlComponents: urlComponents, method: method, headers: headers, body: body)
-        } else if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
-            self.init(
-                scheme: url.scheme ?? "https",
-                user: url.user(percentEncoded: false),
-                password: url.password(percentEncoded: false),
-                host: url.host(percentEncoded: false) ?? "",
-                port: url.port,
-                path: url.path(percentEncoded: false),
-                query: url.query(percentEncoded: false),
-                fragment: url.fragment(percentEncoded: false),
-                method: method,
-                headers: headers,
-                body: body
-            )
         } else {
-            self.init(
-                scheme: url.scheme ?? "https",
-                user: url.user,
-                password: url.password,
-                host: url.host ?? "",
-                port: url.port,
-                path: url.path,
-                query: url.query,
-                fragment: url.fragment,
-                percentEncoded: true,
-                method: method,
-                headers: headers,
-                body: body
-            )
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+            if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
+                self.init(
+                    scheme: url.scheme ?? "https",
+                    user: url.user(percentEncoded: false),
+                    password: url.password(percentEncoded: false),
+                    host: url.host(percentEncoded: false) ?? "",
+                    port: url.port,
+                    path: url.path(percentEncoded: false),
+                    query: url.query(percentEncoded: false),
+                    fragment: url.fragment(percentEncoded: false),
+                    method: method,
+                    headers: headers,
+                    body: body
+                )
+            } else {
+                self.init(
+                    scheme: url.scheme ?? "https",
+                    user: url.user,
+                    password: url.password,
+                    host: url.host ?? "",
+                    port: url.port,
+                    path: url.path,
+                    query: url.query,
+                    fragment: url.fragment,
+                    percentEncoded: true,
+                    method: method,
+                    headers: headers,
+                    body: body
+                )
+            }
+#else
+        self.init(
+            scheme: url.scheme ?? "https",
+            user: url.user,
+            password: url.password,
+            host: url.host ?? "",
+            port: url.port,
+            path: url.path,
+            query: url.query,
+            fragment: url.fragment,
+            percentEncoded: true,
+            method: method,
+            headers: headers,
+            body: body
+        )
+#endif
         }
     }
 
@@ -153,11 +172,15 @@ public struct HTTPRequestComponents: Sendable, Hashable {
         if percentEncoded {
             urlComponents.percentEncodedUser = user
             urlComponents.percentEncodedPassword = password
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
             if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
                 urlComponents.encodedHost = host
             } else {
                 urlComponents.percentEncodedHost = host
             }
+#else
+            urlComponents.percentEncodedHost = host
+#endif
             urlComponents.percentEncodedPath = path
             urlComponents.percentEncodedQuery = query
             urlComponents.percentEncodedFragment = fragment

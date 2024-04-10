@@ -1,6 +1,5 @@
 import Foundation
 
-#if !canImport(FoundationNetworking)
 public extension APIClient.Configs {
 
 	/// The redirect behaviour for the client. Default is `.follow`.
@@ -18,4 +17,3 @@ public extension APIClient {
 		configs(\.redirectBehaviour, behaviour)
 	}
 }
-#endif
