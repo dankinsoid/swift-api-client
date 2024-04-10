@@ -55,6 +55,8 @@ public extension HTTPDownloadClient {
 
 private extension URLSession {
 
+#if os(Linux)
+#else
 	@available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 	func data(for request: URLRequest, body: RequestBody?) async throws -> (Data, URLResponse) {
 		switch body {
@@ -66,6 +68,7 @@ private extension URLSession {
 			return try await data(for: request)
 		}
 	}
+#endif
 
 	func uploadTask(with request: URLRequest, body: RequestBody?, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
 		switch body {
