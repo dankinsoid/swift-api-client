@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 /// A protocol defining a decoder for deserializing `Data` into decodable types.
 public protocol DataDecoder {

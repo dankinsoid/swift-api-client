@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 @propertyWrapper
 struct Ref<Value> {

@@ -1,5 +1,5 @@
 #if canImport(SystemConfiguration)
-import Foundation
+@preconcurrency import Foundation
 
 public extension APIClient {
 

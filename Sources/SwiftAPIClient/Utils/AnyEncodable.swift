@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 struct AnyEncodable: Encodable {
 

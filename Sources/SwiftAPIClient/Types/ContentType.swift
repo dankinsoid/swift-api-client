@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 /// Represents a MIME content type with support for type, subtype, and parameters.
 ///

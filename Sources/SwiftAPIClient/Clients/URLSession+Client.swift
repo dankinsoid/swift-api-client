@@ -1,7 +1,7 @@
-import Foundation
+@preconcurrency import Foundation
 import Logging
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+@preconcurrency import FoundationNetworking
 #endif
 
 public extension HTTPClient {

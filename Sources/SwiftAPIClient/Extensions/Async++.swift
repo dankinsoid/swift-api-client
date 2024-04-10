@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 public struct AsyncSequenceOfElements<S: Sequence>: AsyncSequence {
 

@@ -1,8 +1,8 @@
 #if canImport(zlib)
-import Foundation
+@preconcurrency import Foundation
 import zlib
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+@preconcurrency import FoundationNetworking
 #endif
 
 public extension APIClient {

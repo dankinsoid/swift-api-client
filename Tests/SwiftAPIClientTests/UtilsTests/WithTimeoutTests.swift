@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 @testable import SwiftAPIClient
 import XCTest
 

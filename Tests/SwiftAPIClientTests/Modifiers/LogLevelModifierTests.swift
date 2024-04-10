@@ -1,8 +1,8 @@
-import Foundation
+@preconcurrency import Foundation
 import Logging
 @testable import SwiftAPIClient
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+@preconcurrency import FoundationNetworking
 #endif
 import XCTest
 

@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 import SwiftAPIClient
 
 struct Forecast: Decodable, Equatable, Sendable {

@@ -1,5 +1,5 @@
 // swiftlint:disable all
-import Foundation
+@preconcurrency import Foundation
 import SwiftAPIClient
 
 {% if info.description %}

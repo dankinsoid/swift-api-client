@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 /// A protocol defining an encoder that serializes data into a specific content type.
 public protocol ContentEncoder {

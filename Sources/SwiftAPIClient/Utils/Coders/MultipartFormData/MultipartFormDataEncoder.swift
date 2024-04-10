@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 public extension ContentEncoder where Self == MultipartFormDataEncoder {
 

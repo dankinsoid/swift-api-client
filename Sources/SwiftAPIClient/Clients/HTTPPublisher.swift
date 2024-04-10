@@ -1,6 +1,6 @@
 #if canImport(Combine)
 import Combine
-import Foundation
+@preconcurrency import Foundation
 
 public extension APIClientCaller where Result == AnyPublisher<Value, Error>, Response == Data {
 

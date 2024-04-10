@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 /// A type that represents an error decoding from a response body.
 public struct ErrorDecoder {

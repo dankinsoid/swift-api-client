@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 
 /// A type-erasing wrapper for any `AsyncSequence`.
 public struct AnyAsyncSequence<Element>: AsyncSequence {

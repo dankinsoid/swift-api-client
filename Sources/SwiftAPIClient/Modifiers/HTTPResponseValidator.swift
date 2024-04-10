@@ -1,6 +1,6 @@
-import Foundation
+@preconcurrency import Foundation
 #if canImport(FoundationNetworking)
-import FoundationNetworking
+@preconcurrency import FoundationNetworking
 #endif
 
 /// A struct for validating HTTP responses.
