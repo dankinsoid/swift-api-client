@@ -13,7 +13,6 @@ public extension APIClient.Configs {
 	}
 }
 
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 public extension APIClient.Configs {
 
 	/// The delegate for the URLSession of the client.
@@ -30,7 +29,6 @@ public extension APIClient {
 		configs(\.urlSessionDelegate, delegate)
 	}
 }
-#endif
 
 private extension URLSession {
 
