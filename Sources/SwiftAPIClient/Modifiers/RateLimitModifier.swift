@@ -29,7 +29,7 @@ extension APIClient {
         maxRepeatCount: Int = 3
     ) -> Self {
         waitIfRateLimitExceeded(
-            id: { $0.url?.baseURL?.absoluteString ?? UUID().uuidString },
+            id: { $0.url?.host ?? UUID().uuidString },
             interval: interval,
             statusCodes: statusCodes,
             maxRepeatCount: maxRepeatCount

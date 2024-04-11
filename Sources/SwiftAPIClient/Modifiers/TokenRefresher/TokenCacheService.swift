@@ -38,6 +38,18 @@ public extension SecureCacheService where Self == MockSecureCacheService {
 	}
 }
 
+public extension SecureCacheService {
+
+    func save(_ date: Date, for key: SecureCacheServiceKey) async throws {
+        try await save(dateFormatter.string(for: date), for: key)
+    }
+
+    func load(for key: SecureCacheServiceKey) async -> Date? {
+        guard let dateString = await load(for: key) else { return nil }
+        return dateFormatter.date(from: dateString)
+    }
+}
+
 public final actor MockSecureCacheService: SecureCacheService {
 
 	private var values: [SecureCacheServiceKey: String] = [:]
@@ -154,3 +166,11 @@ public struct KeychainCacheService: SecureCacheService {
 	}
 }
 #endif
+
+private let dateFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(secondsFromGMT: 0)
+    formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+    return formatter
+}()

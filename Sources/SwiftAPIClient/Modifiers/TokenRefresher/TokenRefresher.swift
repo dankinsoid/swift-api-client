@@ -8,7 +8,7 @@ public extension APIClient {
 	/// - Parameters:
     /// - cacheService: The `SecureCacheService` to use for caching the token. Default to `.keychain`. Token must be stored with the key `.accessToken`.
 	/// - expiredStatusCodes: The set of status codes that indicate an expired token. Default to `[401]`.
-	/// - request: The closure to use for requesting a new token and refresh token first time. Set to `nil` if you want to request and cache tokens manually.
+    /// - request: The closure to use for requesting a new token and refresh token first time. Set to `nil` if you want to request and cache tokens manually.
 	/// - refresh: The closure to use for refreshing a new token with refresh token.
 	/// - auth: The closure that creates an `AuthModifier` for the new token. Default to `.bearer(token:)`.
 	///
@@ -16,7 +16,7 @@ public extension APIClient {
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
-        request: @escaping (SecureCacheService) async -> String? = { await $0.load(for: .accessToken) },
+        request: ((APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?))? = nil,
 		refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
 		auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
 	) -> Self {
@@ -24,6 +24,7 @@ public extension APIClient {
 			TokenRefresherMiddleware(
 				cacheService: cacheService,
 				expiredStatusCodes: expiredStatusCodes,
+                request: request.map { request in { try await request(self, $0) } },
 				refresh: { try await refresh($0, self, $1) },
 				auth: auth
 			)
@@ -43,6 +44,7 @@ public extension APIClient {
     func tokenRefresher(
         cacheService: SecureCacheService,
         expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
+        request: ((APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?))? = nil,
         refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
         auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
     ) -> Self {
@@ -50,6 +52,7 @@ public extension APIClient {
             TokenRefresherMiddleware(
                 cacheService: cacheService,
                 expiredStatusCodes: expiredStatusCodes,
+                request: request.map { request in { try await request(self, $0) } },
                 refresh: { try await refresh($0, self, $1) },
                 auth: auth
             )
@@ -63,16 +66,19 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 	private let tokenCacheService: SecureCacheService
 	private let expiredStatusCodes: Set<HTTPResponse.Status>
 	private let auth: (String) -> AuthModifier
+    private let requestToken: ((APIClient.Configs) async throws -> (String, String?, Date?))?
 	private let refresh: (String?, APIClient.Configs) async throws -> (String, String?, Date?)
 
 	public init(
 		cacheService: SecureCacheService,
 		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
+        request: ((APIClient.Configs) async throws -> (String, String?, Date?))?,
 		refresh: @escaping (String?, APIClient.Configs) async throws -> (String, String?, Date?),
 		auth: @escaping (String) -> AuthModifier
 	) {
 		tokenCacheService = cacheService
 		self.refresh = refresh
+        self.requestToken = request
 		self.auth = auth
 		self.expiredStatusCodes = expiredStatusCodes
 	}
@@ -85,20 +91,30 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
         guard configs.isAuthEnabled else {
             return try await next(request, configs)
         }
-        guard var accessToken = await tokenCacheService.load(for: .accessToken) else {
+        var accessToken: String
+        var currentExpiryDate: Date?
+        var refreshToken: String?
+        if let cachedToken = await tokenCacheService.load(for: .accessToken) {
+            accessToken = cachedToken
+            currentExpiryDate = await tokenCacheService.load(for: .expiryDate)
+            refreshToken = await tokenCacheService.load(for: .refreshToken)
+        } else if let requestToken, let url = request.url {
+            (accessToken, refreshToken, currentExpiryDate) = try await withThrowingSynchronizedAccess(id: url.host) {
+                try await requestToken(configs)
+            }
+        } else {
             throw Errors.custom("Token not found.")
         }
-        var refreshToken = await tokenCacheService.load(for: .refreshToken)
 
         if
-            let expiryDateString = await tokenCacheService.load(for: .expiryDate),
-            let currentExpiryDate = dateFormatter.date(from: expiryDateString),
+            let currentExpiryDate,
             currentExpiryDate > Date()
         {
             (accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, accessToken: accessToken, refreshToken: refreshToken)
         } else {
-            let token = await waitForSynchronizedAccess(id: accessToken, of: (String, String?, Date?).self)?.0
-            accessToken = token ?? accessToken
+            if let values = await waitForSynchronizedAccess(id: accessToken, of: (String, String?, Date?).self) {
+                (accessToken, refreshToken, currentExpiryDate) = values
+            }
         }
         var authorizedRequest = request
         try auth(accessToken).modifier(&authorizedRequest, configs)
@@ -124,17 +140,9 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
                 try await tokenCacheService.save(refreshToken, for: .refreshToken)
             }
             if let expiryDate {
-                try await tokenCacheService.save(dateFormatter.string(from: expiryDate), for: .expiryDate)
+                try await tokenCacheService.save(expiryDate, for: .expiryDate)
             }
             return (token, refreshToken, expiryDate)
         }
 	}
 }
-
-private let dateFormatter: DateFormatter = {
-	let formatter = DateFormatter()
-	formatter.locale = Locale(identifier: "en_US_POSIX")
-	formatter.timeZone = TimeZone(secondsFromGMT: 0)
-	formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-	return formatter
-}()
