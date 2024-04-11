@@ -40,8 +40,8 @@ public extension SecureCacheService where Self == MockSecureCacheService {
 
 public extension SecureCacheService {
 
-    func save(_ date: Date, for key: SecureCacheServiceKey) async throws {
-        try await save(dateFormatter.string(for: date), for: key)
+    func save(_ date: Date?, for key: SecureCacheServiceKey) async throws {
+        try await save(date.map(dateFormatter.string), for: key)
     }
 
     func load(for key: SecureCacheServiceKey) async -> Date? {
