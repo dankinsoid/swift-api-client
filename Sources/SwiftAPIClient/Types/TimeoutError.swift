@@ -7,6 +7,7 @@ import Foundation
 ///   - operation: The operation to perform.
 /// - Returns: The result of the operation.
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
+/// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
 public func withTimeout<T>(
 	_ timeout: TimeInterval?,
 	fileID: String = #fileID,
@@ -32,6 +33,7 @@ public func withTimeout<T>(
 ///   - operation: The operation to perform.
 /// - Returns: The result of the operation.
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
+/// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
 public func withTimeout<T, C: Clock>(
 	_ timeout: C.Instant.Duration?,
@@ -59,6 +61,7 @@ public func withTimeout<T, C: Clock>(
 ///   - operation: The operation to perform.
 /// - Returns: The result of the operation.
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
+/// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
 public func withTimeout<T>(
 	_ timeout: ContinuousClock.Instant.Duration?,
