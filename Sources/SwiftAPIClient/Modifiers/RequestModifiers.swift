@@ -275,7 +275,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - newBaseURL: The new base URL to set.
 	/// - Returns: An instance with the updated base URL.
 	///
-	/// - Note: The path, query, and fragment of the original URL are retained, while those of the new URL are ignored.
+	/// - Note: The query, and fragment of the original URL are retained, while those of the new URL are ignored.
 	func baseURL(_ newBaseURL: URL) -> Self {
 		modifyRequest {
             $0.urlComponents.scheme = newBaseURL.scheme
@@ -284,19 +284,38 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
                 if let host = newBaseURL.host(percentEncoded: false) {
                     $0.urlComponents.host = host
                 }
+                $0.prependPath(newBaseURL.path(percentEncoded: false))
             } else {
                 if let host = newBaseURL.host {
                     $0.urlComponents.percentEncodedHost = host
+                }
+                if !newBaseURL.path.isEmpty {
+                    $0.prependPath(newBaseURL.path, percentEncoded: true)
                 }
             }
 #else
             if let host = newBaseURL.host {
                 $0.urlComponents.percentEncodedHost = host
             }
+            if !newBaseURL.path.isEmpty {
+                $0.prependPath(newBaseURL.path, percentEncoded: true)
+            }
 #endif
             $0.urlComponents.port = newBaseURL.port
 		}
 	}
+    
+    /// Sets the URL for the request.
+    /// - Parameter url: The new URL to set.
+    /// - Returns: An instance with the updated URL.
+    func url(_ url: URL) -> Self {
+        modifyRequest {
+            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                throw Errors.custom("Invalid URL \(url.absoluteString) components")
+            }
+            $0.urlComponents = components
+        }
+    }
 
 	/// Sets the scheme for the request.
 	///

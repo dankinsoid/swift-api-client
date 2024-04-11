@@ -214,6 +214,26 @@ public struct HTTPRequestComponents: Sendable, Hashable {
             urlComponents.path += "/"
         }
     }
+    
+    public mutating func prependPath(
+        _ pathComponent: String,
+        percentEncoded: Bool = false
+    ) {
+        var path = pathComponent
+        if path.hasSuffix("/"), urlComponents.path.hasPrefix("/") {
+            path.removeLast()
+        } else if !path.hasSuffix("/"), !urlComponents.path.hasPrefix("/") {
+            path += "/"
+        }
+        if percentEncoded {
+            urlComponents.percentEncodedPath = path + urlComponents.percentEncodedPath
+        } else {
+            urlComponents.path = path + urlComponents.path
+        }
+        if !urlComponents.path.isEmpty, !urlComponents.path.hasSuffix("/") {
+            urlComponents.path += "/"
+        }
+    }
 }
 
 extension HTTPRequestComponents {
