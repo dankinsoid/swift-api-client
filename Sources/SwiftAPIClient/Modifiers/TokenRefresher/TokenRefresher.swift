@@ -99,7 +99,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 				let currentExpiryDate = dateFormatter.date(from: expiryDateString),
 				currentExpiryDate > Date()
 			{
-				(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, refreshToken: refreshToken)
+				(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, accessToken: currentToken, refreshToken: refreshToken)
 			} else {
 				accessToken = currentToken
 			}
@@ -110,7 +110,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		try auth(accessToken).modifier(&authorizedRequest, configs)
 		let result = try await next(authorizedRequest, configs)
 		if expiredStatusCodes.contains(result.1.status) {
-			(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, refreshToken: refreshToken)
+            (accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, accessToken: accessToken, refreshToken: refreshToken)
 			authorizedRequest = request
 			try auth(accessToken).modifier(&authorizedRequest, configs)
 			return try await next(authorizedRequest, configs)
@@ -124,6 +124,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		guard let request else {
 			throw Errors.custom("No cached token found.")
 		}
+        
 		let (token, refreshToken, expiryDate) = try await request(configs)
 		tokenCacheService[.accessToken] = token
 		if let refreshToken {
@@ -137,9 +138,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 
 	private func refreshTokenAndCache(
 		_ configs: APIClient.Configs,
+        accessToken: String,
 		refreshToken: String?
 	) async throws -> (String, String?, Date?) {
-		let (token, refreshToken, expiryDate) = try await refresh(refreshToken, configs)
+        let (token, refreshToken, expiryDate) = try await withThrowingSynchronizedAccess(id: accessToken) {
+            try await refresh(refreshToken, configs)
+        }
 		tokenCacheService[.accessToken] = token
 		if let refreshToken {
 			tokenCacheService[.refreshToken] = refreshToken
