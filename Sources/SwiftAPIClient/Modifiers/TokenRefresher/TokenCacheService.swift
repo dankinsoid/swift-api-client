@@ -3,8 +3,9 @@ import Foundation
 /// A service for caching and retrieving secure data.
 public protocol SecureCacheService {
 
-	subscript(key: SecureCacheServiceKey) -> String? { get nonmutating set }
-	func clear() throws
+    func load(for key: SecureCacheServiceKey) async -> String?
+    func save(_ value: String?, for key: SecureCacheServiceKey) async throws
+	func clear() async throws
 }
 
 /// A key for a secure cache service.
@@ -37,18 +38,26 @@ public extension SecureCacheService where Self == MockSecureCacheService {
 	}
 }
 
-public final class MockSecureCacheService: SecureCacheService {
+public final actor MockSecureCacheService: SecureCacheService {
 
 	private var values: [SecureCacheServiceKey: String] = [:]
 
 	public static let shared = MockSecureCacheService()
 
-	public subscript(key: SecureCacheServiceKey) -> String? {
-		get { values[key] }
-		set { values[key] = newValue }
-	}
+    public init(_ values: [SecureCacheServiceKey: String] = [:]) {
+        self.values = values
+    }
 
-	public func clear() throws {}
+    public func load(for key: SecureCacheServiceKey) async -> String? {
+        values[key]
+    }
+    public func save(_ value: String?, for key: SecureCacheServiceKey) async throws {
+        values[key] = value
+    }
+
+	public func clear() async throws {
+        values.removeAll()
+    }
 }
 
 #if canImport(Security)
@@ -84,52 +93,51 @@ public struct KeychainCacheService: SecureCacheService {
 		self.service = service
 	}
 
-	public subscript(key: SecureCacheServiceKey) -> String? {
-		get {
-			// Create a query for retrieving the value
-			var query: [String: Any] = [
-				kSecClass as String: kSecClassGenericPassword,
-				kSecAttrAccount as String: key.value,
-				kSecReturnData as String: kCFBooleanTrue!,
-				kSecMatchLimit as String: kSecMatchLimitOne,
-			]
-			if let service {
-				query[kSecAttrService as String] = service
-			}
-
-			var item: CFTypeRef?
-			let status = SecItemCopyMatching(query as CFDictionary, &item)
-
-			// Check the result
-			guard status == errSecSuccess, let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
-				return nil
-			}
-
-			return token
-		}
-		nonmutating set {
-			// Create a query for saving the token
-			var query: [String: Any] = [
-				kSecClass as String: kSecClassGenericPassword,
-				kSecAttrAccount as String: key.value,
-			]
-
-			if let service {
-				query[kSecAttrService as String] = service
-			}
-
-			// Try to delete the old value if it exists
-			SecItemDelete(query as CFDictionary)
-
-			if let newValue {
-				query[kSecValueData as String] = newValue.data(using: .utf8)
-				// Add the new token to the Keychain
-				SecItemAdd(query as CFDictionary, nil)
-				// Check the result
-				// status == errSecSuccess
-			}
-		}
-	}
+    public func load(for key: SecureCacheServiceKey) async -> String? {
+        // Create a query for retrieving the value
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key.value,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        if let service {
+            query[kSecAttrService as String] = service
+        }
+        
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        
+        // Check the result
+        guard status == errSecSuccess, let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+        
+        return token
+    }
+    
+    public func save(_ value: String?, for key: SecureCacheServiceKey) async throws {
+        // Create a query for saving the token
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key.value,
+        ]
+        
+        if let service {
+            query[kSecAttrService as String] = service
+        }
+        
+        // Try to delete the old value if it exists
+        SecItemDelete(query as CFDictionary)
+        
+        if let value {
+            query[kSecValueData as String] = value.data(using: .utf8)
+            // Add the new token to the Keychain
+            SecItemAdd(query as CFDictionary, nil)
+            // Check the result
+            // status == errSecSuccess
+        }
+    }
 
 	public func clear() throws {
 		var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword]

@@ -16,7 +16,7 @@ public extension APIClient {
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
-		request: @escaping (SecureCacheService) -> String? = { $0[.accessToken] },
+        request: @escaping (SecureCacheService) async -> String? = { await $0.load(for: .accessToken) },
 		refresh: @escaping (_ refreshToken: String?, APIClient, APIClient.Configs) async throws -> (accessToken: String, refreshToken: String?, expiryDate: Date?),
 		auth: @escaping (String) -> AuthModifier = AuthModifier.bearer
 	) -> Self {
@@ -85,13 +85,13 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
         guard configs.isAuthEnabled else {
             return try await next(request, configs)
         }
-        guard var accessToken = tokenCacheService[.accessToken] else {
+        guard var accessToken = await tokenCacheService.load(for: .accessToken) else {
             throw Errors.custom("Token not found.")
         }
-        var refreshToken = tokenCacheService[.refreshToken]
+        var refreshToken = await tokenCacheService.load(for: .refreshToken)
 
         if
-            let expiryDateString = tokenCacheService[.expiryDate],
+            let expiryDateString = await tokenCacheService.load(for: .expiryDate),
             let currentExpiryDate = dateFormatter.date(from: expiryDateString),
             currentExpiryDate > Date()
         {
@@ -119,12 +119,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 	) async throws -> (String, String?, Date?) {
         try await withThrowingSynchronizedAccess(id: accessToken) { [self] in
             let (token, refreshToken, expiryDate) = try await refresh(refreshToken, configs)
-            tokenCacheService[.accessToken] = token
+            try await tokenCacheService.save(token, for: .accessToken)
             if let refreshToken {
-                tokenCacheService[.refreshToken] = refreshToken
+                try await tokenCacheService.save(refreshToken, for: .refreshToken)
             }
             if let expiryDate {
-                tokenCacheService[.expiryDate] = dateFormatter.string(from: expiryDate)
+                try await tokenCacheService.save(dateFormatter.string(from: expiryDate), for: .expiryDate)
             }
             return (token, refreshToken, expiryDate)
         }
