@@ -198,16 +198,16 @@ public extension APIClient {
 						return try serializer.serialize(response, configs)
 					} catch {
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-                            configs.errorHandler(failure, configs)
+                            try configs.errorHandler(failure, configs)
 							throw failure
 						}
-                        configs.errorHandler(error, configs)
+                        try configs.errorHandler(error, configs)
 						throw error
 					}
 				}
 			}
 		} catch {
-			withConfigs { configs in
+			try withConfigs { configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
 				if !configs.loggingComponents.isEmpty {
 					let message = configs.loggingComponents.errorMessage(
@@ -217,7 +217,7 @@ public extension APIClient {
 					)
 					configs.logger.error("\(message)")
 				}
-                configs.errorHandler(error, configs)
+                try configs.errorHandler(error, configs)
 			}
 			throw error
 		}
@@ -226,7 +226,7 @@ public extension APIClient {
 
 public extension APIClient.Configs {
 
-    var errorHandler: (Error, APIClient.Configs) -> Void {
+    var errorHandler: (Error, APIClient.Configs) throws -> Void {
         get { self[\.errorHandler] ?? { _, _ in } }
         set { self[\.errorHandler] = newValue }
     }
@@ -235,12 +235,16 @@ public extension APIClient.Configs {
 public extension APIClient {
 
     /// Sets the error handler.
-    func errorHandler(_ handler: @escaping (Error, APIClient.Configs) -> Void) -> APIClient {
+    func errorHandler(_ handler: @escaping (Error, APIClient.Configs) throws -> Void) -> APIClient {
         configs { configs in
             let current = configs.errorHandler
-            configs.errorHandler = { error, configs in
-                current(error, configs)
-                handler(error, configs)
+            configs.errorHandler = { failure, configs in
+                do {
+                    try current(failure, configs)
+                } catch {
+                    try handler(error, configs)
+                    throw error
+                }
             }
         }
     }
