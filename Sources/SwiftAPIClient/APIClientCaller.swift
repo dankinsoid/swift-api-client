@@ -198,8 +198,10 @@ public extension APIClient {
 						return try serializer.serialize(response, configs)
 					} catch {
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
+                            configs.errorHandler(failure, configs)
 							throw failure
 						}
+                        configs.errorHandler(error, configs)
 						throw error
 					}
 				}
@@ -215,8 +217,31 @@ public extension APIClient {
 					)
 					configs.logger.error("\(message)")
 				}
+                configs.errorHandler(error, configs)
 			}
 			throw error
 		}
 	}
+}
+
+public extension APIClient.Configs {
+
+    var errorHandler: (Error, APIClient.Configs) -> Void {
+        get { self[\.errorHandler] ?? { _, _ in } }
+        set { self[\.errorHandler] = newValue }
+    }
+}
+
+public extension APIClient {
+
+    /// Sets the error handler.
+    func errorHandler(_ handler: @escaping (Error, APIClient.Configs) -> Void) -> APIClient {
+        configs { configs in
+            let current = configs.errorHandler
+            configs.errorHandler = { error, configs in
+                current(error, configs)
+                handler(error, configs)
+            }
+        }
+    }
 }
