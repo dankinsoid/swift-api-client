@@ -22,7 +22,7 @@ public func withThrowingSynchronizedAccess<T, ID: Hashable>(
         } else if let task = cached as? Task<T, Never> {
             return await task.value
         } else {
-//            runtimeWarn("Unexpected task type found in the barrier.")
+            runtimeWarn("Unexpected task type found in the barrier.")
         }
     }
     let task = Task(operation: task)
@@ -57,14 +57,14 @@ public func withSynchronizedAccess<T, ID: Hashable>(
 ) async -> T {
     if let cached = await Barriers.shared.tasks[taskIdentifier] {
         if let task = cached as? Task<T, Error> {
-//            logger("Attempted to access a throwing synchronized task from a non-throwing context.")
+            runtimeWarn("Attempted to access a throwing synchronized task from a non-throwing context.")
             if let result = try? await task.value {
                 return result
             }
         } else if let task = cached as? Task<T, Never> {
             return await task.value
         } else {
-//            runtimeWarn("Unexpected task type found in the barrier.")
+            runtimeWarn("Unexpected task type found in the barrier.")
         }
     }
     let task = Task(operation: task)
@@ -96,11 +96,11 @@ public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier
     guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
         return nil
     }
-    return try await cached.wait() as? T
-//    if result == nil, !(type is Void.Type) {
-//        runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
-//    }
-//    return result
+    let result = try await cached.wait() as? T
+    if result == nil, !(type is Void.Type) {
+        runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
+    }
+    return result
 }
 
 /// Waits for the completion of all synchronized accesses associated with a specific identifier before proceeding.
@@ -124,11 +124,11 @@ public func waitForSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of
         return nil
     }
     do {
-        return try await cached.wait() as? T
-//        if result == nil, !(type is Void.Type) {
-//            runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
-//        }
-//        return result
+        let result = try await cached.wait() as? T
+        if result == nil, !(type is Void.Type) {
+            runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
+        }
+        return result
     } catch {
         return nil
     }
