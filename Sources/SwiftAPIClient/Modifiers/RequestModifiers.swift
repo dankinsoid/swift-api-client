@@ -212,7 +212,6 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 		modifyRequest { req, configs in
 			let items = try items(configs)
 			guard !items.isEmpty else { return }
-			req.appendPath("")
 			let itemsToAdd: [URLQueryItem]
 			if percentEncoded {
 				itemsToAdd = items

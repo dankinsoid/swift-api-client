@@ -841,7 +841,7 @@ final class FormURLEncoderTests: XCTestCase {
             .withRequest { components, _ in
                 components.url!
             }
-        XCTAssertEqual(url.absoluteString, "https://example.com/?q=remaster%2520track%3ADoxy%2520artist%3AMiles%2520Davis")
+        XCTAssertEqual(url.absoluteString, "https://example.com?q=remaster%2520track%3ADoxy%2520artist%3AMiles%2520Davis")
     }
 
 	func testThatIllegalASCIICharactersArePercentEscaped() {

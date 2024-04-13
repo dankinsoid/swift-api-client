@@ -13,7 +13,7 @@ final class RequestModifiersTests: XCTestCase {
 
 		let modifiedClient = client.path("users", "123")
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/users/123/")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/users/123")
 	}
 
 	func testMethodSetting() throws {
@@ -61,7 +61,7 @@ final class RequestModifiersTests: XCTestCase {
 	func testQueryParametersAdding() throws {
 		let modifiedClient = client.query("page", "some parameter ❤️")
 
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
 
 	func testBaseURLSetting() throws {
@@ -70,9 +70,7 @@ final class RequestModifiersTests: XCTestCase {
 	}
 
 	func testRemoveSlashIfNeeded() throws {
-		let modifiedClient = client.query("test", "value").modifyRequest {
-            $0.urlComponents.path.removeLast()
-		}
+		let modifiedClient = client.query("test", "value")
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?test=value")
 	}
 

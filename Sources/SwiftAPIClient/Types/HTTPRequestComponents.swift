@@ -210,9 +210,6 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 		} else {
 			urlComponents.path += path
 		}
-		if !urlComponents.path.isEmpty, !urlComponents.path.hasSuffix("/") {
-			urlComponents.path += "/"
-		}
 	}
 
 	public mutating func prependPath(
@@ -229,9 +226,6 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 			urlComponents.percentEncodedPath = path + urlComponents.percentEncodedPath
 		} else {
 			urlComponents.path = path + urlComponents.path
-		}
-		if !urlComponents.path.isEmpty, !urlComponents.path.hasSuffix("/") {
-			urlComponents.path += "/"
 		}
 	}
 }
