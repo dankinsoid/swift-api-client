@@ -9,14 +9,14 @@ public extension ContentEncoder where Self == FormURLEncoder {
 	/// - Parameters:
 	///   - dateEncodingStrategy: Strategy for encoding date values. Default is `SecondsSince1970CodingStrategy`.
 	///   - keyEncodingStrategy: Strategy for encoding key names. Default is `UseDeafultKeyCodingStrategy`.
-	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.brackets(indexed: false)`.
+	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.commaSeparator`.
 	///   - nestedEncodingStrategy: Strategy for encoding nested objects. Default is `.brackets`.
 	///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.
 	/// - Returns: An instance of `Self` configured with the specified strategies.
 	static func formURL(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
+		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
 		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) -> Self {
@@ -39,13 +39,13 @@ public struct FormURLEncoder: ContentEncoder {
 	/// - Parameters:
 	///   - dateEncodingStrategy: Strategy for encoding date values. Default is `SecondsSince1970CodingStrategy`.
 	///   - keyEncodingStrategy: Strategy for encoding key names. Default is `UseDeafultKeyCodingStrategy`.
-	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.brackets(indexed: true)`.
+	///   - arrayEncodingStrategy: Strategy for encoding arrays. Default is `.commaSeparator`.
 	///   - nestedEncodingStrategy: Strategy for encoding nested objects. Default is `.brackets`.
 	///   - boolEncodingStrategy: Strategy for encoding boolean values. Default is `.literal`.
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
+		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
 		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) {

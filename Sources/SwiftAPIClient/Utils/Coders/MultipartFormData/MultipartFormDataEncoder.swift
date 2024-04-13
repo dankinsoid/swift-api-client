@@ -14,7 +14,7 @@ public extension ContentEncoder where Self == MultipartFormDataEncoder {
 		boundary: String? = nil,
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
+		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
 		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) -> Self {
@@ -44,7 +44,7 @@ public struct MultipartFormDataEncoder: ContentEncoder {
 		boundary: String? = nil,
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .brackets(indexed: false),
+		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
 		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
 	) {

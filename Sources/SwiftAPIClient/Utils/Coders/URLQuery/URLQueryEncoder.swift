@@ -12,7 +12,7 @@ public struct URLQueryEncoder: QueryEncoder {
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: ArrayEncodingStrategy = .brackets(indexed: false),
+		arrayEncodingStrategy: ArrayEncodingStrategy = .commaSeparator,
 		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
 		boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) {

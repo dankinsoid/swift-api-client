@@ -261,13 +261,13 @@ final class FormURLEncoderTests: XCTestCase {
 		let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
 
 		// Then
-		let expected = "one=one&two=2&three=true&four%5B%5D=1&four%5B%5D=2&four%5B%5D=3&five%5Ba%5D=a&six%5Ba%5D%5Bb%5D=b&seven%5Ba%5D=a"
+		let expected = "one=one&two=2&three=true&four=1%2C2%2C3&five%5Ba%5D=a&six%5Ba%5D%5Bb%5D=b&seven%5Ba%5D=a"
 		XCTAssertEqual(result, expected)
 	}
 
 	func testThatManuallyEncodableStructCanBeEncoded() {
 		// Given
-		let encoder = FormURLEncoder()
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
 		let parameters = ManuallyEncodableStruct()
 
 		// When
@@ -300,13 +300,13 @@ final class FormURLEncoderTests: XCTestCase {
 		let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
 
 		// Then
-		let expected = "one=one&two=2&three=true&four%5B%5D=1&four%5B%5D=2&four%5B%5D=3&five%5Ba%5D=a&five%5Bb%5D=b"
+		let expected = "one=one&two=2&three=true&four=1%2C2%2C3&five%5Ba%5D=a&five%5Bb%5D=b"
 		XCTAssertEqual(result, expected)
 	}
 
 	func testThatManuallyEncodableSubclassCanBeEncoded() {
 		// Given
-		let encoder = FormURLEncoder()
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
 		let parameters = ManuallyEncodableSubclass()
 
 		// When
@@ -314,7 +314,6 @@ final class FormURLEncoderTests: XCTestCase {
 
 		// Then
 		let expected = "four%5B%5D=1&four%5B%5D=2&four%5B%5D=3&five%5Ba%5D=a&five%5Bb%5D=b&four=one&four%5Bfive%5D=2&four%5B%5D%5Bfour%5D=one"
-		// four[]=1&four[]=2&four[]=3&five[a]=a&five[b]=b&four=one&four[five]=2&four[][four]=one
 		XCTAssertEqual(result, expected)
 	}
 
