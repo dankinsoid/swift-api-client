@@ -105,7 +105,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 							error: error,
 							duration: duration
 						)
-						configs.logger.error("\(message)")
+                        configs.logger.log(level: configs.logLevel, "\(message)")
 					}
 					throw error
 				}
@@ -134,7 +134,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 							duration: duration,
 							error: error
 						)
-						configs.logger.error("\(message)")
+						configs.logger.log(level: configs.logLevel, "\(message)")
 					}
 					throw error
 				}

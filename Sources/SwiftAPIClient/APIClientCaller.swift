@@ -215,7 +215,7 @@ public extension APIClient {
 						error: error,
 						fileIDLine: fileIDLine
 					)
-					configs.logger.error("\(message)")
+					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
                 try configs.errorHandler(error, configs)
 			}
