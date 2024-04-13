@@ -9,7 +9,7 @@ public struct APIClientCaller<Response, Value, Result> {
 
 	private let _call: (
 		UUID,
-        HTTPRequestComponents,
+		HTTPRequestComponents,
 		APIClient.Configs,
 		@escaping (Response, () throws -> Void) throws -> Value
 	) throws -> Result
@@ -198,10 +198,10 @@ public extension APIClient {
 						return try serializer.serialize(response, configs)
 					} catch {
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-                            try configs.errorHandler(failure, configs)
+							try configs.errorHandler(failure, configs)
 							throw failure
 						}
-                        try configs.errorHandler(error, configs)
+						try configs.errorHandler(error, configs)
 						throw error
 					}
 				}
@@ -217,7 +217,7 @@ public extension APIClient {
 					)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
-                try configs.errorHandler(error, configs)
+				try configs.errorHandler(error, configs)
 			}
 			throw error
 		}
@@ -226,26 +226,26 @@ public extension APIClient {
 
 public extension APIClient.Configs {
 
-    var errorHandler: (Error, APIClient.Configs) throws -> Void {
-        get { self[\.errorHandler] ?? { _, _ in } }
-        set { self[\.errorHandler] = newValue }
-    }
+	var errorHandler: (Error, APIClient.Configs) throws -> Void {
+		get { self[\.errorHandler] ?? { _, _ in } }
+		set { self[\.errorHandler] = newValue }
+	}
 }
 
 public extension APIClient {
 
-    /// Sets the error handler.
-    func errorHandler(_ handler: @escaping (Error, APIClient.Configs) throws -> Void) -> APIClient {
-        configs { configs in
-            let current = configs.errorHandler
-            configs.errorHandler = { failure, configs in
-                do {
-                    try current(failure, configs)
-                } catch {
-                    try handler(error, configs)
-                    throw error
-                }
-            }
-        }
-    }
+	/// Sets the error handler.
+	func errorHandler(_ handler: @escaping (Error, APIClient.Configs) throws -> Void) -> APIClient {
+		configs { configs in
+			let current = configs.errorHandler
+			configs.errorHandler = { failure, configs in
+				do {
+					try current(failure, configs)
+				} catch {
+					try handler(error, configs)
+					throw error
+				}
+			}
+		}
+	}
 }

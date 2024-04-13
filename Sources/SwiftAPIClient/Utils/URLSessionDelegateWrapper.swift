@@ -42,7 +42,7 @@ final class SessionDelegateProxy: NSObject {
 final class SessionDelegateProxy: NSObject {
 
 	var configs: APIClient.Configs?
-    var originalDelegate: URLSessionDelegate? { configs?.urlSessionDelegate }
+	var originalDelegate: URLSessionDelegate? { configs?.urlSessionDelegate }
 }
 #endif
 

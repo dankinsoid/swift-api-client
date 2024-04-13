@@ -834,6 +834,15 @@ final class FormURLEncoderTests: XCTestCase {
 		// Then
 		XCTAssertEqual(result, "reserved=%3A%23%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D")
 	}
+    
+    func testSpotifyQuery() throws {
+        let url = try APIClient.test
+            .query("q", "remaster%20track:Doxy%20artist:Miles%20Davis")
+            .withRequest { components, _ in
+                components.url!
+            }
+        XCTAssertEqual(url.absoluteString, "https://example.com/?q=remaster%2520track%3ADoxy%2520artist%3AMiles%2520Davis")
+    }
 
 	func testThatIllegalASCIICharactersArePercentEscaped() {
 		// Given

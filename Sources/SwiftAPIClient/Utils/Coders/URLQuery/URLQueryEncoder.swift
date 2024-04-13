@@ -42,21 +42,18 @@ public struct URLQueryEncoder: QueryEncoder {
 		return baseURL
 	}
 
-	public func encode<T: Encodable>(_ value: T) throws -> [URLQueryItem] {
+	public func encode<T: Encodable>(_ value: T, percentEncoded: Bool = false) throws -> [URLQueryItem] {
 		let encoder = _URLQueryEncoder(path: [], context: self)
 		let query = try encoder.encode(value)
-		return try getQueryItems(from: query)
+		return try getQueryItems(from: query, percentEncoded: percentEncoded)
 	}
 
 	public func encodeQuery<T: Encodable>(_ value: T) throws -> String {
-		var components = URLComponents()
-		components.queryItems = try encode(value).map {
-			URLQueryItem(
-				name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
-				value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986)
-			)
-		}
-		return components.query ?? ""
+		try encode(value, percentEncoded: true)
+			.map {
+				"\($0.name)=\($0.value ?? "")"
+			}
+			.joined(separator: "&")
 	}
 
 	public func encodeParameters<T: Encodable>(_ value: T) throws -> [String: String] {
@@ -96,7 +93,7 @@ public struct URLQueryEncoder: QueryEncoder {
 		public static var json: NestedEncodingStrategy { .json(nil) }
 	}
 
-	private func getQueryItems(from output: QueryValue) throws -> [URLQueryItem] {
+	private func getQueryItems(from output: QueryValue, percentEncoded: Bool) throws -> [URLQueryItem] {
 		let array: QueryValue.Keyed
 		switch output {
 		case .single, .unkeyed, .null:
@@ -133,7 +130,14 @@ public struct URLQueryEncoder: QueryEncoder {
 				}
 				name = result
 			}
-			return URLQueryItem(name: name, value: $0.1)
+			if percentEncoded {
+				return URLQueryItem(
+					name: name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? name,
+					value: $0.1.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.1
+				)
+			} else {
+				return URLQueryItem(name: name, value: $0.1)
+			}
 		}
 	}
 

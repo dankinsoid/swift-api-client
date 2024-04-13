@@ -41,10 +41,10 @@ public extension APIClient {
 			return result
 		}
 
-        /// Creates a new `APIClient` instance with the current configurations and the provided request.
-        public func client(for request: HTTPRequestComponents) -> APIClient {
-            APIClient(request: request).configs(\.self, self)
-        }
+		/// Creates a new `APIClient` instance with the current configurations and the provided request.
+		public func client(for request: HTTPRequestComponents) -> APIClient {
+			APIClient(request: request).configs(\.self, self)
+		}
 	}
 }
 

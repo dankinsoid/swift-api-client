@@ -10,14 +10,14 @@ public extension HTTPClient {
 	/// - Returns: An `HTTPClient` that uses the given `URLSession` to fetch data.
 	static var urlSession: Self {
 		HTTPClient { request, configs in
-            guard
-                let url = request.url,
-                let httpRequest = request.request,
-                var urlRequest = URLRequest(httpRequest: httpRequest)
-            else {
+			guard
+				let url = request.url,
+				let httpRequest = request.request,
+				var urlRequest = URLRequest(httpRequest: httpRequest)
+			else {
 				throw Errors.custom("Invalid request")
 			}
-            urlRequest.url = url
+			urlRequest.url = url
 			#if os(Linux)
 			return try await asyncMethod { completion in
 				configs.urlSession.uploadTask(with: urlRequest, body: request.body, completionHandler: completion)
@@ -25,12 +25,12 @@ public extension HTTPClient {
 			#else
 			if #available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *) {
 				let (data, response) = try await customErrors {
-                    try await configs.urlSession.data(for: urlRequest, body: request.body)
+					try await configs.urlSession.data(for: urlRequest, body: request.body)
 				}
 				return (data, response.http)
 			} else {
 				return try await asyncMethod { completion in
-                    configs.urlSession.uploadTask(with: urlRequest, body: request.body, completionHandler: completion)
+					configs.urlSession.uploadTask(with: urlRequest, body: request.body, completionHandler: completion)
 				}
 			}
 			#endif
@@ -42,10 +42,10 @@ public extension HTTPDownloadClient {
 
 	static var urlSession: Self {
 		HTTPDownloadClient { request, configs in
-            guard var urlRequest = request.urlRequest else {
+			guard var urlRequest = request.urlRequest else {
 				throw Errors.custom("Invalid request")
 			}
-            urlRequest.timeoutInterval = configs.timeoutInterval
+			urlRequest.timeoutInterval = configs.timeoutInterval
 			return try await asyncMethod { completion in
 				configs.urlSession.downloadTask(with: urlRequest, completionHandler: completion)
 			}
@@ -55,8 +55,8 @@ public extension HTTPDownloadClient {
 
 private extension URLSession {
 
-#if os(Linux)
-#else
+	#if os(Linux)
+	#else
 	@available(macOS 12.0, iOS 15.0, watchOS 8.0, tvOS 15.0, *)
 	func data(for request: URLRequest, body: RequestBody?) async throws -> (Data, URLResponse) {
 		switch body {
@@ -68,7 +68,7 @@ private extension URLSession {
 			return try await data(for: request)
 		}
 	}
-#endif
+	#endif
 
 	func uploadTask(with request: URLRequest, body: RequestBody?, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) -> URLSessionDataTask {
 		switch body {

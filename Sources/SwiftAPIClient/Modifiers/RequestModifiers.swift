@@ -8,38 +8,38 @@ import FoundationNetworking
 public extension RequestBuilder where Request == HTTPRequestComponents {
 
 	/// Appends path components to the URL of the request.
-    /// - Parameters:
-    ///   - path: A first item of path.
-    ///   - suffix: A variadic list of components that conform to `CustomStringConvertible`.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	/// - Parameters:
+	///   - path: A first item of path.
+	///   - suffix: A variadic list of components that conform to `CustomStringConvertible`.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
 	func callAsFunction(_ path: CustomStringConvertible, _ suffix: any CustomStringConvertible..., percentEncoded: Bool = false) -> Self {
-        self.path([path] + suffix, percentEncoded: percentEncoded)
+		self.path([path] + suffix, percentEncoded: percentEncoded)
 	}
 
 	/// Appends path components to the URL of the request.
-    /// - Parameters:
-    ///   - components: A variadic list of components that conform to `CustomStringConvertible`.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	/// - Parameters:
+	///   - components: A variadic list of components that conform to `CustomStringConvertible`.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
 	func path(_ components: any CustomStringConvertible..., percentEncoded: Bool = false) -> Self {
-        path(components, percentEncoded: percentEncoded)
+		path(components, percentEncoded: percentEncoded)
 	}
 
 	/// Appends an array of path components to the URL of the request.
 	/// - Parameters:
-    ///   - components: An array of components that conform to `CustomStringConvertible`.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	///   - components: An array of components that conform to `CustomStringConvertible`.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
-    func path(_ components: [any CustomStringConvertible], percentEncoded: Bool = false) -> Self {
+	func path(_ components: [any CustomStringConvertible], percentEncoded: Bool = false) -> Self {
 		modifyRequest {
 			guard !components.isEmpty else { return }
-            let items = components.flatMap {
-                $0.description.components(separatedBy: ["/"]).filter { !$0.isEmpty }
-            }
-            for item in items {
-                $0.appendPath(item, percentEncoded: percentEncoded)
-            }
+			let items = components.flatMap {
+				$0.description.components(separatedBy: ["/"]).filter { !$0.isEmpty }
+			}
+			for item in items {
+				$0.appendPath(item, percentEncoded: percentEncoded)
+			}
 		}
 	}
 }
@@ -51,7 +51,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// Sets the HTTP method for the request.
 	/// - Parameter method: The `HTTPRequest.Method` to set for the request.
 	/// - Returns: An instance with the specified HTTP method.
-    func method(_ method: HTTPRequest.Method) -> Self {
+	func method(_ method: HTTPRequest.Method) -> Self {
 		modifyRequest {
 			$0.method = method
 		}
@@ -173,18 +173,18 @@ public extension APIClient {
 	/// - Parameter data: A closure taking `Configs` and returning `Data` to be set as the body.
 	/// - Returns: An instance with the specified body.
 	func body(_ data: @escaping (Configs) throws -> Data) -> Self {
-        modifyRequest { request, configs in
-            request.body = try .data(data(configs))
-        }
+		modifyRequest { request, configs in
+			request.body = try .data(data(configs))
+		}
 	}
 
 	/// Sets the request body stream with a file URL.
 	/// - Parameter file: The file URL to set as the body stream.
 	/// - Returns: An instance with the specified body stream.
 	func body(file url: URL) -> Self {
-        modifyRequest { request, _ in
-            request.body = .file(url)
-        }
+		modifyRequest { request, _ in
+			request.body = .file(url)
+		}
 	}
 }
 
@@ -192,54 +192,71 @@ public extension APIClient {
 
 public extension RequestBuilder where Request == HTTPRequestComponents {
 
-    /// Adds URL query parameters using a closure providing an array of `URLQueryItem`.
-    /// - Parameter items: A closure returning an array of `URLQueryItem` to be set as query parameters.
-    /// - Returns: An instance with set query parameters.
-    func query(_ items: @escaping @autoclosure () throws -> [URLQueryItem]) -> Self {
-        query { _ in
-            try items()
-        }
-    }
+	/// Adds URL query parameters using a closure providing an array of `URLQueryItem`.
+	/// - Parameters:
+	///   - items: A closure returning an array of `URLQueryItem` to be set as query parameters.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	/// - Returns: An instance with set query parameters.
+	func query(_ items: @escaping @autoclosure () throws -> [URLQueryItem], percentEncoded: Bool = false) -> Self {
+		query(percentEncoded: percentEncoded) { _ in
+			try items()
+		}
+	}
 
-    /// Adds URL query parameters with a closure that dynamically provides an array of `URLQueryItem` based on configurations.
-    /// - Parameter items: A closure taking `Configs` and returning an array of `URLQueryItem`.
-    /// - Returns: An instance with set query parameters.
-    func query(_ items: @escaping (Configs) throws -> [URLQueryItem]) -> Self {
-        modifyRequest { req, configs in
-            let items = try items(configs)
-            guard !items.isEmpty else { return }
-            req.appendPath("")
-            req.urlComponents.queryItems = (req.urlComponents.queryItems ?? []) + items
-        }
-    }
+	/// Adds URL query parameters with a closure that dynamically provides an array of `URLQueryItem` based on configurations.
+	/// - Parameters:
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	///   - items: A closure taking `Configs` and returning an array of `URLQueryItem`.
+	/// - Returns: An instance with set query parameters.
+	func query(percentEncoded: Bool = false, _ items: @escaping (Configs) throws -> [URLQueryItem]) -> Self {
+		modifyRequest { req, configs in
+			let items = try items(configs)
+			guard !items.isEmpty else { return }
+			req.appendPath("")
+			let itemsToAdd: [URLQueryItem]
+			if percentEncoded {
+				itemsToAdd = items
+			} else {
+				itemsToAdd = items.map {
+					URLQueryItem(
+						name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
+						value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.value
+					)
+				}
+			}
+			req.urlComponents.percentEncodedQueryItems = (req.urlComponents.percentEncodedQueryItems ?? []) + itemsToAdd
+		}
+	}
 
-    /// Adds a single URL query parameter.
-    /// - Parameters:
-    ///   - field: The field name of the query parameter.
-    ///   - value: The value of the query parameter.
-    /// - Returns: An instance with the specified query parameter.
-    func query(_ field: String, _ value: String?) -> Self {
-        query(value.map { [URLQueryItem(name: field, value: $0)] } ?? [])
-    }
+	/// Adds a single URL query parameter.
+	/// - Parameters:
+	///   - field: The field name of the query parameter.
+	///   - value: The value of the query parameter.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	/// - Returns: An instance with the specified query parameter.
+	func query(_ field: String, _ value: String?, percentEncoded: Bool = false) -> Self {
+		query(value.map { [URLQueryItem(name: field, value: $0)] } ?? [], percentEncoded: percentEncoded)
+	}
 
-    /// Adds a single URL query parameter.
-    /// - Parameters:
-    ///   - field: The field name of the query parameter.
-    ///   - value: The value of the query parameter, conforming to `RawRepresentable`.
-    /// - Returns: An instance with the specified query parameter.
-    func query<R: RawRepresentable>(_ field: String, _ value: R?) -> Self where R.RawValue == String {
-        query(field, value?.rawValue)
-    }
+	/// Adds a single URL query parameter.
+	/// - Parameters:
+	///   - field: The field name of the query parameter.
+	///   - value: The value of the query parameter, conforming to `RawRepresentable`.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	/// - Returns: An instance with the specified query parameter.
+	func query<R: RawRepresentable>(_ field: String, _ value: R?, percentEncoded: Bool = false) -> Self where R.RawValue == String {
+		query(field, value?.rawValue, percentEncoded: percentEncoded)
+	}
 }
 
 public extension RequestBuilder where Request == HTTPRequestComponents, Configs == APIClient.Configs {
 
 	/// Adds URL query parameters using an `Encodable` object.
-	/// - Parameter items: An `Encodable` object to be used as query parameters.
+	/// - Parameters: items: An `Encodable` object to be used as query parameters.
 	/// - Returns: An instance with set query parameters.
 	func query(_ items: any Encodable) -> Self {
-		query {
-			try $0.queryEncoder.encode(items)
+		query(percentEncoded: true) {
+			try $0.queryEncoder.encode(items, percentEncoded: true)
 		}
 	}
 
@@ -247,9 +264,9 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	/// - Parameter json: A dictionary of `String: JSON` pairs to be used as query parameters.
 	/// - Returns: An instance with set query parameters.
 	func query(_ parameters: [String: Encodable?]) -> Self {
-		query {
+		query(percentEncoded: true) {
 			try $0.queryEncoder
-				.encode(parameters.compactMapValues { $0.map { AnyEncodable($0) }})
+				.encode(parameters.compactMapValues { $0.map { AnyEncodable($0) }}, percentEncoded: true)
 				.sorted(by: { $0.name < $1.name })
 		}
 	}
@@ -278,44 +295,44 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Note: The query, and fragment of the original URL are retained, while those of the new URL are ignored.
 	func baseURL(_ newBaseURL: URL) -> Self {
 		modifyRequest {
-            $0.urlComponents.scheme = newBaseURL.scheme
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
-            if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
-                if let host = newBaseURL.host(percentEncoded: false) {
-                    $0.urlComponents.host = host
-                }
-                $0.prependPath(newBaseURL.path(percentEncoded: false))
-            } else {
-                if let host = newBaseURL.host {
-                    $0.urlComponents.percentEncodedHost = host
-                }
-                if !newBaseURL.path.isEmpty {
-                    $0.prependPath(newBaseURL.path, percentEncoded: true)
-                }
-            }
-#else
-            if let host = newBaseURL.host {
-                $0.urlComponents.percentEncodedHost = host
-            }
-            if !newBaseURL.path.isEmpty {
-                $0.prependPath(newBaseURL.path, percentEncoded: true)
-            }
-#endif
-            $0.urlComponents.port = newBaseURL.port
+			$0.urlComponents.scheme = newBaseURL.scheme
+			#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+			if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
+				if let host = newBaseURL.host(percentEncoded: false) {
+					$0.urlComponents.host = host
+				}
+				$0.prependPath(newBaseURL.path(percentEncoded: false))
+			} else {
+				if let host = newBaseURL.host {
+					$0.urlComponents.percentEncodedHost = host
+				}
+				if !newBaseURL.path.isEmpty {
+					$0.prependPath(newBaseURL.path, percentEncoded: true)
+				}
+			}
+			#else
+			if let host = newBaseURL.host {
+				$0.urlComponents.percentEncodedHost = host
+			}
+			if !newBaseURL.path.isEmpty {
+				$0.prependPath(newBaseURL.path, percentEncoded: true)
+			}
+			#endif
+			$0.urlComponents.port = newBaseURL.port
 		}
 	}
-    
-    /// Sets the URL for the request.
-    /// - Parameter url: The new URL to set.
-    /// - Returns: An instance with the updated URL.
-    func url(_ url: URL) -> Self {
-        modifyRequest {
-            guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-                throw Errors.custom("Invalid URL \(url.absoluteString) components")
-            }
-            $0.urlComponents = components
-        }
-    }
+
+	/// Sets the URL for the request.
+	/// - Parameter url: The new URL to set.
+	/// - Returns: An instance with the updated URL.
+	func url(_ url: URL) -> Self {
+		modifyRequest {
+			guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+				throw Errors.custom("Invalid URL \(url.absoluteString) components")
+			}
+			$0.urlComponents = components
+		}
+	}
 
 	/// Sets the scheme for the request.
 	///
@@ -323,7 +340,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with the updated scheme.
 	func scheme(_ scheme: String) -> Self {
 		modifyRequest {
-            $0.urlComponents.scheme = scheme
+			$0.urlComponents.scheme = scheme
 		}
 	}
 
@@ -333,7 +350,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with the updated host.
 	func host(_ host: String) -> Self {
 		modifyRequest {
-            $0.urlComponents.host = host
+			$0.urlComponents.host = host
 		}
 	}
 
@@ -343,7 +360,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with the updated port.
 	func port(_ port: Int?) -> Self {
 		modifyRequest {
-            $0.urlComponents.port = port
+			$0.urlComponents.port = port
 		}
 	}
 
@@ -353,7 +370,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with the updated port.
 	func fragment(_ fragment: String?) -> Self {
 		modifyRequest {
-            $0.urlComponents.fragment = fragment
+			$0.urlComponents.fragment = fragment
 		}
 	}
 }

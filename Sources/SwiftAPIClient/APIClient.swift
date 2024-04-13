@@ -46,24 +46,24 @@ public struct APIClient: @unchecked Sendable, RequestBuilder {
 		}
 	}
 
-    /// Initializes a new network client with an empty request components.
-    /// - Warning: You must specify the request components before making any requests.
-    public init() {
-        self.init { _ in
-            HTTPRequestComponents()
-        }
-    }
-    
-    /// Initializes a new network client with a URL string.
-    /// - Parameter string: The URL string to be used for creating requests.
-    public init(string: String) {
-        self.init { _ in
-            guard let url = URL(string: string) else {
-                throw Errors.custom("Invalid URL string: \(string)")
-            }
-            return HTTPRequestComponents(url: url)
-        }
-    }
+	/// Initializes a new network client with an empty request components.
+	/// - Warning: You must specify the request components before making any requests.
+	public init() {
+		self.init { _ in
+			HTTPRequestComponents()
+		}
+	}
+
+	/// Initializes a new network client with a URL string.
+	/// - Parameter string: The URL string to be used for creating requests.
+	public init(string: String) {
+		self.init { _ in
+			guard let url = URL(string: string) else {
+				throw Errors.custom("Invalid URL string: \(string)")
+			}
+			return HTTPRequestComponents(url: url)
+		}
+	}
 
 	/// Configures the client with specific configuration values.
 	/// - Parameters:

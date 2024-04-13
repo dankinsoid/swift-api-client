@@ -66,7 +66,7 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 
 		var urlRequest = request
 		urlRequest.headers[.contentEncoding] = "deflate"
-        urlRequest.body = try .data(deflate(data))
+		urlRequest.body = try .data(deflate(data))
 		return try await next(urlRequest, configs)
 	}
 }

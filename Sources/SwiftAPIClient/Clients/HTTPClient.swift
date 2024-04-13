@@ -61,7 +61,7 @@ public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Resp
 
 	static var http: APIClientCaller {
 		.http { request, configs in
-            let isUpload = request.body != nil
+			let isUpload = request.body != nil
 			if isUpload, request.method == .get {
 				configs.logger.warning("It is not allowed to add a body in GET request.")
 			}
@@ -105,7 +105,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 							error: error,
 							duration: duration
 						)
-                        configs.logger.log(level: configs.logLevel, "\(message)")
+						configs.logger.log(level: configs.logLevel, "\(message)")
 					}
 					throw error
 				}

@@ -13,28 +13,28 @@ import Foundation
 ///
 /// This function is ideal for operations that require both synchronization and error handling, such as modifying shared data where failure must be managed explicitly.
 public func withThrowingSynchronizedAccess<T, ID: Hashable>(
-    id taskIdentifier: ID,
-    task: @escaping @Sendable () async throws -> T
+	id taskIdentifier: ID,
+	task: @escaping @Sendable () async throws -> T
 ) async throws -> T {
-    if let cached = await Barriers.shared.tasks[taskIdentifier] {
-        if let task = cached as? Task<T, Error> {
-            return try await task.value
-        } else if let task = cached as? Task<T, Never> {
-            return await task.value
-        } else {
-//            runtimeWarn("Unexpected task type found in the barrier.")
-        }
-    }
-    let task = Task(operation: task)
-    await Barriers.shared.setTask(for: taskIdentifier, task: task)
-    do {
-        let result = try await task.value
-        await Barriers.shared.removeTask(for: taskIdentifier)
-        return result
-    } catch {
-        await Barriers.shared.removeTask(for: taskIdentifier)
-        throw error
-    }
+	if let cached = await Barriers.shared.tasks[taskIdentifier] {
+		if let task = cached as? Task<T, Error> {
+			return try await task.value
+		} else if let task = cached as? Task<T, Never> {
+			return await task.value
+		} else {
+			//            runtimeWarn("Unexpected task type found in the barrier.")
+		}
+	}
+	let task = Task(operation: task)
+	await Barriers.shared.setTask(for: taskIdentifier, task: task)
+	do {
+		let result = try await task.value
+		await Barriers.shared.removeTask(for: taskIdentifier)
+		return result
+	} catch {
+		await Barriers.shared.removeTask(for: taskIdentifier)
+		throw error
+	}
 }
 
 /// Executes a given task with synchronization based on a unique identifier, ensuring serialized access to potentially shared resources.
@@ -52,26 +52,26 @@ public func withThrowingSynchronizedAccess<T, ID: Hashable>(
 /// Use this function for operations that require synchronization but do not need explicit error handling to be exposed to the caller, such as read-only
 /// access to shared data where the outcomes are non-critical or are managed within the tasks themselves.
 public func withSynchronizedAccess<T, ID: Hashable>(
-    id taskIdentifier: ID,
-    task: @escaping @Sendable () async -> T
+	id taskIdentifier: ID,
+	task: @escaping @Sendable () async -> T
 ) async -> T {
-    if let cached = await Barriers.shared.tasks[taskIdentifier] {
-        if let task = cached as? Task<T, Error> {
-//            logger("Attempted to access a throwing synchronized task from a non-throwing context.")
-            if let result = try? await task.value {
-                return result
-            }
-        } else if let task = cached as? Task<T, Never> {
-            return await task.value
-        } else {
-//            runtimeWarn("Unexpected task type found in the barrier.")
-        }
-    }
-    let task = Task(operation: task)
-    await Barriers.shared.setTask(for: taskIdentifier, task: task)
-    let result = await task.value
-    await Barriers.shared.removeTask(for: taskIdentifier)
-    return result
+	if let cached = await Barriers.shared.tasks[taskIdentifier] {
+		if let task = cached as? Task<T, Error> {
+			//            logger("Attempted to access a throwing synchronized task from a non-throwing context.")
+			if let result = try? await task.value {
+				return result
+			}
+		} else if let task = cached as? Task<T, Never> {
+			return await task.value
+		} else {
+			//            runtimeWarn("Unexpected task type found in the barrier.")
+		}
+	}
+	let task = Task(operation: task)
+	await Barriers.shared.setTask(for: taskIdentifier, task: task)
+	let result = await task.value
+	await Barriers.shared.removeTask(for: taskIdentifier)
+	return result
 }
 
 /// Waits for the completion of all synchronized accesses associated with a specific identifier before proceeding.
@@ -93,14 +93,14 @@ public func withSynchronizedAccess<T, ID: Hashable>(
 /// scenarios where tasks modify or access shared resources and need to be executed or awaited serially to prevent data corruption or race conditions.
 @discardableResult
 public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async throws -> T? {
-    guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
-        return nil
-    }
-    return try await cached.wait() as? T
-//    if result == nil, !(type is Void.Type) {
-//        runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
-//    }
-//    return result
+	guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
+		return nil
+	}
+	return try await cached.wait() as? T
+	//    if result == nil, !(type is Void.Type) {
+	//        runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
+	//    }
+	//    return result
 }
 
 /// Waits for the completion of all synchronized accesses associated with a specific identifier before proceeding.
@@ -120,45 +120,45 @@ public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier
 /// or where errors are handled within the tasks themselves.
 @discardableResult
 public func waitForSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async -> T? {
-    guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
-        return nil
-    }
-    do {
-        return try await cached.wait() as? T
-//        if result == nil, !(type is Void.Type) {
-//            runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
-//        }
-//        return result
-    } catch {
-        return nil
-    }
+	guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
+		return nil
+	}
+	do {
+		return try await cached.wait() as? T
+		//        if result == nil, !(type is Void.Type) {
+		//            runtimeWarn("Unexpected task type found in the waitForThrowingSynchronizedAccess.")
+		//        }
+		//        return result
+	} catch {
+		return nil
+	}
 }
 
 private protocol AnyTask {
-    
-    func wait() async throws -> Any
+
+	func wait() async throws -> Any
 }
 
 extension Task: AnyTask {
-    
-    func wait() async throws -> Any {
-        try await value
-    }
+
+	func wait() async throws -> Any {
+		try await value
+	}
 }
 
 private final actor Barriers {
-    
-    static let shared = Barriers()
-    
-    var tasks: [AnyHashable: AnyTask] = [:]
-    
-    private init() {}
-    
-    func removeTask(for key: AnyHashable) {
-        tasks[key] = nil
-    }
-    
-    func setTask<T, E: Error>(for key: AnyHashable, task: Task<T, E>) {
-        tasks[key] = task
-    }
+
+	static let shared = Barriers()
+
+	var tasks: [AnyHashable: AnyTask] = [:]
+
+	private init() {}
+
+	func removeTask(for key: AnyHashable) {
+		tasks[key] = nil
+	}
+
+	func setTask<T, E: Error>(for key: AnyHashable, task: Task<T, E>) {
+		tasks[key] = task
+	}
 }
