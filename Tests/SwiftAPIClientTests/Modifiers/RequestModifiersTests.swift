@@ -66,7 +66,7 @@ final class RequestModifiersTests: XCTestCase {
 
 	func testBaseURLSetting() throws {
 		let modifiedClient = client.query("test", "value").baseURL(URL(string: "http://test.net")!)
-		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net/?test=value")
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net?test=value")
 	}
 
 	func testRemoveSlashIfNeeded() throws {
