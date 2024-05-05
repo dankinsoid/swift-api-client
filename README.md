@@ -204,7 +204,7 @@ Additionally, `.mock(_:)` as a `APIClientCaller` offers an alternative way to mo
 Custom HTTPClient instances can also be created and injected for testing or previews.
 
 ### Logging
-`swift-api-client` employs `swift-log` for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers.
+`swift-api-client` employs [`swift-log`](https://github.com/apple/swift-log) for logging, with `.logger` and `.logLevel` configurations customizable via `logger` and `.log(level:)` modifiers.
 The default log level is `.info`. A built-in `.none` Logger is available to disable all logs.
 
 Log example:
@@ -220,7 +220,7 @@ Content-Type: application/json
 Log message format can be customized with the `.loggingComponents(_:)` modifier.
 
 ### Metrics
-`swift-api-client` employs `swift-metrics` for metrics, with `.reportMetrics` configuration customizable via `.reportMetrics(_:)` modifier.
+`swift-api-client` employs [`swift-metrics`](https://github.com/apple/swift-metrics) for metrics, with `.reportMetrics` configuration customizable via `.reportMetrics(_:)` modifier.
 
 `swift-api-client` reports:
 - `api_client_requests_total`: total requests count.
