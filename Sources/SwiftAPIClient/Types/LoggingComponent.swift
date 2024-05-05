@@ -140,11 +140,16 @@ public extension LoggingComponents {
 		if contains(.uuid) {
 			message = "[\(uuid.uuidString)]\n" + message
 		}
-		if statusCode?.kind == .successful, error == nil {
-			message.append("✅")
-		} else {
-			message.append("🛑")
-		}
+        switch (statusCode?.kind, error) {
+        case (_, .some), (.serverError, _), (.clientError, _), (.invalid, _):
+            message.append("🛑")
+        case (.successful, _), (nil, nil):
+            message.append("✅")
+        case (.informational, _):
+            message.append("ℹ️")
+        case (.redirection, _):
+            message.append("🔀")
+        }
 		var isMultiline = false
 		if let statusCode, contains(.statusCode) {
 			message += " \(statusCode.code) \(statusCode.reasonPhrase)"

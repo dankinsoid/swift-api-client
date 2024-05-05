@@ -187,16 +187,25 @@ public extension APIClient {
 					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
-
-				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
-					return try caller.mockResult(for: mock)
-				}
+                if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
+                    return try caller.mockResult(for: mock)
+                }
+                if configs.reportMetrics {
+                    updateTotalRequestsMetrics(for: request)
+                }
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
 					do {
 						try validate()
-						return try serializer.serialize(response, configs)
+						let result = try serializer.serialize(response, configs)
+                        if configs.reportMetrics {
+                            updateTotalResponseMetrics(for: request, successful: true)
+                        }
+                        return result
 					} catch {
+                        if configs.reportMetrics {
+                            updateTotalResponseMetrics(for: request, successful: false)
+                        }
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
 							try configs.errorHandler(failure, configs)
 							throw failure
@@ -217,6 +226,9 @@ public extension APIClient {
 					)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
+                if configs.reportMetrics {
+                    updateTotalErrorsMetrics(for: nil)
+                }
 				try configs.errorHandler(error, configs)
 			}
 			throw error

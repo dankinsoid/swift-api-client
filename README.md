@@ -4,6 +4,7 @@
 - [Table of Contents](#table-of-contents)
 - [Main Goals of the Library](#main-goals-of-the-library)
 - [Usage](#usage)
+  - [Macros](#macros)
 - [What is `APIClient`](#what-is-apiclient)
 - [Built-in `APIClient` Extensions](#built-in-apiclient-extensions)
   - [Request building](#request-building)
@@ -17,9 +18,10 @@
     - [Token refresher](#token-refresher)
   - [Mocking](#mocking)
   - [Logging](#logging)
+  - [Metrics](#metrics)
 - [`APIClient.Configs`](#apiclientconfigs)
   - [Configs Modifications Order](#configs-modifications-order)
-- [Macros](#macros)
+- [Macros](#macros-1)
 - [Introducing `swift-api-client-addons`](#introducing-swift-api-client-addons)
 - [Installation](#installation)
 - [Author](#author)
@@ -75,6 +77,8 @@ try await johnClient.body(updatedUser).put()
 // DELETE /user/{userID}
 try await johnClient.delete()
 ```
+
+### Macros
 
 Also, you can use macros for API declaration:
 ```swift
@@ -214,6 +218,15 @@ Content-Type: application/json
 <-- ✅ 200 OK (100ms, 15-byte body)
 ```
 Log message format can be customized with the `.loggingComponents(_:)` modifier.
+
+### Metrics
+`swift-api-client` employs `swift-metrics` for metrics, with `.reportMetrics` configuration customizable via `.reportMetrics(_:)` modifier.
+
+`swift-api-client` reports:
+- `api_client_requests_total`: total requests count.
+- `api_client_responses_total`: total responses count.
+- `api_client_errors_total`: total errors count.
+- `http_client_request_duration_seconds`: http requests duration.
 
 ## `APIClient.Configs`
 A collection of config values is propagated through the modifier chain. These configs are accessible in all core methods: `modifyRequest`, `withRequest`, and `withConfigs`.

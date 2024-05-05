@@ -43,7 +43,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 			}
 			throw error
 		}
-		if response.status.kind != .successful, needRetry() {
+        if response.status.kind.isError, needRetry() {
 			return try await retry()
 		}
 		return (data, response)
