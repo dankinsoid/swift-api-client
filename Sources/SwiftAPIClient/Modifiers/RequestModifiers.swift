@@ -300,15 +300,15 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 				if let host = newBaseURL.host(percentEncoded: false) {
 					$0.urlComponents.host = host
 				}
-                let path = newBaseURL.path(percentEncoded: false)
-                if !path.isEmpty, path != "/" {
-                    $0.prependPath(path)
-                }
+				let path = newBaseURL.path(percentEncoded: false)
+				if !path.isEmpty, path != "/" {
+					$0.prependPath(path)
+				}
 			} else {
 				if let host = newBaseURL.host {
 					$0.urlComponents.percentEncodedHost = host
 				}
-                if !newBaseURL.path.isEmpty, newBaseURL.path != "/" {
+				if !newBaseURL.path.isEmpty, newBaseURL.path != "/" {
 					$0.prependPath(newBaseURL.path, percentEncoded: true)
 				}
 			}

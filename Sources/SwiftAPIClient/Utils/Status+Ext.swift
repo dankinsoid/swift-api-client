@@ -3,7 +3,7 @@ import HTTPTypes
 
 extension HTTPResponse.Status.Kind {
 
-    var isError: Bool {
-        self == .clientError || self == .serverError || self == .invalid
-    }
+	var isError: Bool {
+		self == .clientError || self == .serverError || self == .invalid
+	}
 }
