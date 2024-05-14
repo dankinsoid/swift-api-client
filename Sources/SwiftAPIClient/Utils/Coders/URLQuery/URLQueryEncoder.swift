@@ -258,7 +258,10 @@ final class _URLQueryEncoder: Encoder {
 
 	@discardableResult
 	func encode(_ value: Encodable) throws -> QueryValue {
-		if case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty {
+        let isArrayEncoder = IsArrayEncoder(codingPath: codingPath)
+        try? value.encode(to: isArrayEncoder)
+        let isArray = isArrayEncoder.isArray ?? false
+        if case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty, !(codingPath.count < 2 && isArray) {
 			let jsonEncoder = jsonEncoder ?? {
 				let encoder = JSONEncoder()
 				encoder.dateEncodingStrategy = context.dateEncodingStrategy
@@ -740,3 +743,113 @@ private let _iso8601Formatter: ISO8601DateFormatter = {
 	formatter.formatOptions = .withInternetDateTime
 	return formatter
 }()
+
+private final class IsArrayEncoder: Encoder {
+
+    var isArray: Bool?
+    var codingPath: [CodingKey] = []
+    var userInfo: [CodingUserInfoKey: Any] = [:]
+
+    init(codingPath: [CodingKey] = []) {
+        self.codingPath = codingPath
+    }
+
+    func container<Key>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> where Key : CodingKey {
+        if isArray == nil {
+            isArray = false
+        }
+        return KeyedEncodingContainer(MockKeyed())
+    }
+
+    func unkeyedContainer() -> UnkeyedEncodingContainer {
+        if isArray == nil {
+            isArray = true
+        }
+        return MockUnkeyed()
+    }
+
+    func singleValueContainer() -> SingleValueEncodingContainer {
+        return MockSingle(encoder: self, codingPath: codingPath)
+    }
+
+    private struct MockKeyed<Key: CodingKey>: KeyedEncodingContainerProtocol {
+        var codingPath: [CodingKey] = []
+        mutating func encodeNil(forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Bool, forKey key: Key) throws  { throw MockError() }
+        mutating func encode(_ value: String, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Double, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Float, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Int, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Int8, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Int16, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Int32, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: Int64, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: UInt, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: UInt8, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: UInt16, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: UInt32, forKey key: Key) throws { throw MockError() }
+        mutating func encode(_ value: UInt64, forKey key: Key) throws { throw MockError() }
+        mutating func encode<T>(_ value: T, forKey key: Key) throws where T : Encodable { throw MockError() }
+        mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> { return KeyedEncodingContainer(MockKeyed<NestedKey>()) }
+        mutating func nestedUnkeyedContainer(forKey key: Key) -> any UnkeyedEncodingContainer { return MockUnkeyed() }
+        mutating func superEncoder() -> Encoder { return IsArrayEncoder() }
+        mutating func superEncoder(forKey key: Key) -> Encoder { return IsArrayEncoder() }
+    }
+
+    private struct MockUnkeyed: UnkeyedEncodingContainer {
+
+        var codingPath: [CodingKey] = []
+        var count: Int = 0
+
+        mutating func encodeNil() throws { throw MockError() }
+        mutating func encode(_ value: Bool) throws  { throw MockError() }
+        mutating func encode(_ value: String) throws { throw MockError() }
+        mutating func encode(_ value: Double) throws { throw MockError() }
+        mutating func encode(_ value: Float) throws { throw MockError() }
+        mutating func encode(_ value: Int) throws { throw MockError() }
+        mutating func encode(_ value: Int8) throws { throw MockError() }
+        mutating func encode(_ value: Int16) throws { throw MockError() }
+        mutating func encode(_ value: Int32) throws { throw MockError() }
+        mutating func encode(_ value: Int64) throws { throw MockError() }
+        mutating func encode(_ value: UInt) throws { throw MockError() }
+        mutating func encode(_ value: UInt8) throws { throw MockError() }
+        mutating func encode(_ value: UInt16) throws { throw MockError() }
+        mutating func encode(_ value: UInt32) throws { throw MockError() }
+        mutating func encode(_ value: UInt64) throws { throw MockError() }
+        mutating func encode<T>(_ value: T) throws where T : Encodable { throw MockError() }
+        mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> { return KeyedEncodingContainer(MockKeyed<NestedKey>()) }
+        mutating func nestedUnkeyedContainer() -> any UnkeyedEncodingContainer { return MockUnkeyed() }
+        mutating func superEncoder() -> Encoder { return IsArrayEncoder() }
+    }
+
+    private struct MockSingle: SingleValueEncodingContainer {
+
+        let encoder: IsArrayEncoder
+        var codingPath: [CodingKey] = []
+
+        mutating func encodeNil() throws { try throwError() }
+        mutating func encode(_ value: Bool) throws { try throwError() }
+        mutating func encode(_ value: String) throws { try throwError() }
+        mutating func encode(_ value: Double) throws { try throwError() }
+        mutating func encode(_ value: Float) throws { try throwError() }
+        mutating func encode(_ value: Int) throws { try throwError() }
+        mutating func encode(_ value: Int8) throws { try throwError() }
+        mutating func encode(_ value: Int16) throws { try throwError() }
+        mutating func encode(_ value: Int32) throws { try throwError() }
+        mutating func encode(_ value: Int64) throws { try throwError() }
+        mutating func encode(_ value: UInt) throws { try throwError() }
+        mutating func encode(_ value: UInt8) throws { try throwError() }
+        mutating func encode(_ value: UInt16) throws { try throwError() }
+        mutating func encode(_ value: UInt32) throws { try throwError() }
+        mutating func encode(_ value: UInt64) throws { try throwError() }
+        mutating func encode<T>(_ value: T) throws where T : Encodable { try value.encode(to: encoder) }
+        private func throwError() throws {
+            if encoder.isArray  == nil {
+                encoder.isArray = false
+            }
+            throw MockError()
+        }
+    }
+}
+
+private struct MockError: Error {}

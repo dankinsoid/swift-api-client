@@ -406,6 +406,19 @@ final class FormURLEncoderTests: XCTestCase {
 		XCTAssertEqual(result, expected)
 	}
 
+    func testThatEncodableStructCanBeEncodedWithCommaAndJSON() {
+        // Given
+        let encoder = FormURLEncoder(arrayEncodingStrategy: .commaSeparator, nestedEncodingStrategy: .json)
+        let parameters = EncodableStruct()
+        
+        // When
+        let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
+        
+        // Then
+        let expected = "one=one&two=2&three=true&four=1%2C2%2C3&five=%7B%22a%22%3A%22a%22%7D&six=%7B%22a%22%3A%7B%22b%22%3A%22b%22%7D%7D&seven=%7B%22a%22%3A%22a%22%7D"
+        XCTAssertEqual(result, expected)
+    }
+
 	func testThatManuallyEncodableStructCanBeEncodedWithIndexInBrackets() {
 		// Given
 		let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: true))
