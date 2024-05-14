@@ -261,7 +261,8 @@ final class _URLQueryEncoder: Encoder {
         let isArrayEncoder = IsArrayEncoder(codingPath: codingPath)
         try? value.encode(to: isArrayEncoder)
         let isArray = isArrayEncoder.isArray ?? false
-        if case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty, !(codingPath.count < 2 && isArray) {
+        let isSingle = isArrayEncoder.isSingle ?? false
+        if !isSingle, case let .json(jsonEncoder) = context.nestedEncodingStrategy, !codingPath.isEmpty, !(codingPath.count < 2 && isArray) {
 			let jsonEncoder = jsonEncoder ?? {
 				let encoder = JSONEncoder()
 				encoder.dateEncodingStrategy = context.dateEncodingStrategy
@@ -747,6 +748,7 @@ private let _iso8601Formatter: ISO8601DateFormatter = {
 private final class IsArrayEncoder: Encoder {
 
     var isArray: Bool?
+    var isSingle: Bool?
     var codingPath: [CodingKey] = []
     var userInfo: [CodingUserInfoKey: Any] = [:]
 
@@ -758,12 +760,18 @@ private final class IsArrayEncoder: Encoder {
         if isArray == nil {
             isArray = false
         }
+        if isSingle == nil {
+            isSingle = false
+        }
         return KeyedEncodingContainer(MockKeyed())
     }
 
     func unkeyedContainer() -> UnkeyedEncodingContainer {
         if isArray == nil {
             isArray = true
+        }
+        if isSingle == nil {
+            isSingle = false
         }
         return MockUnkeyed()
     }
@@ -846,6 +854,9 @@ private final class IsArrayEncoder: Encoder {
         private func throwError() throws {
             if encoder.isArray  == nil {
                 encoder.isArray = false
+            }
+            if encoder.isSingle  == nil {
+                encoder.isSingle = true
             }
             throw MockError()
         }

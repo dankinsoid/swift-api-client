@@ -409,7 +409,7 @@ final class FormURLEncoderTests: XCTestCase {
     func testThatEncodableStructCanBeEncodedWithCommaAndJSON() {
         // Given
         let encoder = FormURLEncoder(arrayEncodingStrategy: .commaSeparator, nestedEncodingStrategy: .json)
-        let parameters = EncodableStruct()
+        let parameters = EncodableStruct1()
         
         // When
         let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
@@ -983,6 +983,16 @@ private struct EncodableStruct: Encodable {
 	let five = ["a": "a"]
 	let six = ["a": ["b": "b"]]
 	let seven = NestedEncodableStruct()
+}
+
+private struct EncodableStruct1: Encodable {
+    let one = "one"
+    let two = 2
+    let three = true
+    let four = ["1", "2", "3"]
+    let five = ["a": "a"]
+    let six = ["a": ["b": "b"]]
+    let seven = NestedEncodableStruct()
 }
 
 private struct NestedEncodableStruct: Encodable {
