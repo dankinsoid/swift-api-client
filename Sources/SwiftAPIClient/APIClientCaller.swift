@@ -206,11 +206,14 @@ public extension APIClient {
 						if configs.reportMetrics {
 							updateTotalResponseMetrics(for: request, successful: false)
 						}
+
+                        var context = APIErrorContext(request: request, response: nil, fileIDLine: fileIDLine)
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-							try configs.errorHandler(failure, configs)
+                            context.response = data
+							try configs.errorHandler(failure, configs, context)
 							throw failure
 						}
-						try configs.errorHandler(error, configs)
+						try configs.errorHandler(error, configs, context)
 						throw error
 					}
 				}
@@ -229,35 +232,10 @@ public extension APIClient {
 				if configs.reportMetrics {
 					updateTotalErrorsMetrics(for: nil)
 				}
-				try configs.errorHandler(error, configs)
+                let context = APIErrorContext(fileIDLine: fileIDLine)
+				try configs.errorHandler(error, configs, context)
 			}
 			throw error
-		}
-	}
-}
-
-public extension APIClient.Configs {
-
-	var errorHandler: (Error, APIClient.Configs) throws -> Void {
-		get { self[\.errorHandler] ?? { _, _ in } }
-		set { self[\.errorHandler] = newValue }
-	}
-}
-
-public extension APIClient {
-
-	/// Sets the error handler.
-	func errorHandler(_ handler: @escaping (Error, APIClient.Configs) throws -> Void) -> APIClient {
-		configs { configs in
-			let current = configs.errorHandler
-			configs.errorHandler = { failure, configs in
-				do {
-					try current(failure, configs)
-				} catch {
-					try handler(error, configs)
-					throw error
-				}
-			}
 		}
 	}
 }

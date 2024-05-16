@@ -73,3 +73,14 @@ private extension CodingKey {
 		return "." + stringValue
 	}
 }
+
+struct CodableError: LocalizedError, CustomStringConvertible {
+
+    var error: Error
+    var description: String { error.humanReadable }
+    var errorDescription: String? { description }
+    
+    init(_ error: Error) {
+        self.error = error
+    }
+}
