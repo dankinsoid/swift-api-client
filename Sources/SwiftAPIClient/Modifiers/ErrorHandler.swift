@@ -20,7 +20,11 @@ public extension APIClient {
     /// Sets the error handler to throw an `APIClientError` with detailed information.
     func detailedError(includeBody: APIClientError.IncludeBodyPolicy = .auto) -> APIClient {
         errorHandler { error, configs, context in
-            throw APIClientError(error: error, configs: configs, context: context, includeBody: includeBody)
+            if error is APIClientError {
+                throw error
+            } else {
+                throw APIClientError(error: error, configs: configs, context: context, includeBody: includeBody)
+            }
         }
     }
 }
