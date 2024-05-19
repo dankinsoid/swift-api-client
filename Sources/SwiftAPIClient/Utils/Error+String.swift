@@ -76,11 +76,11 @@ private extension CodingKey {
 
 struct CodableError: LocalizedError, CustomStringConvertible {
 
-    var error: Error
-    var description: String { error.humanReadable }
-    var errorDescription: String? { description }
-    
-    init(_ error: Error) {
-        self.error = error
-    }
+	var error: Error
+	var description: String { error.humanReadable }
+	var errorDescription: String? { description }
+
+	init(_ error: Error) {
+		self.error = error
+	}
 }

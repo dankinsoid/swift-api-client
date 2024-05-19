@@ -207,9 +207,9 @@ public extension APIClient {
 							updateTotalResponseMetrics(for: request, successful: false)
 						}
 
-                        var context = APIErrorContext(request: request, response: nil, fileIDLine: fileIDLine)
+						var context = APIErrorContext(request: request, response: nil, fileIDLine: fileIDLine)
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-                            context.response = data
+							context.response = data
 							try configs.errorHandler(failure, configs, context)
 							throw failure
 						}
@@ -232,7 +232,7 @@ public extension APIClient {
 				if configs.reportMetrics {
 					updateTotalErrorsMetrics(for: nil)
 				}
-                let context = APIErrorContext(fileIDLine: fileIDLine)
+				let context = APIErrorContext(fileIDLine: fileIDLine)
 				try configs.errorHandler(error, configs, context)
 			}
 			throw error

@@ -33,7 +33,7 @@
 - Reusability, allowing for the injection of configurations across all requests.
 - Extensibility and modularity.
 - A simple core offering a wide range of possibilities.
-- Facilitation of testing and mocking.
+- Facilitation of testing, mocking and debugging (logs, metrics).
 
 ## Usage
 The core of the library is the `APIClient` struct, serving both as a request builder and executor. It is a generic struct, enabling use for any task associated with URL request.
