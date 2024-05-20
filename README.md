@@ -146,7 +146,7 @@ Defines request execution with several built-in callers for various request type
 - `.httpDownload` for HTTP download requests using `try await` syntax.
 - `.mock` for mock requests using `try await` syntax.
 
-All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession`. It's possible to customize the current `.httpClient` instance.
+All built-in HTTP callers use the `.httpClient` configuration, which can be customized with the `.httpClient()` modifier. The default `.httpClient` is `URLSession`. It's possible to customize the current `.httpClient` instance, for example, to use a custom `URLSession` configuration or [async-http-client](https://github.com/swift-server/async-http-client).
 
 Custom callers can be created for different types of requests, such as WebSocket, GraphQL, etc.
 

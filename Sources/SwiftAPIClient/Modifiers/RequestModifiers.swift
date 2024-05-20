@@ -328,11 +328,45 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Parameter url: The new URL to set.
 	/// - Returns: An instance with the updated URL.
 	func url(_ url: URL) -> Self {
-		modifyRequest {
+		urlComponents {
 			guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
 				throw Errors.custom("Invalid URL \(url.absoluteString) components")
 			}
-			$0.urlComponents = components
+			return components
+		}
+	}
+
+	/// Sets the URL for the request.
+	/// - Parameter url: The new URL string to set.
+	/// - Returns: An instance with the updated URL.
+	func url(_ url: String) -> Self {
+		urlComponents {
+			let components: URLComponents?
+			if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
+				components = URLComponents(string: url, encodingInvalidCharacters: true)
+			} else {
+				components = URLComponents(string: url)
+			}
+			guard let components else {
+				throw Errors.custom("Invalid URL \(url) components")
+			}
+			return components
+		}
+	}
+
+	/// Sets the URL components for the request.
+	/// - Parameter components: The new URL components to set.
+	/// - Returns: An instance with the updated URL.
+	func urlComponents(_ components: URLComponents) -> Self {
+		urlComponents { components }
+	}
+
+	/// Sets the URL components for the request.
+	/// - Parameter components: The new URL components to set.
+	/// - Returns: An instance with the updated URL.
+	func urlComponents(_ components: @escaping () throws -> URLComponents) -> Self {
+		modifyRequest {
+			$0.urlComponents = try components()
 		}
 	}
 
