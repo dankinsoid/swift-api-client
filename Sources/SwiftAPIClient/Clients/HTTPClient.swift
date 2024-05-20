@@ -99,13 +99,13 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs, next: task)
 				} catch {
 					let duration = Date().timeIntervalSince(start)
-					if !configs.loggingComponents.isEmpty {
-						let message = configs.loggingComponents.errorMessage(
+					if !configs._errorLoggingComponents.isEmpty {
+						let message = configs._errorLoggingComponents.errorMessage(
 							uuid: uuid,
 							error: error,
 							duration: duration
 						)
-						configs.logger.log(level: configs.logLevel, "\(message)")
+                        configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: nil, duration: duration, successful: false)
@@ -118,29 +118,34 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 					let result = try serialize(value) {
 						try validate(value, response, configs)
 					}
-					if !configs.loggingComponents.isEmpty {
-						let message = configs.loggingComponents.responseMessage(
+                    let isError = response.status.kind.isError
+                    let logComponents = isError ? configs._errorLoggingComponents : configs.loggingComponents
+					if !logComponents.isEmpty {
+						let message = logComponents.responseMessage(
 							for: response,
 							uuid: uuid,
 							data: data,
 							duration: duration
 						)
-						configs.logger.log(level: configs.logLevel, "\(message)")
+                        configs.logger.log(
+                            level: isError ? configs._errorLogLevel : configs.logLevel,
+                            "\(message)"
+                        )
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: true)
 					}
 					return result
 				} catch {
-					if !configs.loggingComponents.isEmpty {
-						let message = configs.loggingComponents.responseMessage(
+					if !configs._errorLoggingComponents.isEmpty {
+						let message = configs._errorLoggingComponents.responseMessage(
 							for: response,
 							uuid: uuid,
 							data: data,
 							duration: duration,
 							error: error
 						)
-						configs.logger.log(level: configs.logLevel, "\(message)")
+                        configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: false)

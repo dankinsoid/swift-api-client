@@ -221,13 +221,13 @@ public extension APIClient {
 		} catch {
 			try withConfigs { configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				if !configs.loggingComponents.isEmpty {
-					let message = configs.loggingComponents.errorMessage(
+				if !configs._errorLoggingComponents.isEmpty {
+					let message = configs._errorLoggingComponents.errorMessage(
 						uuid: uuid,
 						error: error,
 						fileIDLine: fileIDLine
 					)
-					configs.logger.log(level: configs.logLevel, "\(message)")
+					configs.logger.log(level: configs._errorLogLevel, "\(message)")
 				}
 				if configs.reportMetrics {
 					updateTotalErrorsMetrics(for: nil)
