@@ -342,11 +342,15 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	func url(_ url: String) -> Self {
 		urlComponents {
 			let components: URLComponents?
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 			if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
 				components = URLComponents(string: url, encodingInvalidCharacters: true)
 			} else {
 				components = URLComponents(string: url)
 			}
+#else
+			components = URLComponents(string: url)
+#endif
 			guard let components else {
 				throw Errors.custom("Invalid URL \(url) components")
 			}
