@@ -94,10 +94,10 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		var accessToken: String
 		var currentExpiryDate: Date?
 		var refreshToken: String?
-		if let cachedToken = await tokenCacheService.load(for: .accessToken) {
+		if let cachedToken = try await tokenCacheService.load(for: .accessToken) {
 			accessToken = cachedToken
-			currentExpiryDate = await tokenCacheService.load(for: .expiryDate)
-			refreshToken = await tokenCacheService.load(for: .refreshToken)
+			currentExpiryDate = try await tokenCacheService.load(for: .expiryDate)
+			refreshToken = try await tokenCacheService.load(for: .refreshToken)
 		} else if let requestToken, let url = request.url {
 			(accessToken, refreshToken, currentExpiryDate) = try await withThrowingSynchronizedAccess(id: url.host) {
 				try await requestToken(configs)

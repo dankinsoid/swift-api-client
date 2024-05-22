@@ -3,7 +3,7 @@ import Foundation
 /// A service for caching and retrieving secure data.
 public protocol SecureCacheService {
 
-	func load(for key: SecureCacheServiceKey) async -> String?
+	func load(for key: SecureCacheServiceKey) async throws -> String?
 	func save(_ value: String?, for key: SecureCacheServiceKey) async throws
 	func clear() async throws
 }
@@ -44,8 +44,8 @@ public extension SecureCacheService {
 		try await save(date.map(dateFormatter.string), for: key)
 	}
 
-	func load(for key: SecureCacheServiceKey) async -> Date? {
-		guard let dateString = await load(for: key) else { return nil }
+	func load(for key: SecureCacheServiceKey) async throws -> Date? {
+		guard let dateString = try await load(for: key) else { return nil }
 		return dateFormatter.date(from: dateString)
 	}
 }
@@ -60,7 +60,7 @@ public final actor MockSecureCacheService: SecureCacheService {
 		self.values = values
 	}
 
-	public func load(for key: SecureCacheServiceKey) async -> String? {
+	public func load(for key: SecureCacheServiceKey) async throws -> String? {
 		values[key]
 	}
 
@@ -75,6 +75,9 @@ public final actor MockSecureCacheService: SecureCacheService {
 
 #if canImport(Security)
 import Security
+#if canImport(UIKit)
+import UIKit
+#endif
 
 public extension SecureCacheService where Self == KeychainCacheService {
 
@@ -106,24 +109,41 @@ public struct KeychainCacheService: SecureCacheService {
 		self.service = service
 	}
 
-	public func load(for key: SecureCacheServiceKey) async -> String? {
-		// Create a query for retrieving the value
-		var query: [String: Any] = [
-			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: key.value,
-			kSecReturnData as String: kCFBooleanTrue!,
-			kSecMatchLimit as String: kSecMatchLimitOne,
-		]
-		if let service {
-			query[kSecAttrService as String] = service
-		}
+	public func load(for key: SecureCacheServiceKey) async throws -> String? {
 
-		var item: CFTypeRef?
-		let status = SecItemCopyMatching(query as CFDictionary, &item)
+        // Create a query for retrieving the value
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key.value,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        configureAccess(query: &query)
+        if let service {
+            query[kSecAttrService as String] = service
+        }
 
-		// Check the result
-		guard status == errSecSuccess, let data = item as? Data, let token = String(data: data, encoding: .utf8) else {
-			return nil
+        var item: CFTypeRef?
+        var status = SecItemCopyMatching(query as CFDictionary, &item)
+
+        // Check the result
+
+        if status == errSecInteractionNotAllowed {
+            try await waitForProtectedDataAvailable()
+            item = nil
+            status = SecItemCopyMatching(query as CFDictionary, &item)
+        }
+
+        guard let data = item as? Data else {
+            if [errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain].contains(status) {
+                return nil
+            } else {
+                throw Errors.custom("Failed to load the value from the Keychain. Status: \(status)")
+            }
+        }
+
+		guard let token = String(data: data, encoding: .utf8) else {
+            throw Errors.custom("Failed to convert the data to a string.")
 		}
 
 		return token
@@ -133,8 +153,9 @@ public struct KeychainCacheService: SecureCacheService {
 		// Create a query for saving the token
 		var query: [String: Any] = [
 			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: key.value,
+			kSecAttrAccount as String: key.value
 		]
+        configureAccess(query: &query)
 
 		if let service {
 			query[kSecAttrService as String] = service
@@ -146,26 +167,104 @@ public struct KeychainCacheService: SecureCacheService {
 		if let value {
 			query[kSecValueData as String] = value.data(using: .utf8)
 			// Add the new token to the Keychain
-			SecItemAdd(query as CFDictionary, nil)
+			var status = SecItemAdd(query as CFDictionary, nil)
+            if status == errSecInteractionNotAllowed {
+                try await waitForProtectedDataAvailable()
+                status = SecItemAdd(query as CFDictionary, nil)
+            }
 			// Check the result
-			// status == errSecSuccess
+            guard status == noErr || status == errSecSuccess else {
+                throw Errors.custom("Failed to save the value to the Keychain. Status: \(status)")
+            }
 		}
 	}
 
-	public func clear() throws {
-		var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword]
+	public func clear() async throws {
+		var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword
+        ]
+        configureAccess(query: &query)
 
 		if let service {
 			query[kSecAttrService as String] = service
 		}
 
-		let status = SecItemDelete(query as CFDictionary)
+		var status = SecItemDelete(query as CFDictionary)
+        if status == errSecInteractionNotAllowed {
+            try await waitForProtectedDataAvailable()
+            status = SecItemDelete(query as CFDictionary)
+        }
 
 		guard status == noErr || status == errSecSuccess else {
-			throw Errors.custom("Failed to clear the Keychain cache.")
+			throw Errors.custom("Failed to clear the Keychain cache. Status: \(status)")
 		}
 	}
+
+    private func configureAccess(query: inout [String: Any]) {
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+#if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+#endif
+    }
+    
+    private func waitForProtectedDataAvailable() async throws {
+#if canImport(UIKit)
+        guard await !UIApplication.shared.isProtectedDataAvailable else { return }
+        let name = await UIApplication.protectedDataDidBecomeAvailableNotification
+        let holder = Holder()
+        try await withCheckedThrowingContinuation { continuation in
+            Task {
+                await holder.setContinuation(continuation)
+                let observer = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { _ in
+                    Task {
+                        await holder.resume()
+                    }
+                }
+                await holder.setObserver(observer)
+            }
+        }
+#endif
+    }
 }
+#if canImport(UIKit)
+private final actor Holder {
+    
+    var observer: NSObjectProtocol?
+    var continuation: CheckedContinuation<Void, Error>?
+    var task: Task<Void, Error>?
+
+    func setObserver(_ observer: NSObjectProtocol) {
+        if continuation != nil {
+            self.observer = observer
+        } else {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    func setContinuation(_ continuation: CheckedContinuation<Void, Error>) {
+        self.continuation = continuation
+        task = Task { [weak self] in
+            try await Task.sleep(nanoseconds: 60_000_000_000)
+            await self?.resume(error: CancellationError())
+        }
+    }
+
+    func resume(error: Error? = nil) {
+        task?.cancel()
+        task = nil
+        if let error {
+            continuation?.resume(throwing: error)
+        } else {
+            continuation?.resume()
+        }
+        continuation = nil
+        if let observer {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        observer = nil
+    }
+}
+#endif
 #endif
 
 private let dateFormatter: DateFormatter = {
