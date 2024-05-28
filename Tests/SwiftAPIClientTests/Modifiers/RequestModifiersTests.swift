@@ -96,4 +96,9 @@ final class RequestModifiersTests: XCTestCase {
 		let modifiedClient = client.timeout(30)
 		XCTAssertEqual(modifiedClient.withConfigs(\.timeoutInterval), 30)
 	}
+
+    func testPathWithQuery() throws {
+        let modifiedClient = client.path("test?offset=100")
+        try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com/test?offset=100")
+    }
 }

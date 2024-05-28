@@ -199,7 +199,7 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 		_ pathComponent: String,
 		percentEncoded: Bool = false
 	) {
-		var path = pathComponent
+		var (path, query, fragment) = decomposePathIfNeeded(pathComponent)
 		if path.hasPrefix("/"), urlComponents.path.hasSuffix("/") {
 			path.removeFirst()
 		} else if !path.hasPrefix("/"), !urlComponents.path.hasSuffix("/") {
@@ -210,13 +210,19 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 		} else {
 			urlComponents.path += path
 		}
+        if !query.isEmpty {
+            addQueryItems(items: query, percentEncoded: percentEncoded)
+        }
+        if let fragment {
+            urlComponents.fragment = fragment
+        }
 	}
 
 	public mutating func prependPath(
 		_ pathComponent: String,
 		percentEncoded: Bool = false
 	) {
-		var path = pathComponent
+        var (path, query, fragment) = decomposePathIfNeeded(pathComponent)
 		if path.hasSuffix("/"), urlComponents.path.hasPrefix("/") {
 			path.removeLast()
 		} else if !path.hasSuffix("/"), !urlComponents.path.hasPrefix("/") {
@@ -227,7 +233,51 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 		} else {
 			urlComponents.path = path + urlComponents.path
 		}
+        if !query.isEmpty {
+            addQueryItems(items: query, percentEncoded: percentEncoded)
+        }
+        if let fragment {
+            urlComponents.fragment = fragment
+        }
 	}
+
+    mutating func addQueryItems(
+        items: [URLQueryItem],
+        percentEncoded: Bool
+    ) {
+        guard !items.isEmpty else { return }
+        let itemsToAdd: [URLQueryItem]
+        if percentEncoded {
+            itemsToAdd = items
+        } else {
+            itemsToAdd = items.map {
+                URLQueryItem(
+                    name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
+                    value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.value
+                )
+            }
+        }
+        urlComponents.percentEncodedQueryItems = (urlComponents.percentEncodedQueryItems ?? []) + itemsToAdd
+    }
+
+    private func decomposePathIfNeeded(_ path: String) -> (String, query: [URLQueryItem], fragment: String?) {
+        var path = path
+        var query: [URLQueryItem] = []
+        var fragment: String?
+        if let fragmentIndex = path.lastIndex(of: "#") {
+            fragment = String(path[path.index(after: fragmentIndex)...])
+            path = String(path[..<fragmentIndex])
+        }
+        if let queryIndex = path.lastIndex(of: "?") {
+            query = path[queryIndex...].dropFirst().components(separatedBy: "&").compactMap {
+                let components = $0.components(separatedBy: "=")
+                guard !components.isEmpty else { return nil }
+                return URLQueryItem(name: components[0], value: components.dropFirst().last)
+            }
+            path = String(path[..<queryIndex])
+        }
+        return (path, query: query, fragment: fragment)
+    }
 }
 
 public extension HTTPRequestComponents {

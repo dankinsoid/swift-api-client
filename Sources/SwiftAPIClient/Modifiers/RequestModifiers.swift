@@ -210,20 +210,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with set query parameters.
 	func query(percentEncoded: Bool = false, _ items: @escaping (Configs) throws -> [URLQueryItem]) -> Self {
 		modifyRequest { req, configs in
-			let items = try items(configs)
-			guard !items.isEmpty else { return }
-			let itemsToAdd: [URLQueryItem]
-			if percentEncoded {
-				itemsToAdd = items
-			} else {
-				itemsToAdd = items.map {
-					URLQueryItem(
-						name: $0.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.name,
-						value: $0.value?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowedRFC3986) ?? $0.value
-					)
-				}
-			}
-			req.urlComponents.percentEncodedQueryItems = (req.urlComponents.percentEncodedQueryItems ?? []) + itemsToAdd
+            try req.addQueryItems(items: items(configs), percentEncoded: percentEncoded)
 		}
 	}
 
