@@ -25,7 +25,7 @@ public struct LoggingComponents: OptionSet {
 	/// Example:
 	/// ```
 	/// --> POST /greeting (3-byte body)
-	/// <-- ✅ 200 OK (22ms, 6-byte body)
+	/// <-- ✅ 200 OK (22ms, 6-byte body) /greeting
 	/// ```
 	public static var basic: LoggingComponents { [.method, .path, .query, .bodySize, .duration, .statusCode] }
 
@@ -38,7 +38,7 @@ public struct LoggingComponents: OptionSet {
 	/// Content-Type: application/json
 	/// --> END PUT
 	/// [29CDD5AE-1A5D-4135-B76E-52A8973985E4]
-	/// <-- ✅ 200 OK (0ms, 15-byte body)
+	/// <-- ✅ 200 OK (0ms, 15-byte body) /petstore
 	/// ```
 	public static var standart: LoggingComponents { [.basic, .headers, .location, .uuid] }
 
@@ -51,7 +51,7 @@ public struct LoggingComponents: OptionSet {
 	/// {"id":"666A6886-70C4-454C-BD2D-F36B1B2F7F95"}
 	/// --> END PUT
 	/// [9F252BDC-1F9E-4F3D-8C46-1F984C10F4EB]
-	/// <-- ✅ 200 OK (0ms, 17-byte body)
+	/// <-- ✅ 200 OK (0ms, 17-byte body) https://example.com/petstore
 	/// {"name": "Candy"}
 	/// <-- END
 	/// ```
@@ -113,12 +113,14 @@ public extension LoggingComponents {
 	func responseMessage(
 		for response: HTTPResponse,
 		uuid: UUID,
+        request: HTTPRequestComponents? = nil,
 		data: Data?,
 		duration: TimeInterval,
 		error: Error? = nil
 	) -> String {
 		responseMessage(
 			uuid: uuid,
+            request: request,
 			statusCode: response.status,
 			data: data,
 			headers: response.headerFields,
@@ -129,6 +131,7 @@ public extension LoggingComponents {
 
 	func responseMessage(
 		uuid: UUID,
+        request: HTTPRequestComponents? = nil,
 		statusCode: HTTPResponse.Status? = nil,
 		data: Data?,
 		headers: HTTPFields = [:],
@@ -164,6 +167,15 @@ public extension LoggingComponents {
 		if !inBrackets.isEmpty {
 			message += " (\(inBrackets.joined(separator: ", ")))"
 		}
+        
+        if let request {
+            if contains(.method) {
+                message += " \(request.method.rawValue)"
+            }
+            if let url = request.url, !intersection(.url).isEmpty {
+                message += " \(urlString(url))"
+            }
+        }
 
 		if let error {
 			message += "\n❗️\(error.humanReadable)❗️"
@@ -189,6 +201,7 @@ public extension LoggingComponents {
 	func errorMessage(
 		uuid: UUID,
 		error: Error,
+        request: HTTPRequestComponents? = nil,
 		duration: TimeInterval? = nil,
 		fileIDLine: FileIDLine? = nil
 	) -> String {
@@ -196,6 +209,16 @@ public extension LoggingComponents {
 		if let duration, contains(.duration) {
 			message += "\(Int(duration * 1000))ms "
 		}
+
+        if let request {
+            if contains(.method) {
+                message += " \(request.method.rawValue)"
+            }
+            if let url = request.url, !intersection(.url).isEmpty {
+                message += " \(urlString(url))"
+            }
+        }
+
 		if let fileIDLine, contains(.location) {
 			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
 		}

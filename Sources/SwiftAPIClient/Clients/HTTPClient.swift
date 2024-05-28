@@ -103,6 +103,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 						let message = configs._errorLoggingComponents.errorMessage(
 							uuid: uuid,
 							error: error,
+                            request: request,
 							duration: duration
 						)
                         configs.logger.log(level: configs._errorLogLevel, "\(message)")
@@ -124,6 +125,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 						let message = logComponents.responseMessage(
 							for: response,
 							uuid: uuid,
+                            request: request,
 							data: data,
 							duration: duration
 						)
@@ -141,6 +143,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 						let message = configs._errorLoggingComponents.responseMessage(
 							for: response,
 							uuid: uuid,
+                            request: request,
 							data: data,
 							duration: duration,
 							error: error
