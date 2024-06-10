@@ -207,9 +207,12 @@ public extension APIClient {
 							updateTotalResponseMetrics(for: request, successful: false)
 						}
 
-						var context = APIErrorContext(request: request, response: nil, fileIDLine: fileIDLine)
+						var context = APIErrorContext(
+                            request: request,
+                            response: response as? Data,
+                            fileIDLine: fileIDLine
+                        )
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-							context.response = data
 							try configs.errorHandler(failure, configs, context)
 							throw failure
 						}

@@ -41,17 +41,20 @@ public struct APIErrorContext: Equatable {
 
 	public var request: HTTPRequestComponents?
 	public var response: Data?
+    public var status: HTTPResponse.Status?
 	public var fileID: String
 	public var line: UInt
 
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
+        status: HTTPResponse.Status? = nil,
 		fileID: String,
 		line: UInt
 	) {
 		self.request = request
 		self.response = response
+        self.status = status
 		self.fileID = fileID
 		self.line = line
 	}
@@ -59,11 +62,13 @@ public struct APIErrorContext: Equatable {
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
+        status: HTTPResponse.Status? = nil,
 		fileIDLine: FileIDLine
 	) {
 		self.init(
 			request: request,
 			response: response,
+            status: status,
 			fileID: fileIDLine.fileID,
 			line: fileIDLine.line
 		)
