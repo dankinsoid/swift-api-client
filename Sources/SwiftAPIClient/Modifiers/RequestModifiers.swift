@@ -107,8 +107,12 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - value: The value for the header.
 	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
 	/// - Returns: An instance with modified header.
-	func header(_ field: HTTPField.Name, _ value: String, removeCurrent: Bool = false) -> Self {
-		headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
+	func header(_ field: HTTPField.Name, _ value: String?, removeCurrent: Bool = false) -> Self {
+        if let value {
+            return headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
+        } else {
+            return self
+        }
 	}
 
 	/// Adds or updates a specific HTTP header for the request.
@@ -125,6 +129,42 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 			return self
 		}
 	}
+
+    /// Adds or updates a specific HTTP header for the request.
+    /// - Parameters:
+    ///   - field: The key of the header to add or update.
+    ///   - value: The value for the header.
+    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+    /// - Returns: An instance with modified header.
+    func header(_ field: String, _ value: String?, removeCurrent: Bool = false) -> Self {
+        if let value {
+            return modifyRequest { request in
+                guard let name = HTTPField.Name(field) else {
+                    throw Errors.custom("Invalid header field name '\(field)'")
+                }
+                if removeCurrent {
+                    request.headers[fields: name] = [HTTPField(name: name, value: value)]
+                } else {
+                    var field = request.headers[fields: name]
+                    field.append(HTTPField(name: name, value: value))
+                    request.headers[fields: name] = field
+                }
+            }
+        } else {
+            return self
+        }
+    }
+
+    /// Adds or updates a specific HTTP header for the request.
+    /// - Parameters:
+    ///   - field: The key of the header to add or update.
+    ///   - value: The value for the header.
+    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+    /// - Returns: An instance with modified header.
+    @_disfavoredOverload
+    func header(_ field: String, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> Self {
+        header(field, value?.description, removeCurrent: removeCurrent)
+    }
 }
 
 // MARK: - Body modifiers
@@ -240,19 +280,19 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	/// Adds URL query parameters using an `Encodable` object.
 	/// - Parameters: items: An `Encodable` object to be used as query parameters.
 	/// - Returns: An instance with set query parameters.
-	func query(_ items: any Encodable) -> Self {
+	func query(_ items: any Encodable, percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
-			try $0.queryEncoder.encode(items, percentEncoded: true)
+			try $0.queryEncoder.encode(items, percentEncoded: !percentEncoded)
 		}
 	}
 
 	/// Adds URL query parameters using a dictionary of JSON objects.
 	/// - Parameter json: A dictionary of `String: JSON` pairs to be used as query parameters.
 	/// - Returns: An instance with set query parameters.
-	func query(_ parameters: [String: Encodable?]) -> Self {
+	func query(_ parameters: [String: Encodable?], percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
 			try $0.queryEncoder
-				.encode(parameters.compactMapValues { $0.map { AnyEncodable($0) }}, percentEncoded: true)
+				.encode(parameters.compactMapValues { $0.map { AnyEncodable($0) }}, percentEncoded: !percentEncoded)
 				.sorted(by: { $0.name < $1.name })
 		}
 	}
@@ -263,7 +303,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	///   - value: The value of the query parameter, conforming to `Encodable`.
 	/// - Returns: An instance with the specified query parameter.
 	@_disfavoredOverload
-	func query(_ field: String, _ value: Encodable?) -> Self {
+    func query(_ field: String, _ value: Encodable?, percentEncoded: Bool = false) -> Self {
 		query([field: value])
 	}
 }
