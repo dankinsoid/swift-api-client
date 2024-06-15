@@ -1,4 +1,5 @@
 import Foundation
+import HTTPTypes
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -13,5 +14,5 @@ public enum RedirectBehaviour {
 	case doNotFollow
 
 	/// Modify the redirect request defined in the response.
-	case modify((URLRequest, HTTPURLResponse) -> URLRequest?)
+	case modify((HTTPRequestComponents, HTTPResponse) -> HTTPRequestComponents?)
 }

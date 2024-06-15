@@ -78,21 +78,21 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 	///   - headers: The headers of the request.
 	///   - body: The body of the request.
 	public init(
-		url: URL,
+		url: URL?,
 		method: HTTPRequest.Method = .get,
 		headers: HTTPFields = [:],
 		body: RequestBody? = nil
 	) {
-		if let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+		if let url, let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) {
 			self.init(urlComponents: urlComponents, method: method, headers: headers, body: body)
-		} else {
+		} else if let url {
 			#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 			if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
 				self.init(
-					scheme: url.scheme ?? "https",
+					scheme: url.scheme,
 					user: url.user(percentEncoded: false),
 					password: url.password(percentEncoded: false),
-					host: url.host(percentEncoded: false) ?? "",
+					host: url.host(percentEncoded: false),
 					port: url.port,
 					path: url.path(percentEncoded: false),
 					query: url.query(percentEncoded: false),
@@ -103,7 +103,7 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 				)
 			} else {
 				self.init(
-					scheme: url.scheme ?? "https",
+					scheme: url.scheme,
 					user: url.user,
 					password: url.password,
 					host: url.host ?? "",
@@ -119,10 +119,10 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 			}
 			#else
 			self.init(
-				scheme: url.scheme ?? "https",
+				scheme: url.scheme,
 				user: url.user,
 				password: url.password,
-				host: url.host ?? "",
+				host: url.host,
 				port: url.port,
 				path: url.path,
 				query: url.query,
@@ -133,7 +133,9 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 				body: body
 			)
 			#endif
-		}
+        } else {
+            self.init(scheme: nil, host: nil, query: nil)
+        }
 	}
 
 	/// Initialize a new `HTTPRequestComponents` instance from the given components.
@@ -153,10 +155,10 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 	///
 	/// - Warning: IETF STD 66 (rfc3986) says the use of the format “user:password” in the userinfo subcomponent of a URI is deprecated because passing authentication information in clear text has proven to be a security risk.
 	public init(
-		scheme: String,
+		scheme: String?,
 		user: String? = nil,
 		password: String? = nil,
-		host: String,
+		host: String?,
 		port: Int? = nil,
 		path: String = "/",
 		query: String?,
@@ -195,6 +197,26 @@ public struct HTTPRequestComponents: Sendable, Hashable {
 		self.init(urlComponents: urlComponents, method: method, headers: headers, body: body)
 	}
 
+    public init(httpRequest: HTTPRequest) {
+        self.init(
+            url: httpRequest.url,
+            method: httpRequest.method,
+            headers: httpRequest.headerFields
+        )
+    }
+
+    public init?(urlRequest: URLRequest) {
+        guard urlRequest.httpBodyStream == nil, let httpRequest = urlRequest.httpRequest else {
+            return nil
+        }
+        self.init(
+            url: urlRequest.url,
+            method: httpRequest.method,
+            headers: httpRequest.headerFields,
+            body: urlRequest.httpBody.map { .data($0) }
+        )
+    }
+    
 	public mutating func appendPath(
 		_ pathComponent: String,
 		percentEncoded: Bool = false
