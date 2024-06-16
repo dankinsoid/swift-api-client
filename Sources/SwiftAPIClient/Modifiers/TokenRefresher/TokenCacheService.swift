@@ -48,6 +48,24 @@ public extension SecureCacheService {
 		guard let dateString = try await load(for: key) else { return nil }
 		return dateFormatter.date(from: dateString)
 	}
+
+    @_disfavoredOverload
+    func save(_ value: Encodable?, for key: SecureCacheServiceKey, encoder: JSONEncoder = JSONEncoder()) async throws {
+        guard let value else {
+            try await save(nil as String?, for: key)
+            return
+        }
+        let data = try encoder.encode(value)
+        guard let string = String(data: data, encoding: .utf8) else { throw Errors.custom("Invalid UTF8 data") }
+        try await save(string, for: key)
+    }
+
+    @_disfavoredOverload
+    func load<T: Decodable>(for key: SecureCacheServiceKey, decoder: JSONDecoder = JSONDecoder()) async throws -> T? {
+        guard let string = try await load(for: key) else { return nil }
+        guard let data = string.data(using: .utf8) else { throw Errors.custom("Invalid UTF8 string") }
+        return try decoder.decode(T.self, from: data)
+    }
 }
 
 public final actor MockSecureCacheService: SecureCacheService {
