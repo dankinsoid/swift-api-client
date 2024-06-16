@@ -51,9 +51,19 @@ public extension Serializer where Response == Data, T == String {
 			return string
 		}
 	}
+
+    /// A static property to get a `Serializer` that directly returns the response `Data`.
+    static func string(_ encoding: String.Encoding) -> Self {
+        Self { data, _ in
+            guard let string = String(data: data, encoding: encoding) else {
+                throw Errors.custom("Invalid \(encoding) data")
+            }
+            return string
+        }
+    }
 }
 
-public extension Serializer where Response == Data, T == Void {
+public extension Serializer where T == Void {
 
 	/// A static property to get a `Serializer` that discards the response data.
 	static var void: Self {

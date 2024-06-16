@@ -1,4 +1,5 @@
 import Foundation
+import HTTPTypes
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -60,39 +61,60 @@ public extension APIClient.Configs {
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static var http: APIClientCaller {
-		.http { request, configs in
-			let isUpload = request.body != nil
-			if isUpload, request.method == .get {
-				configs.logger.warning("It is not allowed to add a body in GET request.")
-			}
-			return try await configs.httpClient.data(request, configs)
-		}
+        APIClientCaller<Data, Value, AsyncThrowingValue<(Value, HTTPResponse)>>
+            .httpResponse
+            .dropHTTPResponse
 	}
 }
 
-extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
+public extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)>, Response == Data {
+
+    static var httpResponse: APIClientCaller {
+        HTTPClientCaller<Data, Value>.http { request, configs in
+            let isUpload = request.body != nil
+            if isUpload, request.method == .get {
+                configs.logger.warning("It is not allowed to add a body in GET request.")
+            }
+            return try await configs.httpClient.data(request, configs)
+        }
+        .mapResponse(\.0)
+    }
+}
+
+extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)>, Response == (Data, HTTPResponse) {
 
 	static func http(
 		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) -> APIClientCaller {
-		.http(task: task) {
-			try $2.httpResponseValidator.validate($1, $0, $2)
+        .http(task: task) {
+            try $2.httpResponseValidator.validate($1, $0, $2)
 		} data: {
-			$0
+            $0
 		}
 	}
 }
 
-extension APIClientCaller where Result == AsyncThrowingValue<Value> {
+typealias HTTPClientCaller<R, T> = APIClientCaller<(R, HTTPResponse), T, AsyncThrowingValue<(T, HTTPResponse)>>
 
-	static func http(
-		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Response, HTTPResponse),
-		validate: @escaping (Response, HTTPResponse, APIClient.Configs) throws -> Void,
-		data: @escaping (Response) -> Data?
-	) -> APIClientCaller {
+extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)> {
+
+    var dropHTTPResponse: APIClientCaller<Response, Value, AsyncThrowingValue<Value>> {
+        map { asyncCl in
+            { try await asyncCl().0 }
+        }
+    }
+}
+
+extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)> {
+
+	static func http<T>(
+		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse),
+		validate: @escaping (T, HTTPResponse, APIClient.Configs) throws -> Void,
+		data: @escaping (T) -> Data?
+	) -> APIClientCaller where Response == (T, HTTPResponse) {
 		APIClientCaller { uuid, request, configs, serialize in
 			{
-				let value: Response
+				let value: T
 				let response: HTTPResponse
 				let start = Date()
 				do {
@@ -116,7 +138,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 				let duration = Date().timeIntervalSince(start)
 				let data = data(value)
 				do {
-					let result = try serialize(value) {
+					let result = try serialize((value, response)) {
 						try validate(value, response, configs)
 					}
                     let isError = response.status.kind.isError
@@ -137,7 +159,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: true)
 					}
-					return result
+					return (result, response)
 				} catch {
 					if !configs._errorLoggingComponents.isEmpty {
 						let message = configs._errorLoggingComponents.responseMessage(
@@ -157,7 +179,11 @@ extension APIClientCaller where Result == AsyncThrowingValue<Value> {
 				}
 			}
 		} mockResult: { value in
-			{ value }
+            asyncWithResponse(value)
 		}
 	}
+}
+
+private func asyncWithResponse<T>(_ value: T) -> AsyncThrowingValue<(T, HTTPResponse)> {
+    { return (value, HTTPResponse(status: .ok)) }
 }
