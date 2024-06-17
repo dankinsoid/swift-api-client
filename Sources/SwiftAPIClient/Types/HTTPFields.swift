@@ -64,6 +64,18 @@ public extension HTTPField {
 		return HTTPField(name: .contentDisposition, value: value)
 	}
 
+    /// Returns a `Basic` `Proxy-Authorization` header using the `username` and `password` provided.
+    ///
+    /// - Parameters:
+    ///   - username: The username of the header.
+    ///   - password: The password of the header.
+    ///
+    /// - Returns:    The header.
+    static func proxyAuthorization(username: String, password: String) -> HTTPField {
+        let credential = Data("\(username):\(password)".utf8).base64EncodedString()
+        return HTTPField(name: .proxyAuthorization, value: "Basic \(credential)")
+    }
+
 	/// Returns a `Content-Encoding` header.
 	///
 	/// - Parameter value: The `Content-Encoding`.
