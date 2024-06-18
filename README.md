@@ -22,6 +22,7 @@
 - [`APIClient.Configs`](#apiclientconfigs)
   - [Configs Modifications Order](#configs-modifications-order)
 - [Macros](#macros-1)
+- [URL and URLComponents Extensions](#url-and-urlcomponents-extensions)
 - [Introducing `swift-api-client-addons`](#introducing-swift-api-client-addons)
 - [Installation](#installation)
 - [Author](#author)
@@ -321,6 +322,20 @@ struct Pet {
 }
 ```
 Macros are not necessary for using `swift-api-client`; they are just syntax sugar.
+
+Sure, here is a concise section for your README that demonstrates the most convenient methods provided by your extensions:
+
+## URL and URLComponents Extensions
+
+These extensions provide convenient methods for configuring URLs and URLComponents, offering a fluent interface for setting path components, query parameters, and other URL components.
+
+```swift
+let url = URL(string: "https://example.com")!
+    .path("path1", "path2")
+    .query("key1", 1)
+```
+
+These extensions simplify and streamline your URL building and modification processes in Swift.
 
 ## Introducing `swift-api-client-addons`
 
