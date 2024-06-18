@@ -88,13 +88,13 @@ public struct URLQueryEncoder: QueryEncoder {
 
 	public enum NestedEncodingStrategy {
 
-        case brackets, dots, json(JSONEncoder? = nil, encode: ValueType = .objects)
+		case brackets, dots, json(JSONEncoder? = nil, encode: ValueType = .objects)
 
 		public static var json: NestedEncodingStrategy { .json(nil) }
-        
-        public enum ValueType {
-            case objects, arraysAndObjects
-        }
+
+		public enum ValueType {
+			case objects, arraysAndObjects
+		}
 	}
 
 	private func getQueryItems(from output: QueryValue, percentEncoded: Bool) throws -> [URLQueryItem] {
@@ -266,11 +266,12 @@ final class _URLQueryEncoder: Encoder {
 		try? value.encode(to: isArrayEncoder)
 		let isArray = isArrayEncoder.isArray ?? false
 		let isSingle = isArrayEncoder.isSingle ?? false
-		if 
-            !isSingle,
-            case let .json(jsonEncoder, encodeType) = context.nestedEncodingStrategy,
-            !codingPath.isEmpty,
-            !(codingPath.count < 2 && isArray && encodeType == .objects) {
+		if
+			!isSingle,
+			case let .json(jsonEncoder, encodeType) = context.nestedEncodingStrategy,
+			!codingPath.isEmpty,
+			!(codingPath.count < 2 && isArray && encodeType == .objects)
+		{
 			let jsonEncoder = jsonEncoder ?? {
 				let encoder = JSONEncoder()
 				encoder.dateEncodingStrategy = context.dateEncodingStrategy

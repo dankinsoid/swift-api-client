@@ -113,14 +113,14 @@ public extension LoggingComponents {
 	func responseMessage(
 		for response: HTTPResponse,
 		uuid: UUID,
-        request: HTTPRequestComponents? = nil,
+		request: HTTPRequestComponents? = nil,
 		data: Data?,
 		duration: TimeInterval,
 		error: Error? = nil
 	) -> String {
 		responseMessage(
 			uuid: uuid,
-            request: request,
+			request: request,
 			statusCode: response.status,
 			data: data,
 			headers: response.headerFields,
@@ -131,7 +131,7 @@ public extension LoggingComponents {
 
 	func responseMessage(
 		uuid: UUID,
-        request: HTTPRequestComponents? = nil,
+		request: HTTPRequestComponents? = nil,
 		statusCode: HTTPResponse.Status? = nil,
 		data: Data?,
 		headers: HTTPFields = [:],
@@ -167,15 +167,15 @@ public extension LoggingComponents {
 		if !inBrackets.isEmpty {
 			message += " (\(inBrackets.joined(separator: ", ")))"
 		}
-        
-        if let request {
-            if contains(.method) {
-                message += " \(request.method.rawValue)"
-            }
-            if let url = request.url, !intersection(.url).isEmpty {
-                message += " \(urlString(url))"
-            }
-        }
+
+		if let request {
+			if contains(.method) {
+				message += " \(request.method.rawValue)"
+			}
+			if let url = request.url, !intersection(.url).isEmpty {
+				message += " \(urlString(url))"
+			}
+		}
 
 		if let error {
 			message += "\n❗️\(error.humanReadable)❗️"
@@ -201,7 +201,7 @@ public extension LoggingComponents {
 	func errorMessage(
 		uuid: UUID,
 		error: Error,
-        request: HTTPRequestComponents? = nil,
+		request: HTTPRequestComponents? = nil,
 		duration: TimeInterval? = nil,
 		fileIDLine: FileIDLine? = nil
 	) -> String {
@@ -210,14 +210,14 @@ public extension LoggingComponents {
 			message += "\(Int(duration * 1000))ms "
 		}
 
-        if let request {
-            if contains(.method) {
-                message += " \(request.method.rawValue)"
-            }
-            if let url = request.url, !intersection(.url).isEmpty {
-                message += " \(urlString(url))"
-            }
-        }
+		if let request {
+			if contains(.method) {
+				message += " \(request.method.rawValue)"
+			}
+			if let url = request.url, !intersection(.url).isEmpty {
+				message += " \(urlString(url))"
+			}
+		}
 
 		if let fileIDLine, contains(.location) {
 			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message

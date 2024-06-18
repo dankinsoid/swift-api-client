@@ -69,22 +69,22 @@ public extension APIClient.Configs {
 
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == URL {
 
-    static var httpDownload: APIClientCaller {
-        APIClientCaller<URL, Value, AsyncThrowingValue<(Value, HTTPResponse)>>
-            .httpDownloadResponse
-            .dropHTTPResponse
-    }
+	static var httpDownload: APIClientCaller {
+		APIClientCaller<URL, Value, AsyncThrowingValue<(Value, HTTPResponse)>>
+			.httpDownloadResponse
+			.dropHTTPResponse
+	}
 }
 
 public extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)>, Response == URL {
 
-    static var httpDownloadResponse: APIClientCaller {
-        HTTPClientCaller<URL, Value>.http { request, configs in
-            try await configs.httpDownloadClient.download(request, configs)
-        } validate: { _, _, _ in
-        } data: { _ in
-            nil
-        }
-        .mapResponse(\.0)
-    }
+	static var httpDownloadResponse: APIClientCaller {
+		HTTPClientCaller<URL, Value>.http { request, configs in
+			try await configs.httpDownloadClient.download(request, configs)
+		} validate: { _, _, _ in
+		} data: { _ in
+			nil
+		}
+		.mapResponse(\.0)
+	}
 }

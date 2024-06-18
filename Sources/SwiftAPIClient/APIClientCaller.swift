@@ -70,23 +70,23 @@ public struct APIClientCaller<Response, Value, Result> {
 		}
 	}
 
-    /// Maps the response to another type using the provided mapper.
-    /// - Parameter mapper: A closure that maps the result to a different type.
-    /// - Returns: A `APIClientCaller` with the mapped result type.
-    ///
-    /// Example
-    /// ```swift
-    /// try await client.call(.http, as: .decodable)
-    /// ```
-    public func mapResponse<T>(_ mapper: @escaping (Response) throws -> T) -> APIClientCaller<T, Value, Result> {
-        APIClientCaller<T, Value, Result> { id, request, configs, serialize in
-            try _call(id, request, configs) { response, validate in
-                try serialize(mapper(response), validate)
-            }
-        } mockResult: {
-            try _mockResult($0)
-        }
-    }
+	/// Maps the response to another type using the provided mapper.
+	/// - Parameter mapper: A closure that maps the result to a different type.
+	/// - Returns: A `APIClientCaller` with the mapped result type.
+	///
+	/// Example
+	/// ```swift
+	/// try await client.call(.http, as: .decodable)
+	/// ```
+	public func mapResponse<T>(_ mapper: @escaping (Response) throws -> T) -> APIClientCaller<T, Value, Result> {
+		APIClientCaller<T, Value, Result> { id, request, configs, serialize in
+			try _call(id, request, configs) { response, validate in
+				try serialize(mapper(response), validate)
+			}
+		} mockResult: {
+			try _mockResult($0)
+		}
+	}
 }
 
 public extension APIClientCaller where Result == Value {
@@ -226,10 +226,10 @@ public extension APIClient {
 						}
 
 						let context = APIErrorContext(
-                            request: request,
-                            response: response as? Data,
-                            fileIDLine: fileIDLine
-                        )
+							request: request,
+							response: response as? Data,
+							fileIDLine: fileIDLine
+						)
 						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
 							try configs.errorHandler(failure, configs, context)
 							throw failure

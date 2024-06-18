@@ -33,7 +33,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with updated path.
 	func path(_ components: [any CustomStringConvertible], percentEncoded: Bool = false) -> Self {
 		modifyRequest {
-            $0 = $0.path(components, percentEncoded: percentEncoded)
+			$0 = $0.path(components, percentEncoded: percentEncoded)
 		}
 	}
 }
@@ -102,11 +102,11 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
 	/// - Returns: An instance with modified header.
 	func header(_ field: HTTPField.Name, _ value: String?, removeCurrent: Bool = false) -> Self {
-        if let value {
-            return headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
-        } else {
-            return self
-        }
+		if let value {
+			return headers(HTTPField(name: field, value: value), removeCurrent: removeCurrent)
+		} else {
+			return self
+		}
 	}
 
 	/// Adds or updates a specific HTTP header for the request.
@@ -124,41 +124,41 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 		}
 	}
 
-    /// Adds or updates a specific HTTP header for the request.
-    /// - Parameters:
-    ///   - field: The key of the header to add or update.
-    ///   - value: The value for the header.
-    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
-    /// - Returns: An instance with modified header.
-    func header(_ field: String, _ value: String?, removeCurrent: Bool = false) -> Self {
-        if let value {
-            return modifyRequest { request in
-                guard let name = HTTPField.Name(field) else {
-                    throw Errors.custom("Invalid header field name '\(field)'")
-                }
-                if removeCurrent {
-                    request.headers[fields: name] = [HTTPField(name: name, value: value)]
-                } else {
-                    var field = request.headers[fields: name]
-                    field.append(HTTPField(name: name, value: value))
-                    request.headers[fields: name] = field
-                }
-            }
-        } else {
-            return self
-        }
-    }
+	/// Adds or updates a specific HTTP header for the request.
+	/// - Parameters:
+	///   - field: The key of the header to add or update.
+	///   - value: The value for the header.
+	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+	/// - Returns: An instance with modified header.
+	func header(_ field: String, _ value: String?, removeCurrent: Bool = false) -> Self {
+		if let value {
+			return modifyRequest { request in
+				guard let name = HTTPField.Name(field) else {
+					throw Errors.custom("Invalid header field name '\(field)'")
+				}
+				if removeCurrent {
+					request.headers[fields: name] = [HTTPField(name: name, value: value)]
+				} else {
+					var field = request.headers[fields: name]
+					field.append(HTTPField(name: name, value: value))
+					request.headers[fields: name] = field
+				}
+			}
+		} else {
+			return self
+		}
+	}
 
-    /// Adds or updates a specific HTTP header for the request.
-    /// - Parameters:
-    ///   - field: The key of the header to add or update.
-    ///   - value: The value for the header.
-    ///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
-    /// - Returns: An instance with modified header.
-    @_disfavoredOverload
-    func header(_ field: String, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> Self {
-        header(field, value?.description, removeCurrent: removeCurrent)
-    }
+	/// Adds or updates a specific HTTP header for the request.
+	/// - Parameters:
+	///   - field: The key of the header to add or update.
+	///   - value: The value for the header.
+	///   - update: A Boolean to determine whether to remove the current header if it exists. Default is `false`.
+	/// - Returns: An instance with modified header.
+	@_disfavoredOverload
+	func header(_ field: String, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> Self {
+		header(field, value?.description, removeCurrent: removeCurrent)
+	}
 }
 
 // MARK: - Body modifiers
@@ -244,7 +244,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with set query parameters.
 	func query(percentEncoded: Bool = false, _ items: @escaping (Configs) throws -> [URLQueryItem]) -> Self {
 		modifyRequest { req, configs in
-            try req.addQueryItems(items: items(configs), percentEncoded: percentEncoded)
+			try req.addQueryItems(items: items(configs), percentEncoded: percentEncoded)
 		}
 	}
 
@@ -272,11 +272,11 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 public extension RequestBuilder where Request == HTTPRequestComponents, Configs == APIClient.Configs {
 
 	/// Adds URL query parameters using an `Encodable` object.
-	/// - Parameters: 
-    ///   - items: An `Encodable` object to be used as query parameters.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.   
+	/// - Parameters:
+	///   - items: An `Encodable` object to be used as query parameters.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with set query parameters.
-    @_disfavoredOverload
+	@_disfavoredOverload
 	func query(_ items: any Encodable, percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
 			try $0.queryEncoder.encode(items, percentEncoded: !percentEncoded)
@@ -285,8 +285,8 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 
 	/// Adds URL query parameters using a dictionary of JSON objects.
 	/// - Parameters:
-    ///   - parameters: A dictionary of `String: Encodable?` pairs to be used as query parameters.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
+	///   - parameters: A dictionary of `String: Encodable?` pairs to be used as query parameters.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with set query parameters.
 	func query(_ parameters: [String: Encodable?], percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
@@ -302,8 +302,8 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	///   - value: The value of the query parameter, conforming to `Encodable`.
 	/// - Returns: An instance with the specified query parameter.
 	@_disfavoredOverload
-    func query(_ field: String, _ value: Encodable?, percentEncoded: Bool = false) -> Self {
-        query([field: value], percentEncoded: percentEncoded)
+	func query(_ field: String, _ value: Encodable?, percentEncoded: Bool = false) -> Self {
+		query([field: value], percentEncoded: percentEncoded)
 	}
 }
 
@@ -320,7 +320,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Note: The query, and fragment of the original URL are retained, while those of the new URL are ignored.
 	func baseURL(_ newBaseURL: URL) -> Self {
 		modifyRequest {
-            $0.urlComponents = $0.urlComponents.baseURL(newBaseURL)
+			$0.urlComponents = $0.urlComponents.baseURL(newBaseURL)
 		}
 	}
 
@@ -342,15 +342,15 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	func url(_ url: String) -> Self {
 		urlComponents {
 			let components: URLComponents?
-#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
+			#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 			if #available(macOS 14.0, iOS 17.0, watchOS 10.0, tvOS 17.0, *) {
 				components = URLComponents(string: url, encodingInvalidCharacters: true)
 			} else {
 				components = URLComponents(string: url)
 			}
-#else
+			#else
 			components = URLComponents(string: url)
-#endif
+			#endif
 			guard let components else {
 				throw Errors.custom("Invalid URL \(url) components")
 			}
@@ -386,13 +386,13 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 
 	/// Sets the host for the request.
 	///
-    /// - Parameters:
-    ///   - host: The new host to set.
-    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.   
+	/// - Parameters:
+	///   - host: The new host to set.
+	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with the updated host.
 	func host(_ host: String, percentEncoded: Bool = false) -> Self {
 		modifyRequest {
-            $0 = $0.host(host, percentEncoded: percentEncoded)
+			$0 = $0.host(host, percentEncoded: percentEncoded)
 		}
 	}
 

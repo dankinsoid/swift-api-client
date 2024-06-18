@@ -66,16 +66,16 @@ extension SessionDelegateProxy: URLSessionTaskDelegate {
 		case .doNotFollow:
 			completionHandler(nil)
 		case let .modify(modifier):
-            guard 
-                let request = HTTPRequestComponents(urlRequest: request),
-                let response = response.httpResponse
-            else {
-                completionHandler(nil)
-                return
-            }
+			guard
+				let request = HTTPRequestComponents(urlRequest: request),
+				let response = response.httpResponse
+			else {
+				completionHandler(nil)
+				return
+			}
 			completionHandler(
-                modifier(request, response)?.urlRequest
-            )
+				modifier(request, response)?.urlRequest
+			)
 		}
 	}
 

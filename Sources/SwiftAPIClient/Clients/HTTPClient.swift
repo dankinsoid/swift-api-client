@@ -61,24 +61,24 @@ public extension APIClient.Configs {
 public extension APIClientCaller where Result == AsyncThrowingValue<Value>, Response == Data {
 
 	static var http: APIClientCaller {
-        APIClientCaller<Data, Value, AsyncThrowingValue<(Value, HTTPResponse)>>
-            .httpResponse
-            .dropHTTPResponse
+		APIClientCaller<Data, Value, AsyncThrowingValue<(Value, HTTPResponse)>>
+			.httpResponse
+			.dropHTTPResponse
 	}
 }
 
 public extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)>, Response == Data {
 
-    static var httpResponse: APIClientCaller {
-        HTTPClientCaller<Data, Value>.http { request, configs in
-            let isUpload = request.body != nil
-            if isUpload, request.method == .get {
-                configs.logger.warning("It is not allowed to add a body in GET request.")
-            }
-            return try await configs.httpClient.data(request, configs)
-        }
-        .mapResponse(\.0)
-    }
+	static var httpResponse: APIClientCaller {
+		HTTPClientCaller<Data, Value>.http { request, configs in
+			let isUpload = request.body != nil
+			if isUpload, request.method == .get {
+				configs.logger.warning("It is not allowed to add a body in GET request.")
+			}
+			return try await configs.httpClient.data(request, configs)
+		}
+		.mapResponse(\.0)
+	}
 }
 
 extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)>, Response == (Data, HTTPResponse) {
@@ -86,10 +86,10 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 	static func http(
 		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) -> APIClientCaller {
-        .http(task: task) {
-            try $2.httpResponseValidator.validate($1, $0, $2)
+		.http(task: task) {
+			try $2.httpResponseValidator.validate($1, $0, $2)
 		} data: {
-            $0
+			$0
 		}
 	}
 }
@@ -98,11 +98,11 @@ typealias HTTPClientCaller<R, T> = APIClientCaller<(R, HTTPResponse), T, AsyncTh
 
 extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)> {
 
-    var dropHTTPResponse: APIClientCaller<Response, Value, AsyncThrowingValue<Value>> {
-        map { asyncCl in
-            { try await asyncCl().0 }
-        }
-    }
+	var dropHTTPResponse: APIClientCaller<Response, Value, AsyncThrowingValue<Value>> {
+		map { asyncCl in
+			{ try await asyncCl().0 }
+		}
+	}
 }
 
 extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)> {
@@ -125,10 +125,10 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 						let message = configs._errorLoggingComponents.errorMessage(
 							uuid: uuid,
 							error: error,
-                            request: request,
+							request: request,
 							duration: duration
 						)
-                        configs.logger.log(level: configs._errorLogLevel, "\(message)")
+						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: nil, duration: duration, successful: false)
@@ -141,20 +141,20 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					let result = try serialize((value, response)) {
 						try validate(value, response, configs)
 					}
-                    let isError = response.status.kind.isError
-                    let logComponents = isError ? configs._errorLoggingComponents : configs.loggingComponents
+					let isError = response.status.kind.isError
+					let logComponents = isError ? configs._errorLoggingComponents : configs.loggingComponents
 					if !logComponents.isEmpty {
 						let message = logComponents.responseMessage(
 							for: response,
 							uuid: uuid,
-                            request: request,
+							request: request,
 							data: data,
 							duration: duration
 						)
-                        configs.logger.log(
-                            level: isError ? configs._errorLogLevel : configs.logLevel,
-                            "\(message)"
-                        )
+						configs.logger.log(
+							level: isError ? configs._errorLogLevel : configs.logLevel,
+							"\(message)"
+						)
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: true)
@@ -165,12 +165,12 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 						let message = configs._errorLoggingComponents.responseMessage(
 							for: response,
 							uuid: uuid,
-                            request: request,
+							request: request,
 							data: data,
 							duration: duration,
 							error: error
 						)
-                        configs.logger.log(level: configs._errorLogLevel, "\(message)")
+						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: false)
@@ -179,11 +179,11 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				}
 			}
 		} mockResult: { value in
-            asyncWithResponse(value)
+			asyncWithResponse(value)
 		}
 	}
 }
 
 private func asyncWithResponse<T>(_ value: T) -> AsyncThrowingValue<(T, HTTPResponse)> {
-    { return (value, HTTPResponse(status: .ok)) }
+	{ (value, HTTPResponse(status: .ok)) }
 }

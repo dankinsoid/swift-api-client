@@ -30,7 +30,7 @@ public extension HTTPResponseValidator {
 	/// - Returns: An `HTTPResponseValidator` that validates based on the specified status code range.
 	static func statusCode(_ codes: ClosedRange<Int>) -> Self {
 		HTTPResponseValidator { response, _, configs in
-            guard codes.contains(response.status.code) || configs.ignoreStatusCodeValidator else {
+			guard codes.contains(response.status.code) || configs.ignoreStatusCodeValidator else {
 				throw Errors.invalidStatusCode(response.status.code)
 			}
 		}
@@ -84,9 +84,9 @@ public extension APIClient {
 }
 
 public extension APIClient.Configs {
-    
-    var ignoreStatusCodeValidator: Bool {
-        get { self[\.ignoreStatusCodeValidator] ?? false }
-        set { self[\.ignoreStatusCodeValidator] = newValue }
-    }
+
+	var ignoreStatusCodeValidator: Bool {
+		get { self[\.ignoreStatusCodeValidator] ?? false }
+		set { self[\.ignoreStatusCodeValidator] = newValue }
+	}
 }
