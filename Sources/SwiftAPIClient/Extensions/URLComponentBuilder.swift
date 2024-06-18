@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// A protocol that defines a type capable of configuring URLComponents.
 public protocol URLComponentBuilder {
