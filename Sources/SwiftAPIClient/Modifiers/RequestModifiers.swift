@@ -33,13 +33,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Returns: An instance with updated path.
 	func path(_ components: [any CustomStringConvertible], percentEncoded: Bool = false) -> Self {
 		modifyRequest {
-			guard !components.isEmpty else { return }
-			let items = components.flatMap {
-				$0.description.components(separatedBy: ["/"]).filter { !$0.isEmpty }
-			}
-			for item in items {
-				$0.appendPath(item, percentEncoded: percentEncoded)
-			}
+            $0 = $0.path(components, percentEncoded: percentEncoded)
 		}
 	}
 }
@@ -278,8 +272,11 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 public extension RequestBuilder where Request == HTTPRequestComponents, Configs == APIClient.Configs {
 
 	/// Adds URL query parameters using an `Encodable` object.
-	/// - Parameters: items: An `Encodable` object to be used as query parameters.
+	/// - Parameters: 
+    ///   - items: An `Encodable` object to be used as query parameters.
+    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.   
 	/// - Returns: An instance with set query parameters.
+    @_disfavoredOverload
 	func query(_ items: any Encodable, percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
 			try $0.queryEncoder.encode(items, percentEncoded: !percentEncoded)
@@ -287,7 +284,9 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	}
 
 	/// Adds URL query parameters using a dictionary of JSON objects.
-	/// - Parameter json: A dictionary of `String: JSON` pairs to be used as query parameters.
+	/// - Parameters:
+    ///   - parameters: A dictionary of `String: Encodable?` pairs to be used as query parameters.
+    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with set query parameters.
 	func query(_ parameters: [String: Encodable?], percentEncoded: Bool = false) -> Self {
 		query(percentEncoded: true) {
@@ -304,7 +303,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	/// - Returns: An instance with the specified query parameter.
 	@_disfavoredOverload
     func query(_ field: String, _ value: Encodable?, percentEncoded: Bool = false) -> Self {
-		query([field: value])
+        query([field: value], percentEncoded: percentEncoded)
 	}
 }
 
@@ -321,33 +320,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	/// - Note: The query, and fragment of the original URL are retained, while those of the new URL are ignored.
 	func baseURL(_ newBaseURL: URL) -> Self {
 		modifyRequest {
-			$0.urlComponents.scheme = newBaseURL.scheme
-			#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
-			if #available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *) {
-				if let host = newBaseURL.host(percentEncoded: false) {
-					$0.urlComponents.host = host
-				}
-				let path = newBaseURL.path(percentEncoded: false)
-				if !path.isEmpty, path != "/" {
-					$0.prependPath(path)
-				}
-			} else {
-				if let host = newBaseURL.host {
-					$0.urlComponents.percentEncodedHost = host
-				}
-				if !newBaseURL.path.isEmpty, newBaseURL.path != "/" {
-					$0.prependPath(newBaseURL.path, percentEncoded: true)
-				}
-			}
-			#else
-			if let host = newBaseURL.host {
-				$0.urlComponents.percentEncodedHost = host
-			}
-			if !newBaseURL.path.isEmpty, newBaseURL.path != "/" {
-				$0.prependPath(newBaseURL.path, percentEncoded: true)
-			}
-			#endif
-			$0.urlComponents.port = newBaseURL.port
+            $0.urlComponents = $0.urlComponents.baseURL(newBaseURL)
 		}
 	}
 
@@ -413,11 +386,13 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 
 	/// Sets the host for the request.
 	///
-	/// - Parameter host: The new host to set.
+    /// - Parameters:
+    ///   - host: The new host to set.
+    ///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.   
 	/// - Returns: An instance with the updated host.
-	func host(_ host: String) -> Self {
+	func host(_ host: String, percentEncoded: Bool = false) -> Self {
 		modifyRequest {
-			$0.urlComponents.host = host
+            $0 = $0.host(host, percentEncoded: percentEncoded)
 		}
 	}
 

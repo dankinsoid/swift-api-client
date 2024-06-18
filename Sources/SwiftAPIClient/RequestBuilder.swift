@@ -26,3 +26,11 @@ public extension RequestBuilder {
 		}
 	}
 }
+
+public extension RequestBuilder where Request == HTTPRequestComponents {
+    
+    /// The request `URL`
+    var url: URL? {
+        try? request().url
+    }
+}
