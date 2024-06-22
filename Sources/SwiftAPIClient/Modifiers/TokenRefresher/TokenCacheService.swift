@@ -9,9 +9,10 @@ public protocol SecureCacheService {
 }
 
 /// A key for a secure cache service.
-public struct SecureCacheServiceKey: Hashable, ExpressibleByStringInterpolation {
+public struct SecureCacheServiceKey: Hashable, ExpressibleByStringInterpolation, LosslessStringConvertible {
 
 	public var value: String
+    public var description: String { value }
 
 	public init(_ value: String) {
 		self.value = value
