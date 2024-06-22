@@ -103,7 +103,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 				try await requestToken(configs)
 			}
 		} else {
-			throw Errors.custom("Token not found.")
+			throw TokenNotFound()
 		}
 
 		if
@@ -145,4 +145,9 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 			return (token, refreshToken, expiryDate)
 		}
 	}
+}
+
+public struct TokenNotFound: Error {
+    
+    public init() {}
 }
