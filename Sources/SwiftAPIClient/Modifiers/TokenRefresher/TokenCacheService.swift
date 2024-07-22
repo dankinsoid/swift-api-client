@@ -42,12 +42,12 @@ public extension SecureCacheService where Self == MockSecureCacheService {
 public extension SecureCacheService {
 
 	func save(_ date: Date?, for key: SecureCacheServiceKey) async throws {
-		try await save(date.map(dateFormatter.string), for: key)
+        try await save(date.map(DateFormatter.secureCacheService.string), for: key)
 	}
 
 	func load(for key: SecureCacheServiceKey) async throws -> Date? {
 		guard let dateString = try await load(for: key) else { return nil }
-		return dateFormatter.date(from: dateString)
+		return DateFormatter.secureCacheService.date(from: dateString)
 	}
 
 	@_disfavoredOverload
@@ -287,10 +287,14 @@ private final actor Holder {
 #endif
 #endif
 
-private let dateFormatter: DateFormatter = {
-	let formatter = DateFormatter()
-	formatter.locale = Locale(identifier: "en_US_POSIX")
-	formatter.timeZone = TimeZone(secondsFromGMT: 0)
-	formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
-	return formatter
-}()
+public extension DateFormatter {
+
+    /// A date formatter for the secure cache service to format dates.
+    static let secureCacheService: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZ"
+        return formatter
+    }()
+}
