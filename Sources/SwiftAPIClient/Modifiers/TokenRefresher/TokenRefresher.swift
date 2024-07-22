@@ -108,7 +108,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 
 		if
 			let currentExpiryDate,
-			currentExpiryDate > Date()
+			currentExpiryDate < Date()
 		{
 			(accessToken, refreshToken, _) = try await refreshTokenAndCache(configs, accessToken: accessToken, refreshToken: refreshToken)
 		} else {
