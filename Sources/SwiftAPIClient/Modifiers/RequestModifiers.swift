@@ -22,16 +22,17 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - components: A variadic list of components that conform to `CustomStringConvertible`.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
+    @_disfavoredOverload
 	func path(_ components: any CustomStringConvertible..., percentEncoded: Bool = false) -> Self {
         path(components.map(\.description), percentEncoded: percentEncoded)
 	}
 
 	/// Appends an array of path components to the URL of the request.
 	/// - Parameters:
-	///   - components: An array of components that conform to `CustomStringConvertible`.
+	///   - components: An array of components.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
-    func path<T: CustomStringConvertible>(_ components: [T], percentEncoded: Bool = false) -> Self {
+    func path(_ components: [String], percentEncoded: Bool = false) -> Self {
 		modifyRequest {
 			$0 = $0.path(components, percentEncoded: percentEncoded)
 		}

@@ -70,16 +70,17 @@ public extension URLComponentBuilder {
 	///   - components: A variadic list of components that conform to `CustomStringConvertible`.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
+    @_disfavoredOverload
 	func path(_ components: any CustomStringConvertible..., percentEncoded: Bool = false) -> BuildResult {
         path(components.map(\.description), percentEncoded: percentEncoded)
 	}
 
 	/// Appends an array of path components to the URL.
 	/// - Parameters:
-	///   - components: An array of components that conform to `CustomStringConvertible`.
+	///   - components: An array of components.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
-    func path<T: CustomStringConvertible>(_ components: [T], percentEncoded: Bool = false) -> BuildResult {
+    func path(_ components: [String], percentEncoded: Bool = false) -> BuildResult {
 		configureURLComponents {
 			guard !components.isEmpty else { return }
 			let items = components.flatMap {
