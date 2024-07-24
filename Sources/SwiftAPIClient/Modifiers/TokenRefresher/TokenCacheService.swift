@@ -128,22 +128,14 @@ public struct KeychainCacheService: SecureCacheService {
 		self.service = service
 	}
 
+    public func load(for key: SecureCacheServiceKey) throws -> String? {
+        let (_, item, status) = loadStatus(for: key)
+        return try load(item: item, status: status)
+    }
+
 	public func load(for key: SecureCacheServiceKey) async throws -> String? {
 
-		// Create a query for retrieving the value
-		var query: [String: Any] = [
-			kSecClass as String: kSecClassGenericPassword,
-			kSecAttrAccount as String: key.value,
-			kSecReturnData as String: kCFBooleanTrue!,
-			kSecMatchLimit as String: kSecMatchLimitOne,
-		]
-		configureAccess(query: &query)
-		if let service {
-			query[kSecAttrService as String] = service
-		}
-
-		var item: CFTypeRef?
-		var status = SecItemCopyMatching(query as CFDictionary, &item)
+		var (query, item, status) = loadStatus(for: key)
 
 		// Check the result
 
@@ -152,20 +144,8 @@ public struct KeychainCacheService: SecureCacheService {
 			item = nil
 			status = SecItemCopyMatching(query as CFDictionary, &item)
 		}
-
-		guard let data = item as? Data else {
-			if [errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain].contains(status) {
-				return nil
-			} else {
-				throw Errors.custom("Failed to load the value from the Keychain. Status: \(status)")
-			}
-		}
-
-		guard let token = String(data: data, encoding: .utf8) else {
-			throw Errors.custom("Failed to convert the data to a string.")
-		}
-
-		return token
+        
+        return try load(item: item, status: status)
 	}
 
 	public func save(_ value: String?, for key: SecureCacheServiceKey) async throws {
@@ -218,7 +198,41 @@ public struct KeychainCacheService: SecureCacheService {
 			throw Errors.custom("Failed to clear the Keychain cache. Status: \(status)")
 		}
 	}
+    
+    private func loadStatus(for key: SecureCacheServiceKey) -> ([String: Any], CFTypeRef?, OSStatus) {
+        // Create a query for retrieving the value
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key.value,
+            kSecReturnData as String: kCFBooleanTrue!,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        configureAccess(query: &query)
+        if let service {
+            query[kSecAttrService as String] = service
+        }
+        
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        return (query, item, status)
+    }
 
+    private func load(item: CFTypeRef?, status: OSStatus) throws -> String? {
+        guard let data = item as? Data else {
+            if [errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain].contains(status) {
+                return nil
+            } else {
+                throw Errors.custom("Failed to load the value from the Keychain. Status: \(status)")
+            }
+        }
+
+        guard let value = String(data: data, encoding: .utf8) else {
+            throw Errors.custom("Failed to convert the data to a string.")
+        }
+
+        return value
+    }
+    
 	private func configureAccess(query: inout [String: Any]) {
 		query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 		#if os(macOS)
