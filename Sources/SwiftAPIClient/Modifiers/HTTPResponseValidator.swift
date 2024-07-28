@@ -31,7 +31,7 @@ public extension HTTPResponseValidator {
 	static func statusCode(_ codes: ClosedRange<Int>) -> Self {
 		HTTPResponseValidator { response, _, configs in
 			guard codes.contains(response.status.code) || configs.ignoreStatusCodeValidator else {
-				throw Errors.invalidStatusCode(response.status.code)
+				throw InvalidStatusCode(response.status)
 			}
 		}
 	}
@@ -42,10 +42,25 @@ public extension HTTPResponseValidator {
 	static func statusCode(_ kind: HTTPResponse.Status.Kind) -> Self {
 		HTTPResponseValidator { response, _, configs in
 			guard response.status.kind == kind || configs.ignoreStatusCodeValidator else {
-				throw Errors.invalidStatusCode(response.status.code)
+				throw InvalidStatusCode(response.status)
 			}
 		}
 	}
+}
+
+public struct InvalidStatusCode: Error, LocalizedError, CustomStringConvertible {
+
+    /// The invalid status code.
+    public let status: HTTPResponse.Status
+
+    public init(_ status: HTTPResponse.Status) {
+        self.status = status
+    }
+
+    public var errorDescription: String? { description }
+    public var description: String {
+        "Invalid status code: \(status.code) \(status.reasonPhrase)"
+    }
 }
 
 public extension HTTPResponseValidator {

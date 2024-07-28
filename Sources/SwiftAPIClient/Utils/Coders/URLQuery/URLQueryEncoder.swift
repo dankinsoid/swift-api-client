@@ -45,7 +45,7 @@ public struct URLQueryEncoder: QueryEncoder {
 	public func encode<T: Encodable>(_ value: T, percentEncoded: Bool = false) throws -> [URLQueryItem] {
 		let encoder = _URLQueryEncoder(path: [], context: self)
 		let query = try encoder.encode(value)
-		return try getQueryItems(from: query, percentEncoded: percentEncoded)
+		return try getQueryItems(from: query, value: value, percentEncoded: percentEncoded)
 	}
 
 	public func encodeQuery<T: Encodable>(_ value: T) throws -> String {
@@ -65,7 +65,7 @@ public struct URLQueryEncoder: QueryEncoder {
 		return result
 	}
 
-	public enum ArrayEncodingStrategy {
+    public enum ArrayEncodingStrategy: CustomStringConvertible {
 
 		/// value1,value2
 		case separator(String)
@@ -79,6 +79,19 @@ public struct URLQueryEncoder: QueryEncoder {
 		public static var commaSeparator: Self {
 			.separator(",")
 		}
+        
+        public var description: String {
+            switch self {
+            case let .separator(separator):
+                return "separator(\(separator))"
+            case let .brackets(indexed):
+                return "brackets(indexed: \(indexed))"
+            case .repeatKey:
+                return "repeatKey"
+            case .custom:
+                return "custom"
+            }
+        }
 	}
 
 	public enum BoolEncodingStrategy {
@@ -97,11 +110,11 @@ public struct URLQueryEncoder: QueryEncoder {
 		}
 	}
 
-	private func getQueryItems(from output: QueryValue, percentEncoded: Bool) throws -> [URLQueryItem] {
+    private func getQueryItems(from output: QueryValue, value: Any, percentEncoded: Bool) throws -> [URLQueryItem] {
 		let array: QueryValue.Keyed
 		switch output {
 		case .single, .unkeyed, .null:
-			throw QueryValue.Errors.expectedKeyedValue
+            throw EncodingError.invalidValue(value, EncodingError.Context(codingPath: [], debugDescription: "Expected a keyed value."))
 		case let .keyed(dictionary):
 			array = try encode(dictionary.map { (.string($0.0), $0.1) })
 		}
@@ -110,7 +123,7 @@ public struct URLQueryEncoder: QueryEncoder {
 			switch nestedEncodingStrategy {
 			case .brackets:
 				guard var key = $0.0.first?.value else {
-					throw QueryValue.Errors.unknown
+                    throw EncodingError.invalidValue($0.1, EncodingError.Context(codingPath: [], debugDescription: "No key found."))
 				}
 				let chain = $0.0.dropFirst().map(\.value).joined(separator: "][")
 				if $0.0.count > 1 {
@@ -168,6 +181,7 @@ public struct URLQueryEncoder: QueryEncoder {
 	}
 
 	private func encode(_ array: [QueryValue], path: [QueryValue.Key]) throws -> QueryValue.Keyed {
+        let codingKeysPath = path.map { PlainCodingKey($0.value) }
 		switch arrayEncodingStrategy {
 		case let .brackets(indexed):
 			return try encode(
@@ -176,35 +190,48 @@ public struct URLQueryEncoder: QueryEncoder {
 			)
 		case .repeatKey:
 			guard let key = path.last else {
-				throw QueryValue.Errors.unknown
+                throw EncodingError.invalidValue(
+                    array,
+                    EncodingError.Context(codingPath: codingKeysPath, debugDescription: "No key found.")
+                )
 			}
 			return try encode(
 				array.enumerated().map { (key, $0.element) },
 				path: path.dropLast()
 			)
 		default:
-			guard let string = try getString(from: .unkeyed(array)) else { return [] }
+            guard let string = try getString(from: .unkeyed(array), path: codingKeysPath) else { return [] }
 			return [(path, string)]
 		}
 	}
 
-	private func getString(from output: QueryValue) throws -> String? {
+    private func getString(from output: QueryValue, path: [CodingKey]) throws -> String? {
 		switch output {
 		case let .single(value):
 			return value
 		case .null:
 			return nil
 		case let .unkeyed(array):
-			switch arrayEncodingStrategy {
-			case let .separator(separator):
-				return try array.compactMap(getString).joined(separator: separator)
-			case .brackets, .repeatKey:
-				throw QueryValue.Errors.prohibitedNesting
-			case let .custom(block):
-				return try block([], array.compactMap(getString))
-			}
+            switch arrayEncodingStrategy {
+            case let .separator(separator):
+                return try array.enumerated().compactMap { try getString(from: $0.element, path: path + [PlainCodingKey(intValue: $0.offset)]) }
+                    .joined(separator: separator)
+            case .brackets, .repeatKey:
+                throw EncodingError.invalidValue(
+                    array,
+                    EncodingError.Context(codingPath: path, debugDescription: "Nested arrays are not allowed for .\(arrayEncodingStrategy) array encoding strategy.")
+                )
+            case let .custom(block):
+                return try block(
+                    [],
+                    array.enumerated().compactMap { try getString(from: $0.element, path: path + [PlainCodingKey(intValue: $0.offset)]) }
+                )
+            }
 		case .keyed:
-			throw QueryValue.Errors.prohibitedNesting
+            throw EncodingError.invalidValue(
+                output,
+                EncodingError.Context(codingPath: path, debugDescription: "Nested keyed objects are not allowed.")
+            )
 		}
 	}
 }
