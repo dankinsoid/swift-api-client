@@ -126,7 +126,8 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							uuid: uuid,
 							error: error,
 							request: request,
-							duration: duration
+							duration: duration,
+                            fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
@@ -149,7 +150,8 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							uuid: uuid,
 							request: request,
 							data: data,
-							duration: duration
+							duration: duration,
+                            fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(
 							level: isError ? configs._errorLogLevel : configs.logLevel,
@@ -168,7 +170,8 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							request: request,
 							data: data,
 							duration: duration,
-							error: error
+							error: error,
+                            fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}

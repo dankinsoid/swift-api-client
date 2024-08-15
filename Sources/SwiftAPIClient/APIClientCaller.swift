@@ -200,8 +200,9 @@ public extension APIClient {
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+                let configs = configs.with(\.fileIDLine, fileIDLine)
 
-				if !configs.loggingComponents.isEmpty {
+                if configs.loggingComponents.contains(.onRequest), configs.loggingComponents != .onRequest {
 					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}

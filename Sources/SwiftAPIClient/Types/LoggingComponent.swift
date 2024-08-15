@@ -17,6 +17,7 @@ public struct LoggingComponents: OptionSet {
 	public static let query = LoggingComponents(rawValue: 1 << 8)
 	public static let uuid = LoggingComponents(rawValue: 1 << 9)
 	public static let location = LoggingComponents(rawValue: 1 << 10)
+    public static let onRequest = LoggingComponents(rawValue: 1 << 11)
 
 	public static var url: LoggingComponents { [.path, .baseURL, .query] }
 
@@ -69,12 +70,12 @@ public extension LoggingComponents {
 	func requestMessage(
 		for request: HTTPRequestComponents,
 		uuid: UUID,
-		fileIDLine: FileIDLine
+		fileIDLine: FileIDLine?
 	) -> String {
 		guard !isEmpty else { return "" }
 		var message = "--> 🌐"
 		var isMultiline = false
-		if contains(.location) {
+		if contains(.location), let fileIDLine {
 			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
 		}
 		if contains(.uuid) {
@@ -116,7 +117,8 @@ public extension LoggingComponents {
 		request: HTTPRequestComponents? = nil,
 		data: Data?,
 		duration: TimeInterval,
-		error: Error? = nil
+		error: Error? = nil,
+        fileIDLine: FileIDLine?
 	) -> String {
 		responseMessage(
 			uuid: uuid,
@@ -125,7 +127,8 @@ public extension LoggingComponents {
 			data: data,
 			headers: response.headerFields,
 			duration: duration,
-			error: error
+			error: error,
+            fileIDLine: fileIDLine
 		)
 	}
 
@@ -136,13 +139,18 @@ public extension LoggingComponents {
 		data: Data?,
 		headers: HTTPFields = [:],
 		duration: TimeInterval? = nil,
-		error: Error? = nil
+		error: Error? = nil,
+        fileIDLine: FileIDLine?
 	) -> String {
 		guard !isEmpty else { return "" }
-		var message = "<-- "
-		if contains(.uuid) {
-			message = "[\(uuid.uuidString)]\n" + message
-		}
+        var message = "<-- "
+        if let request {
+            message = requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine) + "\n" + message
+        } else {
+            if contains(.uuid) {
+                message = "[\(uuid.uuidString)]\n" + message
+            }
+        }
 		switch (statusCode?.kind, error) {
 		case (_, .some), (.serverError, _), (.clientError, _), (.invalid, _):
 			message.append("🛑")
@@ -166,15 +174,6 @@ public extension LoggingComponents {
 		}
 		if !inBrackets.isEmpty {
 			message += " (\(inBrackets.joined(separator: ", ")))"
-		}
-
-		if let request {
-			if contains(.method) {
-				message += " \(request.method.rawValue)"
-			}
-			if let url = request.url, !intersection(.url).isEmpty {
-				message += " \(urlString(url))"
-			}
 		}
 
 		if let error {
@@ -205,21 +204,14 @@ public extension LoggingComponents {
 		duration: TimeInterval? = nil,
 		fileIDLine: FileIDLine? = nil
 	) -> String {
-		var message = contains(.uuid) ? "[\(uuid.uuidString)] " : ""
+		var message = contains(.uuid) && request == nil ? "[\(uuid.uuidString)] " : ""
 		if let duration, contains(.duration) {
 			message += "\(Int(duration * 1000))ms "
 		}
 
 		if let request {
-			if contains(.method) {
-				message += " \(request.method.rawValue)"
-			}
-			if let url = request.url, !intersection(.url).isEmpty {
-				message += " \(urlString(url))"
-			}
-		}
-
-		if let fileIDLine, contains(.location) {
+            message = requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine) + "\n" + message
+        } else if let fileIDLine, contains(.location) {
 			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
 		}
 		message += "❗️\(error.humanReadable)❗️"
