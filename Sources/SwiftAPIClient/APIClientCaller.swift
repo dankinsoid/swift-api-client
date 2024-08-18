@@ -243,6 +243,7 @@ public extension APIClient {
 		} catch {
 			try withConfigs { configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+                let configs = configs.with(\.fileIDLine, fileIDLine)
 				if !configs._errorLoggingComponents.isEmpty {
 					let message = configs._errorLoggingComponents.errorMessage(
 						uuid: uuid,

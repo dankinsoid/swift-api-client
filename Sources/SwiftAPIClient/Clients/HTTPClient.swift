@@ -134,6 +134,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: nil, duration: duration, successful: false)
 					}
+                    try configs.errorHandler(error, configs, APIErrorContext(request: request, fileIDLine: configs.fileIDLine ?? FileIDLine()))
 					throw error
 				}
 				let duration = Date().timeIntervalSince(start)
