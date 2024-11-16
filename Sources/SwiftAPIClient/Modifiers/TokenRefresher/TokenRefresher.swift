@@ -13,6 +13,24 @@ public extension APIClient {
 	/// - auth: The closure that creates an `AuthModifier` for the new token. Default to `.bearer(token:)`.
 	///
 	/// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
+	///
+	/// ### Example Usage:
+	/// #### Initial Token Request
+	/// ```swift
+	/// let client = APIClient()
+	///   .tokenRefresher { refreshToken, client, _ in
+	///      let response: AuthResponse = try await client("refresh").post(RefreshRequest(token: refreshToken)))
+	///      return (response.accessToken, response.refreshToken, response.expiryDate)
+	///   }
+	///
+	/// func login(_ body: LoginBody) async throws {
+	///   let response: AuthResponse = try await client("login").auth(enabled: false).post(body)
+	///   // Tokens must be cached.
+	///   try await SecureCacheService.keychain.save(response.accessToken, for: .accessToken)
+	///   try await SecureCacheService.keychain.save(response.refreshToken, for: .refreshToken)
+	///   try await SecureCacheService.keychain.save(response.expiryDate, for: .expiryDate)
+	/// }
+	/// ```
 	func tokenRefresher(
 		cacheService: SecureCacheService = valueFor(live: .keychain, test: .mock),
 		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
@@ -41,6 +59,24 @@ public extension APIClient {
 	/// - auth: The closure that creates an `AuthModifier` for the new token. Default to `.bearer(token:)`.
 	///
 	/// - Warning: Don't use this modifier with `.auth(_ modifier:)` as it will be override it.
+	///
+	/// ### Example Usage:
+	/// #### Initial Token Request
+	/// ```swift
+	/// let client = APIClient()
+	///   .tokenRefresher(cacheService: cacheService) { refreshToken, client, _ in
+	///      let response: AuthResponse = try await client("refresh").post(RefreshRequest(token: refreshToken)))
+	///      return (response.accessToken, response.refreshToken, response.expiryDate)
+	///   }
+	///
+	/// func login(_ body: LoginBody) async throws {
+	///   let response: AuthResponse = try await client("login").auth(enabled: false).post(body)
+	///   // Tokens must be cached.
+	///   try await cacheService.save(response.accessToken, for: .accessToken)
+	///   try await cacheService.save(response.refreshToken, for: .refreshToken)
+	///   try await cacheService.save(response.expiryDate, for: .expiryDate)
+	/// }
+	/// ```
 	func tokenRefresher(
 		cacheService: SecureCacheService,
 		expiredStatusCodes: Set<HTTPResponse.Status> = [.unauthorized],
@@ -148,6 +184,6 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 }
 
 public struct TokenNotFound: Error {
-    
-    public init() {}
+
+	public init() {}
 }
