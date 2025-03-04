@@ -742,17 +742,14 @@ extension JSONEncoder.DateEncodingStrategy {
       try (date.timeIntervalSince1970 * 1000).encode(to: encoder)
     case .iso8601:
       try _iso8601Formatter.string(from: date).encode(to: encoder)
-    case .formatted:
-      if case let .formatted(formatter) = self {
-        try formatter.string(from: date).encode(to: encoder)
-      }
-    case .custom:
-      if case let .custom(closure) = self {
-        try closure(date, encoder)
-      }
+    case let .formatted(formatter):
+      try formatter.string(from: date).encode(to: encoder)
+    case let .custom(closure):
+      try closure(date, encoder)
     @unknown default:
       try date.timeIntervalSince1970.encode(to: encoder)
     }
+    return
   }
 }
 
