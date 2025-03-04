@@ -743,11 +743,11 @@ extension JSONEncoder.DateEncodingStrategy {
     case .iso8601:
       try _iso8601Formatter.string(from: date).encode(to: encoder)
     case .formatted:
-      if case .formatted(let formatter) = self {
+      if case let .formatted(formatter) = self {
         try formatter.string(from: date).encode(to: encoder)
       }
     case .custom:
-      if case .custom(let closure) = self {
+      if case let .custom(closure) = self {
         try closure(date, encoder)
       }
     @unknown default:
