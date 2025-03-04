@@ -348,13 +348,13 @@ To enhance your experience with `swift-api-client`, I'm excited to introduce [`s
 
 Create a `Package.swift` file.
 ```swift
-// swift-tools-version:5.7
+// swift-tools-version:5.9
 import PackageDescription
 
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.8.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.40.0")
   ],
   targets: [
     .target(
