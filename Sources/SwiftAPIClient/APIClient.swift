@@ -46,6 +46,16 @@ public struct APIClient: @unchecked Sendable, RequestBuilder {
 		}
 	}
 
+	/// Initializes a new network client with a cURL command.
+	/// - Parameter cURL: The cURL command to be used for creating requests.
+	public init(
+		cURL: String
+	) {
+		self.init { _ in
+			try HTTPRequestComponents(cURL: cURL)
+		}
+	}
+
 	/// Initializes a new network client with an empty request components.
 	/// - Warning: You must specify the request components before making any requests.
 	public init() {

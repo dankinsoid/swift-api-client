@@ -1,26 +1,6 @@
 @preconcurrency import Foundation
 import HTTPTypes
 
-/// Regular expression pattern to match cURL command components
-private let curlPattern = #"""
-(?:^|\s)curl\s+(?:'[^']*'|"[^"]*"|[^\s'"]+)
-"""#
-
-/// Regular expression pattern to match URL in cURL command
-private let urlPattern = #"""
-(?:(?:-X\s+\w+|--request\s+\w+)\s+)?(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
-"""#
-
-/// Regular expression pattern to match headers in cURL command
-private let headerPattern = #"""
-(?:-H\s+|--header\s+)(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
-"""#
-
-/// Regular expression pattern to match data in cURL command
-private let dataPattern = #"""
-(?:-d\s+|--data\s+|--data-ascii\s+|--data-binary\s+|--data-raw\s+|--data-urlencode\s+)(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
-"""#
-
 /// The components of an HTTP request.
 public struct HTTPRequestComponents: Sendable, Hashable {
 
@@ -348,81 +328,7 @@ private func decomposePathIfNeeded(_ path: String) -> (String, query: [URLQueryI
 
 public extension HTTPRequestComponents {
 
-    /// Returns a cURL command string representation of the request
-    public var curlString: String {
-        var components = ["curl"]
-        
-        // Add URL
-        if let url = url {
-            components.append("'\(url.absoluteString)'")
-        }
-        
-        // Add method if not GET
-        if method != .get {
-            components.append("-X \(method.rawValue)")
-        }
-        
-        // Add headers
-        for field in headers {
-            components.append("-H '\(field.name.rawName): \(field.value)'")
-        }
-        
-        // Add body if present
-        switch body {
-        case .data(let data):
-            if let bodyString = String(data: data, encoding: .utf8) {
-                components.append("-d '\(bodyString)'")
-            }
-        case .file(let url):
-            components.append("--data-binary @'\(url.path)'")
-        case .none:
-            break
-        }
-        
-        return components.joined(separator: " \\\n    ")
-    }
-    
-    /// Initialize from a cURL command string
-    public init(curlString: String) throws {
-        guard curlString.range(of: curlPattern, options: .regularExpression) != nil else {
-            throw Errors.custom("Invalid cURL command")
-        }
-        
-        // Extract URL
-        guard let urlMatch = curlString.firstMatch(for: urlPattern),
-              let urlString = urlMatch[1] ?? urlMatch[2] ?? urlMatch[3],
-              let url = URL(string: urlString) else {
-            throw Errors.custom("Could not parse URL from cURL command")
-        }
-        
-        // Extract method
-        var method = HTTPRequest.Method.get
-        if let methodMatch = curlString.firstMatch(for: #"-X\s+(\w+)"#) {
-            method = HTTPRequest.Method(rawValue: methodMatch[1] ?? "GET") ?? .get
-        }
-        
-        // Extract headers
-        var headers = HTTPFields()
-        for headerMatch in curlString.matches(for: headerPattern) {
-            if let headerString = headerMatch[1] ?? headerMatch[2] ?? headerMatch[3],
-               let colonIndex = headerString.firstIndex(of: ":") {
-                let name = String(headerString[..<colonIndex]).trimmingCharacters(in: .whitespaces)
-                let value = String(headerString[headerString.index(colonIndex, offsetBy: 1)...])
-                    .trimmingCharacters(in: .whitespaces)
-                headers[.init(name)!] = value
-            }
-        }
-        
-        // Extract body
-        var body: RequestBody?
-        if let dataMatch = curlString.firstMatch(for: dataPattern),
-           let dataString = dataMatch[1] ?? dataMatch[2] ?? dataMatch[3] {
-            body = .data(dataString.data(using: .utf8) ?? Data())
-        }
-        
-        self.init(url: url, method: method, headers: headers, body: body)
-    }
-
+  /// Returns an `URLRequest` object created from the components.
 	var urlRequest: URLRequest? {
 		guard let url, let request, var result = URLRequest(httpRequest: request) else { return nil }
 		result.url = url
@@ -437,3 +343,96 @@ public extension HTTPRequestComponents {
 		return result
 	}
 }
+public extension HTTPRequestComponents {
+
+    /// Returns a cURL command string representation of the request
+    var cURL: String {
+        var components: [String] = []
+
+        // Add URL
+        if let url {
+            let urlString = url.absoluteString.replacingOccurrences(of: "\"", with: "\\\"") // Escape double quotes
+            components.append("\"\(urlString)\"")
+        }
+
+        // Add method if not GET
+        if method != .get {
+            components.append("-X \(method.rawValue)")
+        }
+
+        // Add headers
+        for field in headers {
+            let headerValue = field.value.replacingOccurrences(of: "\"", with: "\\\"") // Escape double quotes
+            components.append("-H \"\(field.name.rawName): \(headerValue)\"")
+        }
+
+        // Add body if present (support multiple -d flags)
+        if case let .data(data) = body, let bodyString = String(data: data, encoding: .utf8) {
+            let escapedBody = bodyString.replacingOccurrences(of: "\"", with: "\\\"") // Escape double quotes
+            let bodyParts = escapedBody.split(separator: "&").map { "-d \"\($0)\"" } // Handle multiple -d flags
+            components.append(contentsOf: bodyParts)
+        } else if case let .file(url) = body {
+            let filePath = url.path.replacingOccurrences(of: "\"", with: "\\\"") // Escape double quotes
+            components.append("--data-binary @\"\(filePath)\"")
+        }
+
+        return "curl " + components.joined(separator: " \\\n    ")
+    }
+
+    /// Initialize from a cURL command string
+    init(cURL: String) throws {
+        // Ensure it's a valid cURL command
+        guard cURL.range(of: curlPattern, options: .regularExpression) != nil else {
+            throw Errors.custom("Invalid cURL command: \(cURL)")
+        }
+
+        // Extract URL (handle cases where it's not the first argument)
+        guard let urlMatch = cURL.firstMatch(for: urlPattern),
+              let urlString = urlMatch[1] ?? urlMatch[2] ?? urlMatch[3],
+              let url = URL(string: urlString)
+        else {
+            throw Errors.custom("Could not parse URL from cURL command")
+        }
+
+        // Extract method (support `-XPOST` without space)
+        var method = HTTPRequest.Method.get
+        if let methodMatch = cURL.firstMatch(for: #"-X\s?(\w+)"#) {
+            method = HTTPRequest.Method(rawValue: methodMatch[1] ?? "GET") ?? .get
+        }
+
+        // Extract headers
+        var headers = HTTPFields()
+        for headerMatch in cURL.matches(for: headerPattern) {
+            if let headerString = headerMatch[1] ?? headerMatch[2] ?? headerMatch[3] {
+                let components = headerString.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false)
+                if components.count == 2 {
+                    let name = components[0].trimmingCharacters(in: .whitespaces)
+                    let value = components[1].trimmingCharacters(in: .whitespaces)
+                    headers[.init(name)!] = value
+                }
+            }
+        }
+
+        // Extract body (support multiple -d flags)
+        let dataMatches = cURL.matches(for: dataPattern).compactMap { $0[1] ?? $0[2] ?? $0[3] }
+        var body: RequestBody? = nil
+        if !dataMatches.isEmpty {
+            let joinedData = dataMatches.joined(separator: "&") // Combine multiple -d flags
+            body = .data(joinedData.data(using: .utf8) ?? Data())
+        }
+
+        self.init(url: url, method: method, headers: headers, body: body)
+    }
+}
+
+/// Regular expression pattern to match cURL command components
+private let curlPattern = #"(?:^|\s)curl\s+(?:'[^']*'|"[^"]*"|\S+)(?:\s+-\w+\s?(?:'[^']*'|"[^"]*"|\S+))*"#
+
+/// Regular expression pattern to match URL in cURL command (allow URL anywhere in the command)
+private let urlPattern = #"(?:\s+|^)['\"]?(https?://[^\s'\"\\]+)['\"]?"#
+
+/// Regular expression pattern to match headers in cURL command
+private let headerPattern = #"(?:-H\s+|--header\s+)(?:'([^']+:\s*[^']*)'|"([^"]+:\s*[^"]*)"|([^\s'"]+:\s*[^\s'"]+))"#
+
+/// Regular expression pattern to match data in cURL command (support multiple `-d`)
+private let dataPattern = #"(?:-d\s+|--data(?:-ascii|-binary|-raw|-urlencode)?\s?)(?:'([^']*)'|"([^"]*)"|([^\s'"]+))"#

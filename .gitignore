@@ -5,3 +5,5 @@ Package.resolved~main_0
 .idea
 **/.DS_Store
 *.xcuserstate
+.aider*
+.env

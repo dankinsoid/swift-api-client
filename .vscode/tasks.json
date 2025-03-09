@@ -19,6 +19,26 @@
 			"problemMatcher": [],
 			"label": "Build",
 			"detail": "swift build --build-tests -Xswiftc -diagnostic-style=llvm"
+		},
+		{
+			"type": "swift",
+			"args": [
+				"test",
+				"--parallel",
+				"--enable-test-discovery",
+				"-Xswiftc",
+				"-diagnostic-style=llvm"
+			],
+			"env": {},
+			"cwd": "/Users/danil/Code/swift-api-client",
+			"disableTaskQueue": true,
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			},
+			"problemMatcher": [],
+			"label": "Test",
+			"detail": "swift test --parallel --enable-test-discovery -Xswiftc -diagnostic-style=llvm"
 		}
 	]
 }
