@@ -218,7 +218,7 @@ Content-Type: application/json
 [29CDD5AE-1A5D-4135-B76E-52A8973985E4]
 <-- ✅ 200 OK (100ms, 15-byte body)
 ```
-Log message format can be customized with the `.loggingComponents(_:)` modifier.
+Log message format can be customized with the `.loggingComponents(_:)` modifier. For example, cURL logs can be enabled with `.loggingComponents(.cURL)`.
 
 ### Metrics
 `swift-api-client` employs [`swift-metrics`](https://github.com/apple/swift-metrics) for metrics, with `.reportMetrics` configuration customizable via `.reportMetrics(_:)` modifier.
@@ -354,7 +354,7 @@ import PackageDescription
 let package = Package(
   name: "SomeProject",
   dependencies: [
-    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.41.0")
+    .package(url: "https://github.com/dankinsoid/swift-api-client.git", from: "1.42.0")
   ],
   targets: [
     .target(
