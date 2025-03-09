@@ -17,7 +17,8 @@ public struct LoggingComponents: OptionSet {
 	public static let query = LoggingComponents(rawValue: 1 << 8)
 	public static let uuid = LoggingComponents(rawValue: 1 << 9)
 	public static let location = LoggingComponents(rawValue: 1 << 10)
-    public static let onRequest = LoggingComponents(rawValue: 1 << 11)
+  public static let onRequest = LoggingComponents(rawValue: 1 << 11)
+  public static let cURL = LoggingComponents(rawValue: 1 << 12)
 
 	public static var url: LoggingComponents { [.path, .baseURL, .query] }
 
@@ -100,6 +101,10 @@ public extension LoggingComponents {
 		}
 		if contains(.body), let body = request.body?.fileURL {
 			message += "\n\(body.relativePath)"
+			isMultiline = true
+		}
+		if contains(.cURL) {
+			message += "\n\(request.cURL)"
 			isMultiline = true
 		}
 		if isMultiline {
