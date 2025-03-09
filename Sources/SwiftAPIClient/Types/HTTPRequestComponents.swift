@@ -348,6 +348,81 @@ private func decomposePathIfNeeded(_ path: String) -> (String, query: [URLQueryI
 
 public extension HTTPRequestComponents {
 
+    /// Returns a cURL command string representation of the request
+    public var curlString: String {
+        var components = ["curl"]
+        
+        // Add URL
+        if let url = url {
+            components.append("'\(url.absoluteString)'")
+        }
+        
+        // Add method if not GET
+        if method != .get {
+            components.append("-X \(method.rawValue)")
+        }
+        
+        // Add headers
+        for field in headers {
+            components.append("-H '\(field.name.rawName): \(field.value)'")
+        }
+        
+        // Add body if present
+        switch body {
+        case .data(let data):
+            if let bodyString = String(data: data, encoding: .utf8) {
+                components.append("-d '\(bodyString)'")
+            }
+        case .file(let url):
+            components.append("--data-binary @'\(url.path)'")
+        case .none:
+            break
+        }
+        
+        return components.joined(separator: " \\\n    ")
+    }
+    
+    /// Initialize from a cURL command string
+    public init(curlString: String) throws {
+        guard curlString.range(of: curlPattern, options: .regularExpression) != nil else {
+            throw Errors.custom("Invalid cURL command")
+        }
+        
+        // Extract URL
+        guard let urlMatch = curlString.firstMatch(for: urlPattern),
+              let urlString = urlMatch[1] ?? urlMatch[2] ?? urlMatch[3],
+              let url = URL(string: urlString) else {
+            throw Errors.custom("Could not parse URL from cURL command")
+        }
+        
+        // Extract method
+        var method = HTTPRequest.Method.get
+        if let methodMatch = curlString.firstMatch(for: #"-X\s+(\w+)"#) {
+            method = HTTPRequest.Method(rawValue: methodMatch[1] ?? "GET") ?? .get
+        }
+        
+        // Extract headers
+        var headers = HTTPFields()
+        for headerMatch in curlString.matches(for: headerPattern) {
+            if let headerString = headerMatch[1] ?? headerMatch[2] ?? headerMatch[3],
+               let colonIndex = headerString.firstIndex(of: ":") {
+                let name = String(headerString[..<colonIndex]).trimmingCharacters(in: .whitespaces)
+                let value = String(headerString[headerString.index(colonIndex, offsetBy: 1)...])
+                    .trimmingCharacters(in: .whitespaces)
+                headers[.init(name)!] = value
+            }
+        }
+        
+        // Extract body
+        var body: RequestBody?
+        if let dataMatch = curlString.firstMatch(for: dataPattern),
+           let dataString = dataMatch[1] ?? dataMatch[2] ?? dataMatch[3] {
+            body = .data(dataString.data(using: .utf8) ?? Data())
+        }
+        
+        self.init(url: url, method: method, headers: headers, body: body)
+    }
+
 	var urlRequest: URLRequest? {
 		guard let url, let request, var result = URLRequest(httpRequest: request) else { return nil }
 		result.url = url
