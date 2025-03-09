@@ -1,6 +1,26 @@
 @preconcurrency import Foundation
 import HTTPTypes
 
+/// Regular expression pattern to match cURL command components
+private let curlPattern = #"""
+(?:^|\s)curl\s+(?:'[^']*'|"[^"]*"|[^\s'"]+)
+"""#
+
+/// Regular expression pattern to match URL in cURL command
+private let urlPattern = #"""
+(?:(?:-X\s+\w+|--request\s+\w+)\s+)?(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
+"""#
+
+/// Regular expression pattern to match headers in cURL command
+private let headerPattern = #"""
+(?:-H\s+|--header\s+)(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
+"""#
+
+/// Regular expression pattern to match data in cURL command
+private let dataPattern = #"""
+(?:-d\s+|--data\s+|--data-ascii\s+|--data-binary\s+|--data-raw\s+|--data-urlencode\s+)(?:'([^']*)'|"([^"]*)"|([^\s'"]+))
+"""#
+
 /// The components of an HTTP request.
 public struct HTTPRequestComponents: Sendable, Hashable {
 
