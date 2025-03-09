@@ -392,7 +392,7 @@ public extension HTTPRequestComponents {
               let urlString = urlMatch[1] ?? urlMatch[2] ?? urlMatch[3],
               let url = URL(string: urlString)
         else {
-            throw Errors.custom("Could not parse URL from cURL command")
+            throw Errors.custom("Could not parse URL from cURL command: \(cURL)")
         }
 
         // Extract method (support `-XPOST` without space)
