@@ -343,6 +343,7 @@ public extension HTTPRequestComponents {
 		return result
 	}
 }
+
 public extension HTTPRequestComponents {
 
     /// Returns a cURL command string representation of the request
