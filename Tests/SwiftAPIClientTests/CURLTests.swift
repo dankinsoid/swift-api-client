@@ -16,6 +16,12 @@ final class CURLTests: XCTestCase {
 		XCTAssertEqual(components.method, .get)
 		XCTAssertEqual(components.headers[.accept], "application/json")
 		XCTAssertNil(components.body)
+        
+		// Test curl string generation
+		let generatedCurl = components.curl
+		XCTAssertTrue(generatedCurl.contains("curl 'https://example.com/api/v1/users'"))
+		XCTAssertTrue(generatedCurl.contains("-X GET"))
+		XCTAssertTrue(generatedCurl.contains("-H 'Accept: application/json'"))
 	}
 
 	func testPOSTRequestWithBody() throws {
