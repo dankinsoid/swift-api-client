@@ -12,6 +12,12 @@ public protocol ParametersEncoderOptions {
 extension ParametersEncoderOptions {
 
 	func getKeyedItems<T>(from output: ParametersValue, value: Any, percentEncoded: Bool, item: (String, String) throws -> T) throws -> [T] {
+		if let t = value as? T {
+			return [t]
+		}
+		if let t = value as? [T] {
+			return t
+		}
 		let array: ParametersValue.Keyed
 		switch output {
 		case .single, .unkeyed, .null:

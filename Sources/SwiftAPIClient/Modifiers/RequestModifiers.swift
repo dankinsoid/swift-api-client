@@ -178,9 +178,10 @@ public extension RequestBuilder where Request == HTTPRequestComponents, Configs 
 	///  - headers: An `Encodable` object to be used as headers.
 	///  - removeCurrent: A Boolean to determine whether to remove existing headers with these keys. Default is `false`.
 	/// - Returns: An instance with modified headers.
-	func headers(_ headers: any Encodable, removeCurrent: Bool = false) -> Self {
-		self.headers { configs in
-			try configs.headersEncoder.encode(headers)
+	@_disfavoredOverload
+	func headers(_ headers: Encodable..., removeCurrent: Bool = false) -> Self {
+		self.headers(removeCurrent: removeCurrent) { configs in
+			try headers.flatMap { try configs.headersEncoder.encode(AnyEncodable($0)) }
 		}
 	}
 }
