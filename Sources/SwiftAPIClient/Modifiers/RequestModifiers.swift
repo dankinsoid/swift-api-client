@@ -22,9 +22,9 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - components: A variadic list of components that conform to `CustomStringConvertible`.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
-    @_disfavoredOverload
+	@_disfavoredOverload
 	func path(_ components: any CustomStringConvertible..., percentEncoded: Bool = false) -> Self {
-        path(components.map(\.description), percentEncoded: percentEncoded)
+		path(components.map(\.description), percentEncoded: percentEncoded)
 	}
 
 	/// Appends an array of path components to the URL of the request.
@@ -32,7 +32,7 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	///   - components: An array of components.
 	///   - percentEncoded: A Boolean to determine whether to percent encode the components. Default is `false`.
 	/// - Returns: An instance with updated path.
-    func path(_ components: [String], percentEncoded: Bool = false) -> Self {
+	func path(_ components: [String], percentEncoded: Bool = false) -> Self {
 		modifyRequest {
 			$0 = $0.path(components, percentEncoded: percentEncoded)
 		}
@@ -70,12 +70,12 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 
 	/// Adds or updates HTTP headers for the request.
 	/// - Parameters:
-	///   - headers: A variadic list of `HTTPField` to set or update.
+	///   - headers: A closure providing an array of `HTTPField` to add or update.
 	///   - removeCurrent: A Boolean to determine whether to remove existing headers with these keys. Default is `false`.
 	/// - Returns: An instance with modified headers.
-	func headers(_ headers: HTTPField..., removeCurrent: Bool = false) -> Self {
-		modifyRequest { request in
-			for header in headers {
+	func headers(removeCurrent: Bool = false, _ headers: @escaping (Configs) throws -> [HTTPField]) -> Self {
+		modifyRequest { request, configs in
+			for header in try headers(configs) {
 				if removeCurrent {
 					request.headers[fields: header.name] = [header]
 				} else {
@@ -85,6 +85,15 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 				}
 			}
 		}
+	}
+
+	/// Adds or updates HTTP headers for the request.
+	/// - Parameters:
+	///   - headers: A variadic list of `HTTPField` to set or update.
+	///   - removeCurrent: A Boolean to determine whether to remove existing headers with these keys. Default is `false`.
+	/// - Returns: An instance with modified headers.
+	func headers(_ headers: HTTPField..., removeCurrent: Bool = false) -> Self {
+		self.headers(removeCurrent: removeCurrent) { _ in headers }
 	}
 
 	/// Removes a specific HTTP header from the request.
@@ -159,6 +168,20 @@ public extension RequestBuilder where Request == HTTPRequestComponents {
 	@_disfavoredOverload
 	func header(_ field: String, _ value: CustomStringConvertible?, removeCurrent: Bool = false) -> Self {
 		header(field, value?.description, removeCurrent: removeCurrent)
+	}
+}
+
+public extension RequestBuilder where Request == HTTPRequestComponents, Configs == APIClient.Configs {
+
+	/// Adds or updates HTTP headers for the request.
+	/// - Parameters:
+	///  - headers: An `Encodable` object to be used as headers.
+	///  - removeCurrent: A Boolean to determine whether to remove existing headers with these keys. Default is `false`.
+	/// - Returns: An instance with modified headers.
+	func headers(_ headers: any Encodable, removeCurrent: Bool = false) -> Self {
+		self.headers { configs in
+			try configs.headersEncoder.encode(headers)
+		}
 	}
 }
 

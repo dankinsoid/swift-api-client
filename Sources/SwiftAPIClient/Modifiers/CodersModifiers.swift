@@ -31,6 +31,15 @@ public extension APIClient {
 	func queryEncoder(_ encoder: some QueryEncoder) -> APIClient {
 		configs(\.queryEncoder, encoder)
 	}
+
+	/// Sets a request headers encoder.
+	///
+	/// - Parameter encoder: A request headers encoder.
+	///
+	/// - Returns: A new network client with the request headers encoder.
+	func headersEncoder(_ encoder: some HeadersEncoder) -> APIClient {
+		configs(\.headersEncoder, encoder)
+	}
 }
 
 public extension APIClient.Configs {
@@ -51,5 +60,11 @@ public extension APIClient.Configs {
 	var queryEncoder: any QueryEncoder {
 		get { self[\.queryEncoder] ?? URLQueryEncoder() }
 		set { self[\.queryEncoder] = newValue }
+	}
+
+	/// A request headers encoder.
+	var headersEncoder: any HeadersEncoder {
+		get { self[\.headersEncoder] ?? HTTPHeadersEncoder() }
+		set { self[\.headersEncoder] = newValue }
 	}
 }

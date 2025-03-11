@@ -1,12 +1,12 @@
 import Foundation
 
-enum QueryValue {
+enum ParametersValue: Encodable {
 
-	typealias Keyed = [([Key], String)]
+	typealias Keyed = [([CodingKey], String)]
 
-	case single(String)
-	case keyed([(String, QueryValue)])
-	case unkeyed([QueryValue])
+	case single(String, Encodable)
+	case keyed([(String, ParametersValue)])
+	case unkeyed([ParametersValue])
 	case null
 
 	static let start = "?"
@@ -22,15 +22,15 @@ enum QueryValue {
 		var str = ""
 		for char in key {
 			switch char {
-			case QueryValue.openKey:
+			case ParametersValue.openKey:
 				if result.isEmpty, !str.isEmpty {
 					result.append(str)
 					str = ""
 				}
-			case QueryValue.closeKey:
+			case ParametersValue.closeKey:
 				result.append(str)
 				str = ""
-			case QueryValue.point:
+			case ParametersValue.point:
 				result.append(str)
 				str = ""
 			default:
@@ -43,7 +43,7 @@ enum QueryValue {
 		return result
 	}
 
-	var unkeyed: [QueryValue] {
+	var unkeyed: [ParametersValue] {
 		get {
 			if case let .unkeyed(result) = self {
 				return result
@@ -55,7 +55,7 @@ enum QueryValue {
 		}
 	}
 
-	var keyed: [(String, QueryValue)] {
+	var keyed: [(String, ParametersValue)] {
 		get {
 			if case let .keyed(result) = self {
 				return result
@@ -67,24 +67,23 @@ enum QueryValue {
 		}
 	}
 
-	var single: String {
-		get {
-			if case let .single(result) = self {
-				return result
+	func encode(to encoder: any Encoder) throws {
+		switch self {
+		case let .single(_, value):
+			try value.encode(to: encoder)
+		case let .keyed(values):
+			var container = encoder.container(keyedBy: PlainCodingKey.self)
+			for (key, value) in values {
+				try container.encode(value, forKey: PlainCodingKey(key))
 			}
-			return ""
+		case let .unkeyed(values):
+			var container = encoder.unkeyedContainer()
+			for value in values {
+				try container.encode(value)
+			}
+		case .null:
+			var container = encoder.singleValueContainer()
+			try container.encodeNil()
 		}
-		set {
-			self = .single(newValue)
-		}
-	}
-
-	struct Key {
-
-		let value: String
-		let isInt: Bool
-
-		static func string(_ string: String) -> Self { Self(value: string, isInt: false) }
-		static func int(_ string: String) -> Self { Self(value: string, isInt: true) }
 	}
 }

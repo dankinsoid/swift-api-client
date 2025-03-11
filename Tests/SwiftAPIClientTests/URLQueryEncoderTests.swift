@@ -13,7 +13,7 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 
 		// Then
 		let request = try client.request()
-        let body = try client.request().body?.data
+		let body = try client.request().body?.data
 		XCTAssertEqual(request.headers[.contentType], "application/x-www-form-urlencoded; charset=utf-8")
 		XCTAssertEqual(body, Data("property=property".utf8))
 	}
@@ -28,7 +28,7 @@ final class URLEncodedFormQueryEncoderTests: XCTestCase {
 		// Then
 		let request = try client.request()
 		XCTAssertEqual(request.headers[.contentType], "type")
-        XCTAssertEqual(request.body?.data, Data("property=property".utf8))
+		XCTAssertEqual(request.body?.data, Data("property=property".utf8))
 	}
 }
 
@@ -267,7 +267,7 @@ final class FormURLEncoderTests: XCTestCase {
 
 	func testThatManuallyEncodableStructCanBeEncoded() {
 		// Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
+		let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
 		let parameters = ManuallyEncodableStruct()
 
 		// When
@@ -306,7 +306,7 @@ final class FormURLEncoderTests: XCTestCase {
 
 	func testThatManuallyEncodableSubclassCanBeEncoded() {
 		// Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
+		let encoder = FormURLEncoder(arrayEncodingStrategy: .brackets(indexed: false))
 		let parameters = ManuallyEncodableSubclass()
 
 		// When
@@ -406,18 +406,18 @@ final class FormURLEncoderTests: XCTestCase {
 		XCTAssertEqual(result, expected)
 	}
 
-    func testThatEncodableStructCanBeEncodedWithCommaAndJSON() {
-        // Given
-        let encoder = FormURLEncoder(arrayEncodingStrategy: .commaSeparator, nestedEncodingStrategy: .json)
-        let parameters = EncodableStruct1()
-        
-        // When
-        let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
-        
-        // Then
-        let expected = "one=one&two=2&three=true&four=1%2C2%2C3&five=%7B%22a%22%3A%22a%22%7D&six=%7B%22a%22%3A%7B%22b%22%3A%22b%22%7D%7D&seven=%7B%22a%22%3A%22a%22%7D"
-        XCTAssertEqual(result, expected)
-    }
+	func testThatEncodableStructCanBeEncodedWithCommaAndJSON() {
+		// Given
+		let encoder = FormURLEncoder(arrayEncodingStrategy: .commaSeparator, nestedEncodingStrategy: .json)
+		let parameters = EncodableStruct1()
+
+		// When
+		let result = try? String(data: encoder.encode(parameters), encoding: .utf8)
+
+		// Then
+		let expected = "one=one&two=2&three=true&four=1%2C2%2C3&five=%7B%22a%22%3A%22a%22%7D&six=%7B%22a%22%3A%7B%22b%22%3A%22b%22%7D%7D&seven=%7B%22a%22%3A%22a%22%7D"
+		XCTAssertEqual(result, expected)
+	}
 
 	func testThatManuallyEncodableStructCanBeEncodedWithIndexInBrackets() {
 		// Given
@@ -846,15 +846,15 @@ final class FormURLEncoderTests: XCTestCase {
 		// Then
 		XCTAssertEqual(result, "reserved=%3A%23%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D")
 	}
-    
-    func testSpotifyQuery() throws {
-        let url = try APIClient.test
-            .query("q", "remaster%20track:Doxy%20artist:Miles%20Davis")
-            .withRequest { components, _ in
-                components.url!
-            }
-        XCTAssertEqual(url.absoluteString, "https://example.com?q=remaster%2520track%3ADoxy%2520artist%3AMiles%2520Davis")
-    }
+
+	func testSpotifyQuery() throws {
+		let url = try APIClient.test
+			.query("q", "remaster%20track:Doxy%20artist:Miles%20Davis")
+			.withRequest { components, _ in
+				components.url!
+			}
+		XCTAssertEqual(url.absoluteString, "https://example.com?q=remaster%2520track%3ADoxy%2520artist%3AMiles%2520Davis")
+	}
 
 	func testThatIllegalASCIICharactersArePercentEscaped() {
 		// Given
@@ -986,13 +986,13 @@ private struct EncodableStruct: Encodable {
 }
 
 private struct EncodableStruct1: Encodable {
-    let one = "one"
-    let two = 2
-    let three = true
-    let four = ["1", "2", "3"]
-    let five = ["a": "a"]
-    let six = ["a": ["b": "b"]]
-    let seven = NestedEncodableStruct()
+	let one = "one"
+	let two = 2
+	let three = true
+	let four = ["1", "2", "3"]
+	let five = ["a": "a"]
+	let six = ["a": ["b": "b"]]
+	let seven = NestedEncodableStruct()
 }
 
 private struct NestedEncodableStruct: Encodable {
@@ -1027,7 +1027,7 @@ private final class EncodableSubclass: EncodableSuperclass {
 	}
 }
 
-struct OrderedDict: ExpressibleByDictionaryLiteral, Encodable {
+private struct OrderedDict: ExpressibleByDictionaryLiteral, Encodable {
 
 	typealias Key = String
 	typealias Value = String
@@ -1133,11 +1133,11 @@ private struct FailingOptionalStruct: Encodable {
 	}
 }
 
-struct TestQuery: Codable {
+private struct TestQuery: Codable {
 	var property = "property"
 }
 
-struct Key: CodingKey {
+private struct Key: CodingKey {
 
 	var stringValue: String
 	var intValue: Int?

@@ -22,9 +22,9 @@ public extension QueryEncoder where Self == URLQueryEncoder {
 	static func urlQuery(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
-		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
-		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
+		arrayEncodingStrategy: ArrayEncodingStrategy = .commaSeparator,
+		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
+		boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) -> Self {
 		URLQueryEncoder(
 			dateEncodingStrategy: dateEncodingStrategy,
