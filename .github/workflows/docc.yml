@@ -40,7 +40,7 @@ jobs:
           xcodebuild docbuild -scheme swift-api-client -derivedDataPath /tmp/docbuild -destination 'generic/platform=macOS';
           
           $(xcrun --find docc) process-archive \
-            transform-for-static-hosting /tmp/docbuild/Build/Products/Debug-iphoneos/SwiftAPIClient.doccarchive \
+            transform-for-static-hosting /tmp/docbuild/Build/Products/Debug/SwiftAPIClient.doccarchive \
             --output-path docs \
             --hosting-base-path 'swift-api-client';
           
