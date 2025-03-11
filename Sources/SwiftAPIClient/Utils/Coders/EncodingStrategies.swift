@@ -139,20 +139,57 @@ public extension JSONEncoder.KeyEncodingStrategy {
 extension JSONEncoder.DateEncodingStrategy {
 
 	func encode(_ date: Date, encoder: Encoder) throws {
-		if case .deferredToDate = self {
-			try date.encode(to: encoder)
-		} else if case .secondsSince1970 = self {
-			try date.timeIntervalSince1970.encode(to: encoder)
-		} else if case .millisecondsSince1970 = self {
-			try (date.timeIntervalSince1970 * 1000).encode(to: encoder)
-		} else if case .iso8601 = self {
-			try _iso8601Formatter.string(from: date).encode(to: encoder)
-		} else if case let .formatted(formatter) = self {
-			try formatter.string(from: date).encode(to: encoder)
-		} else if case let .custom(closure) = self {
-			try closure(date, encoder)
+		#if os(Linux) && swift(>=5.10)
+		let jsonEncoder = JSONEncoder()
+		jsonEncoder.dateEncodingStrategy = self
+
+		/// Encode the date using the current encoding strategy
+		let encodedData = try jsonEncoder.encode(date)
+
+		/// Decode as CustomDate (String or Number)
+		let value = try JSONDecoder().decode(CustomDate.self, from: encodedData)
+		if let string = value.string {
+			try string.encode(to: encoder)
+		} else if let number = value.number {
+			try number.encode(to: encoder)
 		} else {
+			throw EncodingError.invalidValue(
+				value,
+				EncodingError.Context(codingPath: encoder.codingPath, debugDescription: "Invalid date encoding.")
+			)
+		}
+		#else
+		switch self {
+		case .deferredToDate:
+			try date.encode(to: encoder)
+		case .millisecondsSince1970:
+			try (date.timeIntervalSince1970 * 1000).encode(to: encoder)
+		case .secondsSince1970:
 			try date.timeIntervalSince1970.encode(to: encoder)
+		case .iso8601:
+			try _iso8601Formatter.string(from: date).encode(to: encoder)
+		case let .formatted(formatter):
+			try formatter.string(from: date).encode(to: encoder)
+		case let .custom(closure):
+			try closure(date, encoder)
+		@unknown default:
+			try date.encode(to: encoder)
+		}
+		#endif
+	}
+}
+
+private struct CustomDate: Decodable {
+
+	var string: String?
+	var number: Double?
+
+	init(from decoder: Decoder) throws {
+		let container = try decoder.singleValueContainer()
+		if let string = try? container.decode(String.self) {
+			self.string = string
+		} else if let number = try? container.decode(Double.self) {
+			self.number = number
 		}
 	}
 }
