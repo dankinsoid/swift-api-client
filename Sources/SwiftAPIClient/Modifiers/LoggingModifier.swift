@@ -84,6 +84,18 @@ extension APIClient.Configs {
 	var _errorLoggingComponents: LoggingComponents {
 		errorLogginComponents ?? loggingComponents
 	}
+
+	func logRequest(_ request: HTTPRequestComponents, uuid: UUID) {
+		if loggingComponents.contains(.onRequest), loggingComponents != .onRequest {
+			let message = loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
+			logger.log(level: logLevel, "\(message)")
+		}
+		#if canImport(Metrics)
+		if configs.reportMetrics {
+			updateTotalRequestsMetrics(for: request)
+		}
+		#endif
+	}
 }
 
 private let defaultLogger = Logger(label: "swift-api-client")

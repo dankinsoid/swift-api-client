@@ -112,13 +112,16 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 		validate: @escaping (T, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (T) -> Data?
 	) -> APIClientCaller where Response == (T, HTTPResponse) {
-		APIClientCaller { uuid, request, configs, serialize in
+		var result = APIClientCaller { uuid, request, configs, serialize in
 			{
 				let value: T
 				let response: HTTPResponse
 				let start = Date()
 				do {
-					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs, next: task)
+					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
+						configs.logRequest(request, uuid: uuid)
+						return try await task(request, configs)
+					}
 				} catch {
 					let duration = Date().timeIntervalSince(start)
 					if !configs._errorLoggingComponents.isEmpty {
@@ -191,6 +194,21 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 		} mockResult: { value in
 			asyncWithResponse(value)
 		}
+		result.logRequestByItSelf = true
+		return result
+	}
+}
+
+private final actor SendableValue<Value> {
+	
+	var value: Value
+	
+	init(_ value: Value) {
+		self.value = value
+	}
+	
+	func set(_ value: Value) {
+		self.value = value
 	}
 }
 

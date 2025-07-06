@@ -7,6 +7,7 @@ import FoundationNetworking
 /// A generic structure for handling network requests and their responses.
 public struct APIClientCaller<Response, Value, Result> {
 
+	var logRequestByItSelf = false
 	private let _call: (
 		UUID,
 		HTTPRequestComponents,
@@ -216,18 +217,19 @@ public extension APIClient {
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
 				let configs = configs.with(\.fileIDLine, fileIDLine)
 
-				if configs.loggingComponents.contains(.onRequest), configs.loggingComponents != .onRequest {
-					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
-					configs.logger.log(level: configs.logLevel, "\(message)")
-				}
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
+					#if canImport(Metrics)
+					configs.reportMetrics(false).logRequest(request, uuid: uuid)
+					#else
+					configs.logRequest(request, uuid: uuid)
+					#endif
 					return try caller.mockResult(for: mock)
 				}
-				#if canImport(Metrics)
-				if configs.reportMetrics {
-					updateTotalRequestsMetrics(for: request)
+
+				try configs.requestValidator.validate(request, configs.with(\.requestValidator, .alwaysSuccess))
+				if !caller.logRequestByItSelf {
+					configs.logRequest(request, uuid: uuid)
 				}
-				#endif
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
 					do {

@@ -25,26 +25,27 @@ public extension RequestValidator {
 	}
 }
 
+public extension APIClient.Configs {
+
+	/// The request validator used for validating URL request instances.
+	var requestValidator: RequestValidator {
+		get { self[\.requestValidator] ?? .alwaysSuccess }
+		set { self[\.requestValidator] = newValue }
+	}
+}
+
 public extension APIClient {
 
 	/// Sets a custom request validator for the network client.
 	/// - Parameter validator: The `RequestValidator` to be used for validating URL request instances.
 	/// - Returns: An instance of `APIClient` configured with the specified request validator.
 	func requestValidator(_ validator: RequestValidator) -> APIClient {
-		httpClientMiddleware(RequestValidatorMiddleware(validator: validator))
-	}
-}
-
-private struct RequestValidatorMiddleware: HTTPClientMiddleware {
-
-	let validator: RequestValidator
-
-	func execute<T>(
-		request: HTTPRequestComponents,
-		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
-	) async throws -> (T, HTTPResponse) {
-		try validator.validate(request, configs)
-		return try await next(request, configs)
+		configs { configs in
+			let validate = configs.requestValidator.validate
+			configs.requestValidator.validate = { request, configs in
+				try validate(request, configs)
+				try validator.validate(request, configs)
+			}
+		}
 	}
 }

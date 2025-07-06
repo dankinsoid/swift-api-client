@@ -32,7 +32,7 @@ public struct AnyAsyncSequence<Element>: AsyncSequence {
 
 		private var _next: () async throws -> Element?
 
-		public init(next: @escaping () async throws -> Element?) {
+		public init(next: @escaping @Sendable () async throws -> Element?) {
 			_next = next
 		}
 

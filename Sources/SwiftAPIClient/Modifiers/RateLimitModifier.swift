@@ -47,7 +47,7 @@ private struct RateLimitMiddleware<ID: Hashable>: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 	) async throws -> (T, HTTPResponse) {
 		let id = id(request)
 		await waitForSynchronizedAccess(id: id, of: Void.self)
