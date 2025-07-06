@@ -145,6 +145,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					try configs.errorHandler(error, configs, APIErrorContext(request: request, fileIDLine: configs.fileIDLine ?? FileIDLine()))
 					throw error
 				}
+				let request = await requestWrapper.value
 				let duration = Date().timeIntervalSince(start)
 				let data = data(value)
 				do {
