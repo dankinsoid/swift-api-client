@@ -14,9 +14,9 @@ public extension ContentEncoder where Self == MultipartFormDataEncoder {
 		boundary: String? = nil,
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
-		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
-		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
+		arrayEncodingStrategy: ArrayEncodingStrategy = .commaSeparator,
+		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
+		boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) -> Self {
 		MultipartFormDataEncoder(
 			boundary: boundary,
@@ -44,9 +44,9 @@ public struct MultipartFormDataEncoder: ContentEncoder {
 		boundary: String? = nil,
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: URLQueryEncoder.ArrayEncodingStrategy = .commaSeparator,
-		nestedEncodingStrategy: URLQueryEncoder.NestedEncodingStrategy = .brackets,
-		boolEncodingStrategy: URLQueryEncoder.BoolEncodingStrategy = .literal
+		arrayEncodingStrategy: ArrayEncodingStrategy = .commaSeparator,
+		nestedEncodingStrategy: NestedEncodingStrategy = .brackets,
+		boolEncodingStrategy: BoolEncodingStrategy = .literal
 	) {
 		self.boundary = boundary ?? RandomBoundaryGenerator.defaultBoundary
 		queryEncoder = URLQueryEncoder(

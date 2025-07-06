@@ -20,6 +20,13 @@ public struct Serializer<Response, T> {
 		}
 	}
 
+	/// Maps the serialized object to another type.
+	public func map<U>(_ transform: @escaping (T) throws -> U) -> Serializer<Response, U> {
+		Serializer<Response, U> { response, configs in
+			try transform(serialize(response, configs))
+		}
+	}
+
 	public subscript<U>(dynamicMember keyPath: KeyPath<T, U>) -> Serializer<Response, U> {
 		map { value, _ in value[keyPath: keyPath] }
 	}

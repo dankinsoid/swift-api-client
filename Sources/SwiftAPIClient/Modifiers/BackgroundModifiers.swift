@@ -73,7 +73,7 @@ private final actor WasInBackgroundService {
 	private var observer: NSObjectProtocol?
 
 	public func start() async {
-		observer = await NotificationCenter.default.addObserver(
+		observer = NotificationCenter.default.addObserver(
 			forName: UIApplication.didEnterBackgroundNotification,
 			object: nil,
 			queue: nil

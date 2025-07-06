@@ -13,7 +13,7 @@ extension HTTPClient {
 	}
 }
 
-private extension APIClient.Configs {
+extension APIClient.Configs {
 
 	var testHTTPClient: (HTTPRequestComponents, APIClient.Configs) throws -> (Data, HTTPResponse) {
 		get { self[\.testHTTPClient] ?? { _, _ in throw Unimplemented() } }

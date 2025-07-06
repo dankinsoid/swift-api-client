@@ -16,7 +16,7 @@ public func withThrowingSynchronizedAccess<T, ID: Hashable>(
 	id taskIdentifier: ID,
 	task: @escaping @Sendable () async throws -> T
 ) async throws -> T {
-	if let cached = await Barriers.shared.tasks[taskIdentifier] {
+	if let cached = await Barriers.shared.getTask(for: taskIdentifier) {
 		if let task = cached as? Task<T, Error> {
 			return try await task.value
 		} else if let task = cached as? Task<T, Never> {
@@ -55,7 +55,7 @@ public func withSynchronizedAccess<T, ID: Hashable>(
 	id taskIdentifier: ID,
 	task: @escaping @Sendable () async -> T
 ) async -> T {
-	if let cached = await Barriers.shared.tasks[taskIdentifier] {
+	if let cached = await Barriers.shared.getTask(for: taskIdentifier) {
 		if let task = cached as? Task<T, Error> {
 			//            logger("Attempted to access a throwing synchronized task from a non-throwing context.")
 			if let result = try? await task.value {
@@ -93,7 +93,7 @@ public func withSynchronizedAccess<T, ID: Hashable>(
 /// scenarios where tasks modify or access shared resources and need to be executed or awaited serially to prevent data corruption or race conditions.
 @discardableResult
 public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async throws -> T? {
-	guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
+	guard let cached = await Barriers.shared.getTask(for: taskIdentifier) else {
 		return nil
 	}
 	return try await cached.wait() as? T
@@ -120,7 +120,7 @@ public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier
 /// or where errors are handled within the tasks themselves.
 @discardableResult
 public func waitForSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async -> T? {
-	guard let cached = await Barriers.shared.tasks[taskIdentifier] else {
+	guard let cached = await Barriers.shared.getTask(for: taskIdentifier) else {
 		return nil
 	}
 	do {
@@ -134,7 +134,7 @@ public func waitForSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of
 	}
 }
 
-private protocol AnyTask {
+private protocol AnyTask: Sendable {
 
 	func wait() async throws -> Any
 }
@@ -160,5 +160,9 @@ private final actor Barriers {
 
 	func setTask<T, E: Error>(for key: AnyHashable, task: Task<T, E>) {
 		tasks[key] = task
+	}
+
+	func getTask(for key: AnyHashable) -> AnyTask? {
+		tasks[key]
 	}
 }

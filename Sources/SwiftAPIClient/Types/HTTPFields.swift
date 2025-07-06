@@ -104,6 +104,166 @@ public extension HTTPField {
 	static func webSocketProtocol(_ value: String) -> HTTPField {
 		HTTPField(name: .secWebSocketProtocol, value: value)
 	}
+
+	// MARK: - Caching Headers
+
+	/// Returns a `Cache-Control` header.
+	///
+	/// - Parameter value: The `Cache-Control` value.
+	/// - Returns:         The header.
+	static func cacheControl(_ value: String) -> HTTPField {
+		HTTPField(name: .cacheControl, value: value)
+	}
+
+	/// Returns an `ETag` header.
+	///
+	/// - Parameter value: The `ETag` value.
+	/// - Returns:         The header.
+	static func eTag(_ value: String) -> HTTPField {
+		HTTPField(name: .eTag, value: value)
+	}
+
+	/// Returns an `If-None-Match` header.
+	///
+	/// - Parameter value: The `If-None-Match` value.
+	/// - Returns:         The header.
+	static func ifNoneMatch(_ value: String) -> HTTPField {
+		HTTPField(name: .ifNoneMatch, value: value)
+	}
+
+	/// Returns an `If-Modified-Since` header.
+	///
+	/// - Parameter value: The `If-Modified-Since` value.
+	/// - Returns:         The header.
+	static func ifModifiedSince(_ value: String) -> HTTPField {
+		HTTPField(name: .ifModifiedSince, value: value)
+	}
+
+	// MARK: - Content Headers
+
+	/// Returns a `Content-Length` header.
+	///
+	/// - Parameter value: The `Content-Length` value.
+	/// - Returns:         The header.
+	static func contentLength(_ value: Int) -> HTTPField {
+		HTTPField(name: .contentLength, value: String(value))
+	}
+
+	/// Returns a `Content-Range` header.
+	///
+	/// - Parameter value: The `Content-Range` value.
+	/// - Returns:         The header.
+	static func contentRange(_ value: String) -> HTTPField {
+		HTTPField(name: .contentRange, value: value)
+	}
+
+	/// Returns an `Accept-Charset` header.
+	///
+	/// - Parameter value: The `Accept-Charset` value.
+	/// - Returns:         The header.
+	static func acceptCharset(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("Accept-Charset")!, value: value)
+	}
+
+	/// Returns an `Accept-Ranges` header.
+	///
+	/// - Parameter value: The `Accept-Ranges` value.
+	/// - Returns:         The header.
+	static func acceptRanges(_ value: String) -> HTTPField {
+		HTTPField(name: .acceptRanges, value: value)
+	}
+
+	// MARK: - CORS Headers
+
+	/// Returns an `Access-Control-Allow-Origin` header.
+	///
+	/// - Parameter value: The `Access-Control-Allow-Origin` value.
+	/// - Returns:         The header.
+	static func accessControlAllowOrigin(_ value: String) -> HTTPField {
+		HTTPField(name: .accessControlAllowOrigin, value: value)
+	}
+
+	/// Returns an `Access-Control-Allow-Methods` header.
+	///
+	/// - Parameter value: The `Access-Control-Allow-Methods` value.
+	/// - Returns:         The header.
+	static func accessControlAllowMethods(_ value: String) -> HTTPField {
+		HTTPField(name: .accessControlAllowMethods, value: value)
+	}
+
+	/// Returns an `Access-Control-Allow-Headers` header.
+	///
+	/// - Parameter value: The `Access-Control-Allow-Headers` value.
+	/// - Returns:         The header.
+	static func accessControlAllowHeaders(_ value: String) -> HTTPField {
+		HTTPField(name: .accessControlAllowHeaders, value: value)
+	}
+
+	// MARK: - Common Request Headers
+
+	/// Returns an `X-Request-ID` header.
+	///
+	/// - Parameter value: The `X-Request-ID` value.
+	/// - Returns:         The header.
+	static func xRequestID(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-Request-ID")!, value: value)
+	}
+
+	/// Returns an `X-Correlation-ID` header.
+	///
+	/// - Parameter value: The `X-Correlation-ID` value.
+	/// - Returns:         The header.
+	static func xCorrelationID(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-Correlation-ID")!, value: value)
+	}
+
+	/// Returns an `Origin` header.
+	///
+	/// - Parameter value: The `Origin` value.
+	/// - Returns:         The header.
+	static func origin(_ value: String) -> HTTPField {
+		HTTPField(name: .origin, value: value)
+	}
+
+	/// Returns a `Referer` header.
+	///
+	/// - Parameter value: The `Referer` value.
+	/// - Returns:         The header.
+	static func referer(_ value: String) -> HTTPField {
+		HTTPField(name: .referer, value: value)
+	}
+
+	/// Returns an `X-Forwarded-For` header.
+	///
+	/// - Parameter value: The `X-Forwarded-For` value.
+	/// - Returns:         The header.
+	static func xForwardedFor(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-Forwarded-For")!, value: value)
+	}
+
+	/// Returns an `X-Real-IP` header.
+	///
+	/// - Parameter value: The `X-Real-IP` value.
+	/// - Returns:         The header.
+	static func xRealIP(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-Real-IP")!, value: value)
+	}
+
+	/// Returns an `X-Requested-With` header.
+	///
+	/// - Parameter value: The `X-Requested-With` value.
+	/// - Returns:         The header.
+	static func xRequestedWith(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-Requested-With")!, value: value)
+	}
+
+	/// Returns an `X-API-Key` header.
+	///
+	/// - Parameter value: The `X-API-Key` value.
+	/// - Returns:         The header.
+	static func xAPIKey(_ value: String) -> HTTPField {
+		HTTPField(name: HTTPField.Name("X-API-Key")!, value: value)
+	}
 }
 
 // MARK: - Defaults

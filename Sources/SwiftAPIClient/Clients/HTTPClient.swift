@@ -127,14 +127,16 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							error: error,
 							request: request,
 							duration: duration,
-                            fileIDLine: configs.fileIDLine
+							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
+					#if canImport(Metrics)
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: nil, duration: duration, successful: false)
 					}
-                    try configs.errorHandler(error, configs, APIErrorContext(request: request, fileIDLine: configs.fileIDLine ?? FileIDLine()))
+					#endif
+					try configs.errorHandler(error, configs, APIErrorContext(request: request, fileIDLine: configs.fileIDLine ?? FileIDLine()))
 					throw error
 				}
 				let duration = Date().timeIntervalSince(start)
@@ -152,16 +154,18 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							request: request,
 							data: data,
 							duration: duration,
-                            fileIDLine: configs.fileIDLine
+							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(
 							level: isError ? configs._errorLogLevel : configs.logLevel,
 							"\(message)"
 						)
 					}
+					#if canImport(Metrics)
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: true)
 					}
+					#endif
 					return (result, response)
 				} catch {
 					if !configs._errorLoggingComponents.isEmpty {
@@ -172,13 +176,15 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							data: data,
 							duration: duration,
 							error: error,
-                            fileIDLine: configs.fileIDLine
+							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")
 					}
+					#if canImport(Metrics)
 					if configs.reportMetrics {
 						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: false)
 					}
+					#endif
 					throw error
 				}
 			}

@@ -38,7 +38,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		if funcDecl.signature.effectSpecifiers == nil {
 			funcDecl.signature.effectSpecifiers = FunctionEffectSpecifiersSyntax()
 		}
-		funcDecl.signature.effectSpecifiers?.throwsSpecifier = "throws"
+		funcDecl.signature.effectSpecifiers?.throwsClause = ThrowsClauseSyntax(throwsSpecifier: "throws")
 
 		let isAsync = attribute.caller == "http" || funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil
 		let callModifier = isAsync ? "try await " : "try "
@@ -132,7 +132,6 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 			case "Void", "()": "void"
 			case "String": "string"
 			case "Data": "identity"
-			case "JSON": "json"
 			default: serializer
 			}
 		}
@@ -170,10 +169,10 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 		guard let declName = structDecl?.name, node.description.contains("Path") else {
 			return []
 		}
-		let accessControl = structDecl?.modifiers.first(as: { $0.as(AccessorDeclSyntax.self) }).map {
-			"\($0) "
+		let accessControl = structDecl?.modifiers.first(where: { $0.name.tokenKind == .keyword(.public) || $0.name.tokenKind == .keyword(.internal) || $0.name.tokenKind == .keyword(.private) || $0.name.tokenKind == .keyword(.fileprivate) }).map {
+			"\($0.name.trimmed) "
 		} ?? ""
-
+	
 		let path = path(node: node, name: declName)
 		let pathArguments = pathArguments(path: path)
 		let isVar = pathArguments.isEmpty
@@ -260,8 +259,8 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 public struct SwiftAPIClientFreestandingMacro: DeclarationMacro {
 
 	public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-		let name = node.macro.text.lowercased()
-		var type = node.argumentList.first?.expression.trimmed.description ?? ""
+		let name = node.macroName.text.lowercased()
+		var type = node.arguments.first?.expression.trimmed.description ?? ""
 		if type.hasSuffix(".self") {
 			type.removeLast(5)
 		}

@@ -13,13 +13,12 @@ var package = Package(
     .tvOS(.v13),
   ],
   products: [
-    .library(name: "SwiftAPIClient", targets: ["SwiftAPIClient"])
+    .library(name: "SwiftAPIClient", targets: ["SwiftAPIClient"]),
   ],
   dependencies: [
     .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-http-types.git", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-metrics.git", from: "2.0.0"),
-    .package(url: "https://github.com/swiftlang/swift-syntax", "509.0.0"..<"601.0.0-prerelease"),
+    .package(url: "https://github.com/swiftlang/swift-syntax", "509.0.0" ..< "601.0.0-prerelease"),
   ],
   targets: [
     .target(
@@ -27,7 +26,6 @@ var package = Package(
       dependencies: [
         .target(name: "SwiftAPIClientMacros"),
         .product(name: "Logging", package: "swift-log"),
-        .product(name: "Metrics", package: "swift-metrics"),
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "HTTPTypesFoundation", package: "swift-http-types"),
       ]

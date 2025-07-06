@@ -269,7 +269,7 @@ public final actor MockSecureCacheService: SecureCacheService {
     private func waitForProtectedDataAvailable() async throws {
       #if canImport(UIKit)
         guard await !UIApplication.shared.isProtectedDataAvailable else { return }
-        let name = await UIApplication.protectedDataDidBecomeAvailableNotification
+        let name = UIApplication.protectedDataDidBecomeAvailableNotification
         let holder = Holder()
         try await withCheckedThrowingContinuation { continuation in
           Task {

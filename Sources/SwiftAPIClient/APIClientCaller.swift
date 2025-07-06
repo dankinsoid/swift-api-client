@@ -90,11 +90,25 @@ public struct APIClientCaller<Response, Value, Result> {
 }
 
 public extension APIClientCaller where Result == Value {
-
+	
 	/// A caller with a mocked response.
 	static func mock(_ response: Response) -> APIClientCaller {
 		APIClientCaller { _, _, _, serialize in
 			try serialize(response) {}
+		} mockResult: { value in
+			value
+		}
+	}
+
+	/// A caller that maps the request to a response.
+	/// - Parameter map: Closure that transforms the request into a response.
+	static func mock(
+		_ map: @escaping (HTTPRequestComponents) -> Response
+	) -> APIClientCaller {
+		APIClientCaller { _, request, _, serialize in
+			let response = map(request)
+			let result =  try serialize(response) {}
+			return result
 		} mockResult: { value in
 			value
 		}
@@ -200,31 +214,37 @@ public extension APIClient {
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-                let configs = configs.with(\.fileIDLine, fileIDLine)
+				let configs = configs.with(\.fileIDLine, fileIDLine)
 
-                if configs.loggingComponents.contains(.onRequest), configs.loggingComponents != .onRequest {
+				if configs.loggingComponents.contains(.onRequest), configs.loggingComponents != .onRequest {
 					let message = configs.loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
 					configs.logger.log(level: configs.logLevel, "\(message)")
 				}
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
 					return try caller.mockResult(for: mock)
 				}
+				#if canImport(Metrics)
 				if configs.reportMetrics {
 					updateTotalRequestsMetrics(for: request)
 				}
+				#endif
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
 					do {
 						try validate()
 						let result = try serializer.serialize(response, configs)
+						#if canImport(Metrics)
 						if configs.reportMetrics {
 							updateTotalResponseMetrics(for: request, successful: true)
 						}
+						#endif
 						return result
 					} catch {
+						#if canImport(Metrics)
 						if configs.reportMetrics {
 							updateTotalResponseMetrics(for: request, successful: false)
 						}
+						#endif
 
 						let context = APIErrorContext(
 							request: request,
@@ -243,7 +263,7 @@ public extension APIClient {
 		} catch {
 			try withConfigs { configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-                let configs = configs.with(\.fileIDLine, fileIDLine)
+				let configs = configs.with(\.fileIDLine, fileIDLine)
 				if !configs._errorLoggingComponents.isEmpty {
 					let message = configs._errorLoggingComponents.errorMessage(
 						uuid: uuid,
@@ -252,9 +272,11 @@ public extension APIClient {
 					)
 					configs.logger.log(level: configs._errorLogLevel, "\(message)")
 				}
+				#if canImport(Metrics)
 				if configs.reportMetrics {
 					updateTotalErrorsMetrics(for: nil)
 				}
+				#endif
 				let context = APIErrorContext(fileIDLine: fileIDLine)
 				try configs.errorHandler(error, configs, context)
 			}

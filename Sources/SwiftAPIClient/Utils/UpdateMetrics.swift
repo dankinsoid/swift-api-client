@@ -1,3 +1,4 @@
+#if canImport(Metrics)
 import Foundation
 import HTTPTypes
 import Metrics
@@ -58,3 +59,4 @@ private func dimensions(
 		("path", request?.urlComponents.path ?? "undefined"),
 	]
 }
+#endif
