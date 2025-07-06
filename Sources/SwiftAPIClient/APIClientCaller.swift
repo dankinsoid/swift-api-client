@@ -219,7 +219,7 @@ public extension APIClient {
 
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
 					#if canImport(Metrics)
-					configs.reportMetrics(false).logRequest(request, uuid: uuid)
+					configs.with(\.reportMetrics, false).logRequest(request, uuid: uuid)
 					#else
 					configs.logRequest(request, uuid: uuid)
 					#endif
