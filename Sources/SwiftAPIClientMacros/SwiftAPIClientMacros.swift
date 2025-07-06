@@ -38,7 +38,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		if funcDecl.signature.effectSpecifiers == nil {
 			funcDecl.signature.effectSpecifiers = FunctionEffectSpecifiersSyntax()
 		}
-		funcDecl.signature.effectSpecifiers?.throwsClause = ThrowsClauseSyntax(throwsSpecifier: "throws")
+		funcDecl.signature.effectSpecifiers?.throwsSpecifier = "throws"
 
 		let isAsync = attribute.caller == "http" || funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil
 		let callModifier = isAsync ? "try await " : "try "
@@ -259,8 +259,8 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 public struct SwiftAPIClientFreestandingMacro: DeclarationMacro {
 
 	public static func expansion(of node: some FreestandingMacroExpansionSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-		let name = node.macroName.text.lowercased()
-		var type = node.arguments.first?.expression.trimmed.description ?? ""
+		let name = node.macro.text.lowercased()
+		var type = node.argumentList.first?.expression.trimmed.description ?? ""
 		if type.hasSuffix(".self") {
 			type.removeLast(5)
 		}

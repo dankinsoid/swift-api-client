@@ -91,7 +91,7 @@ extension APIClient.Configs {
 			logger.log(level: logLevel, "\(message)")
 		}
 		#if canImport(Metrics)
-		if configs.reportMetrics {
+		if reportMetrics {
 			updateTotalRequestsMetrics(for: request)
 		}
 		#endif

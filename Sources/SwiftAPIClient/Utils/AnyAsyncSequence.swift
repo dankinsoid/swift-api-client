@@ -1,6 +1,8 @@
 import Foundation
 
+#if swift(<6.0)
 /// A type-erasing wrapper for any `AsyncSequence`.
+@available(*, deprecated, message: "This type is deprecated and will be removed in a future version")
 public struct AnyAsyncSequence<Element>: AsyncSequence {
 
 	private var _makeAsyncIterator: () -> AsyncIterator
@@ -46,7 +48,9 @@ public extension AsyncSequence {
 
 	/// Erases the type of this sequence and returns an `AnyAsyncSequence` instance.
 	/// - Returns: An instance of `AnyAsyncSequence` wrapping the original sequence.
+	@available(*, deprecated, message: "This method is deprecated and will be removed in a future version")
 	func eraseToAnyAsyncSequence() -> AnyAsyncSequence<Element> {
 		AnyAsyncSequence(self)
 	}
 }
+#endif
