@@ -117,12 +117,15 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let value: T
 				let response: HTTPResponse
 				let start = Date()
+				let requestWrapper = SendableValue(request)
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
 						configs.logRequest(request, uuid: uuid)
+						await requestWrapper.set(request)
 						return try await task(request, configs)
 					}
 				} catch {
+					let request = await requestWrapper.value
 					let duration = Date().timeIntervalSince(start)
 					if !configs._errorLoggingComponents.isEmpty {
 						let message = configs._errorLoggingComponents.errorMessage(
