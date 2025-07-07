@@ -2,6 +2,7 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import HTTPTypes
 
 public extension APIClient {
 
@@ -18,7 +19,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
 		var count = 0
 		func needRetry() -> Bool {

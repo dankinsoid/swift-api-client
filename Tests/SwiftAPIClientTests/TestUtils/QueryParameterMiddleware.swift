@@ -3,19 +3,19 @@ import Foundation
 
 /// Test middleware that adds missing query parameters to requests.
 struct QueryParameterMiddleware: HTTPClientMiddleware {
-    
+
     private let defaultParameters: [String: String]
-    
+
     /// Initialize with default parameters to add when missing.
     /// - Parameter defaultParameters: Dictionary of parameter names and values to add when missing from the request.
     init(defaultParameters: [String: String]) {
         self.defaultParameters = defaultParameters
     }
-    
+
     func execute<T>(
         request: HTTPRequestComponents,
         configs: APIClient.Configs,
-        next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+        next: @escaping Next<T>
     ) async throws -> (T, HTTPResponse) {
         var modifiedRequest = request
         

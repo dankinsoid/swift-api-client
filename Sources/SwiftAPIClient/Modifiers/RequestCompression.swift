@@ -41,7 +41,7 @@ private struct CompressionMiddleware: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
 		// No need to compress unless we have body data. No support for compressing streams.
 		guard let body = request.body else {

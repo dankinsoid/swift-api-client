@@ -47,22 +47,26 @@ private struct RateLimitMiddleware<ID: Hashable>: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
 		let id = id(request)
 		await waitForSynchronizedAccess(id: id, of: Void.self)
-		var res = try await next(request, configs)
+		var (res, status) = try await extractStatusCodeEvenFailed {
+			try await next(request, configs)
+		}
 		var count: UInt = 0
 		while
-			statusCodes.contains(res.1.status),
+			statusCodes.contains(status),
 			count < maxCount
 		{
 			count += 1
 			try await withThrowingSynchronizedAccess(id: id) {
 				try await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
 			}
-			res = try await next(request, configs)
+			(res, status) = try await extractStatusCodeEvenFailed {
+				try await next(request, configs)
+			}
 		}
-		return res
+		return try res.get()
 	}
 }

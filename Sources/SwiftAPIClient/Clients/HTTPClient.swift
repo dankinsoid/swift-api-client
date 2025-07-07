@@ -117,15 +117,19 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let value: T
 				let response: HTTPResponse
 				let start = Date()
+				let responseWrapper = SendableValue<(T, HTTPResponse)?>(nil)
 				let requestWrapper = SendableValue(request)
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
 						configs.logRequest(request, uuid: uuid)
 						await requestWrapper.set(request)
-						return try await task(request, configs)
+						let result = try await task(request, configs)
+						await responseWrapper.set(result)
+						return result
 					}
 				} catch {
 					let request = await requestWrapper.value
+					let response = await responseWrapper.value
 					let duration = Date().timeIntervalSince(start)
 					if !configs._errorLoggingComponents.isEmpty {
 						let message = configs._errorLoggingComponents.errorMessage(
@@ -139,10 +143,19 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					}
 					#if canImport(Metrics)
 					if configs.reportMetrics {
-						updateHTTPMetrics(for: request, status: nil, duration: duration, successful: false)
+						updateHTTPMetrics(for: request, status: response?.1.status, duration: duration, successful: false)
 					}
 					#endif
-					try configs.errorHandler(error, configs, APIErrorContext(request: request, fileIDLine: configs.fileIDLine ?? FileIDLine()))
+					try configs.errorHandler(
+						error,
+						configs,
+						APIErrorContext(
+							request: request,
+							response: response.flatMap { data($0.0) },
+							status: response?.1.status,
+							fileIDLine: configs.fileIDLine ?? FileIDLine()
+						)
+					)
 					throw error
 				}
 				let request = await requestWrapper.value

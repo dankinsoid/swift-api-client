@@ -2,6 +2,7 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import HTTPTypes
 
 /// A struct for validating HTTP responses.
 public struct HTTPResponseValidator {
@@ -104,4 +105,27 @@ public extension APIClient.Configs {
 		get { self[\.ignoreStatusCodeValidator] ?? false }
 		set { self[\.ignoreStatusCodeValidator] = newValue }
 	}
+}
+
+func extractStatusCodeEvenFailed<T>(_ request: () async throws -> (T, HTTPResponse)) async throws -> (Result<(T, HTTPResponse), Error>, HTTPResponse.Status) {
+	let status: HTTPResponse.Status
+	let result: Result<(T, HTTPResponse), Error>
+	do {
+		let value = try await request()
+		status = value.1.status
+		result = .success(value)
+	} catch let error as InvalidStatusCode {
+		status = error.status
+		result = .failure(error)
+	} catch let error as APIClientError {
+		if let code = error.context.status {
+			status = code
+			result = .failure(error)
+		} else {
+			throw error
+		}
+	} catch {
+		throw error
+	}
+	return (result, status)
 }

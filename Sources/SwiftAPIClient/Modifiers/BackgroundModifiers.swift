@@ -21,7 +21,7 @@ private struct BackgroundTaskMiddleware: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
 		let id = await UIApplication.shared.beginBackgroundTask(
 			withName: "Background Task for \(request.url?.absoluteString ?? "")"
@@ -45,7 +45,7 @@ private struct RetryOnEnterForegroundMiddleware: HTTPClientMiddleware {
 	func execute<T>(
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
-		next: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
+		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
 		func makeRequest() async throws -> (T, HTTPResponse) {
 			let wasInBackground = WasInBackgroundService()
