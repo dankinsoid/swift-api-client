@@ -34,6 +34,9 @@ final class PathMacroTests: XCTestCase {
 			var pets: Pets  {
 			    Pets (client: client.path("pets"))
 			}
+			
+			extension Pets: APIClientScope {
+			}
 			""",
 			macros: macros,
 			indentationWidth: .spaces(2)
@@ -65,6 +68,9 @@ final class PathMacroTests: XCTestCase {
 			var pets: Pets  {
 			    Pets (client: client.path("some", "long", "path"))
 			}
+			
+			extension Pets: APIClientScope {
+			}
 			""",
 			macros: macros,
 			indentationWidth: .spaces(2)
@@ -95,6 +101,9 @@ final class PathMacroTests: XCTestCase {
 			/// /some/{long}/path/{id: UUID}
 			func pets(_ long: String, id: UUID) -> Pets  {
 			    Pets (client: client.path("some", "\\(long)", "path", "\\(id)"))
+			}
+			
+			extension Pets: APIClientScope {
 			}
 			""",
 			macros: macros,
@@ -131,6 +140,9 @@ final class PathMacroTests: XCTestCase {
 			/// /pets
 			var pets: Pets  {
 			    Pets (client: client.path("pets"))
+			}
+			
+			extension Pets: APIClientScope {
 			}
 			""",
 			macros: macros,

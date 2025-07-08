@@ -282,6 +282,7 @@ public macro PATCH(_ path: String...) = #externalMacro(module: "SwiftAPIClientMa
 @attached(peer, names: arbitrary)
 @attached(memberAttribute)
 @attached(member, names: arbitrary)
+@attached(extension, conformances: APIClientScope)
 public macro Path(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientPathMacro")
 
 /// Macro that generates an API client struct.
@@ -289,6 +290,7 @@ public macro Path(_ path: String...) = #externalMacro(module: "SwiftAPIClientMac
 /// If you specify a custom init, you must initialize the `client` property.
 @attached(memberAttribute)
 @attached(member, names: arbitrary)
+@attached(extension, conformances: APIClientScope)
 public macro API() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientPathMacro")
 
 @propertyWrapper

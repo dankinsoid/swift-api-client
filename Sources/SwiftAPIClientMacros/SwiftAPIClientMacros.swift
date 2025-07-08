@@ -142,7 +142,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 	}
 }
 
-public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMacro {
+public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMacro, ExtensionMacro {
 
 	public static func expansion(
 		of node: AttributeSyntax,
@@ -155,6 +155,18 @@ public struct SwiftAPIClientPathMacro: MemberMacro, MemberAttributeMacro, PeerMa
 			funcDecl.attributes.contains(where: { $0.callAttribute(name: funcDecl.name) != nil })
 		else { return [] }
 		return ["@available(*, unavailable)", "@APICallFakeBuilder"]
+	}
+
+	public static func expansion(
+		of node: AttributeSyntax,
+		attachedTo declaration: some DeclGroupSyntax,
+		providingExtensionsOf type: some TypeSyntaxProtocol,
+		conformingTo protocols: [TypeSyntax],
+		in context: some MacroExpansionContext
+	) throws -> [ExtensionDeclSyntax] {
+		guard declaration.is(StructDeclSyntax.self) || declaration.is(EnumDeclSyntax.self) else { return [] }
+		let scopeExtension = try ExtensionDeclSyntax("extension \(type.trimmed): APIClientScope {}")
+		return [scopeExtension]
 	}
 
 	public static func expansion(

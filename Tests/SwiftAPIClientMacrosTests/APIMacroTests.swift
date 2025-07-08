@@ -29,6 +29,9 @@ final class APIMacroTests: XCTestCase {
 			      self.client = client
 			  }
 			}
+			
+			extension Pets: APIClientScope {
+			}
 			""",
 			macros: macros,
 			indentationWidth: .spaces(2)
@@ -56,6 +59,9 @@ final class APIMacroTests: XCTestCase {
 			  public typealias Query<Value> = _APIParameterWrapper<Value>
 
 			  public var client: APIClient
+			}
+			
+			extension Pets: APIClientScope {
 			}
 			""",
 			macros: macros,
