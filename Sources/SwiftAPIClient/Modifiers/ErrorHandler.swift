@@ -3,14 +3,18 @@ import Foundation
 public extension APIClient {
 
 	/// Sets the error handler.
-	func errorHandler(_ handler: @escaping (Error, APIClient.Configs, APIErrorContext) throws -> Void) -> APIClient {
+	func errorHandler(
+		insertingBeforeExisting: Bool = false,
+		_ handler: @escaping (Error, APIClient.Configs, APIErrorContext) throws -> Void
+	) -> APIClient {
 		configs { configs in
 			let current = configs.errorHandler
 			configs.errorHandler = { failure, configs, context in
+				let (first, second) = insertingBeforeExisting ? (handler, current) : (current, handler)
 				do {
-					try current(failure, configs, context)
+					try first(failure, configs, context)
 				} catch {
-					try handler(error, configs, context)
+					try second(error, configs, context)
 					throw error
 				}
 			}
