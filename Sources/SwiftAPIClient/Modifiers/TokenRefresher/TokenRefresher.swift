@@ -139,7 +139,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 				try await requestToken(configs)
 			}
 		} else {
-			throw TokenNotFound()
+			throw TokenNotFound(name: "accessToken")
 		}
 
 		if
@@ -185,7 +185,15 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 	}
 }
 
-public struct TokenNotFound: Error {
+public struct TokenNotFound: Error, CustomStringConvertible {
 
-	public init() {}
+	public let name: String?
+
+	public var description: String {
+		"TokenNotFound\(name.map { ": \($0)" } ?? "")"
+	}
+
+	public init(name: String? = nil) {
+		self.name = name
+	}
 }
