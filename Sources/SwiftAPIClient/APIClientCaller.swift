@@ -270,6 +270,7 @@ public extension APIClient {
 					let message = configs._errorLoggingComponents.errorMessage(
 						uuid: uuid,
 						error: error,
+						maskedHeaders: configs.logMaskedHeaders,
 						fileIDLine: fileIDLine
 					)
 					configs.logger.log(level: configs._errorLogLevel, "\(message)")

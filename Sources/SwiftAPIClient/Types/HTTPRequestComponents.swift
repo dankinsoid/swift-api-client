@@ -346,8 +346,13 @@ public extension HTTPRequestComponents {
 
 public extension HTTPRequestComponents {
 
+		/// Returns a cURL command string representation of the request
+		var cURL: String {
+			cURL(maskedHeaders: [])
+		}
+
     /// Returns a cURL command string representation of the request
-    var cURL: String {
+		func cURL(maskedHeaders: Set<HTTPField.Name>) -> String {
         var components: [String] = []
 
         // Add URL
@@ -364,7 +369,7 @@ public extension HTTPRequestComponents {
         // Add headers
         for field in headers {
             let headerValue = field.value.replacingOccurrences(of: "\"", with: "\\\"") // Escape double quotes
-            components.append("-H \"\(field.name.rawName): \(headerValue)\"")
+						components.append("-H \"\(field.name.rawName): \(maskedHeaders.contains(field.name) ? "***" : headerValue)\"")
         }
 
         // Add body if present (support multiple -d flags)

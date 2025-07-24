@@ -2,6 +2,7 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import HTTPTypes
 
 /// The components to be logged.
 public struct LoggingComponents: OptionSet {
@@ -17,8 +18,8 @@ public struct LoggingComponents: OptionSet {
 	public static let query = LoggingComponents(rawValue: 1 << 8)
 	public static let uuid = LoggingComponents(rawValue: 1 << 9)
 	public static let location = LoggingComponents(rawValue: 1 << 10)
-  public static let onRequest = LoggingComponents(rawValue: 1 << 11)
-  public static let cURL = LoggingComponents(rawValue: 1 << 12)
+	public static let onRequest = LoggingComponents(rawValue: 1 << 11)
+	public static let cURL = LoggingComponents(rawValue: 1 << 12)
 
 	public static var url: LoggingComponents { [.path, .baseURL, .query] }
 
@@ -71,6 +72,7 @@ public extension LoggingComponents {
 	func requestMessage(
 		for request: HTTPRequestComponents,
 		uuid: UUID,
+		maskedHeaders: Set<HTTPField.Name>,
 		fileIDLine: FileIDLine?
 	) -> String {
 		guard !isEmpty else { return "" }
@@ -92,7 +94,7 @@ public extension LoggingComponents {
 			message += " (\(body.count)-byte body)"
 		}
 		if contains(.headers), !request.headers.isEmpty {
-			message += "\n\(request.headers.multilineDescription)"
+			message += "\n\(request.headers.multilineDescription(masked: maskedHeaders))"
 			isMultiline = true
 		}
 		if contains(.body), let body = request.body?.data, let bodyString = String(data: body, encoding: .utf8) {
@@ -104,7 +106,7 @@ public extension LoggingComponents {
 			isMultiline = true
 		}
 		if contains(.cURL) {
-			message += "\n\(request.cURL)"
+			message += "\n\(request.cURL(maskedHeaders: maskedHeaders))"
 			isMultiline = true
 		}
 		if isMultiline {
@@ -123,7 +125,8 @@ public extension LoggingComponents {
 		data: Data?,
 		duration: TimeInterval,
 		error: Error? = nil,
-        fileIDLine: FileIDLine?
+		maskedHeaders: Set<HTTPField.Name>,
+				fileIDLine: FileIDLine?
 	) -> String {
 		responseMessage(
 			uuid: uuid,
@@ -133,7 +136,8 @@ public extension LoggingComponents {
 			headers: response.headerFields,
 			duration: duration,
 			error: error,
-            fileIDLine: fileIDLine
+			maskedHeaders: maskedHeaders,
+						fileIDLine: fileIDLine
 		)
 	}
 
@@ -145,17 +149,18 @@ public extension LoggingComponents {
 		headers: HTTPFields = [:],
 		duration: TimeInterval? = nil,
 		error: Error? = nil,
-        fileIDLine: FileIDLine?
+		maskedHeaders: Set<HTTPField.Name>,
+		fileIDLine: FileIDLine?
 	) -> String {
 		guard !isEmpty else { return "" }
-        var message = "<-- "
-        if let request {
-            message = requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine) + "\n" + message
-        } else {
-            if contains(.uuid) {
-                message = "[\(uuid.uuidString)]\n" + message
-            }
-        }
+		var message = "<-- "
+		if let request {
+				message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, fileIDLine: fileIDLine) + "\n" + message
+		} else {
+			if contains(.uuid) {
+				message = "[\(uuid.uuidString)]\n" + message
+			}
+		}
 		switch (statusCode?.kind, error) {
 		case (_, .some), (.serverError, _), (.clientError, _), (.invalid, _):
 			message.append("🛑")
@@ -187,7 +192,7 @@ public extension LoggingComponents {
 		}
 
 		if contains(.headers), !headers.isEmpty {
-			message += "\n\(headers.multilineDescription)"
+			message += "\n\(headers.multilineDescription(masked: maskedHeaders))"
 			isMultiline = true
 		}
 		if contains(.body), let body = data, let bodyString = String(data: body, encoding: .utf8) {
@@ -207,6 +212,7 @@ public extension LoggingComponents {
 		error: Error,
 		request: HTTPRequestComponents? = nil,
 		duration: TimeInterval? = nil,
+		maskedHeaders: Set<HTTPField.Name>,
 		fileIDLine: FileIDLine? = nil
 	) -> String {
 		var message = contains(.uuid) && request == nil ? "[\(uuid.uuidString)] " : ""
@@ -215,8 +221,8 @@ public extension LoggingComponents {
 		}
 
 		if let request {
-            message = requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine) + "\n" + message
-        } else if let fileIDLine, contains(.location) {
+			message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, fileIDLine: fileIDLine) + "\n" + message
+				} else if let fileIDLine, contains(.location) {
 			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
 		}
 		message += "❗️\(error.humanReadable)❗️"
@@ -248,7 +254,10 @@ public extension LoggingComponents {
 
 private extension HTTPFields {
 
-	var multilineDescription: String {
-		map { "\($0.name): \($0.value)" }.joined(separator: "\n")
+	func multilineDescription(masked: Set<HTTPField.Name>) -> String {
+		map {
+			"\($0.name): \(masked.contains($0.name) ? "***" : $0.value)"
+		}
+		.joined(separator: "\n")
 	}
 }

@@ -137,6 +137,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							error: error,
 							request: request,
 							duration: duration,
+							maskedHeaders: configs.logMaskedHeaders,
 							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")
@@ -174,6 +175,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							request: request,
 							data: data,
 							duration: duration,
+							maskedHeaders: configs.logMaskedHeaders,
 							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(
@@ -196,6 +198,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 							data: data,
 							duration: duration,
 							error: error,
+							maskedHeaders: configs.logMaskedHeaders,
 							fileIDLine: configs.fileIDLine
 						)
 						configs.logger.log(level: configs._errorLogLevel, "\(message)")

@@ -1,5 +1,6 @@
 import Foundation
 import Logging
+import HTTPTypesFoundation
 
 public extension APIClient {
 
@@ -34,6 +35,14 @@ public extension APIClient {
 	/// - Returns: An instance of `APIClient` configured with the specified error logging components.
 	func errorLoggingComponents(_ components: LoggingComponents?) -> APIClient {
 		configs(\.errorLogginComponents, components)
+	}
+
+	/// Sets the headers that should be masked in logs.
+	/// - Parameter headers: A `Set<HTTPField.Name>` containing the names of headers to be masked.
+	func logMaskedHeaders(_ headers: Set<HTTPField.Name>) -> APIClient {
+		configs { configs in
+			configs.logMaskedHeaders.formUnion(headers)
+		}
 	}
 }
 
@@ -73,6 +82,13 @@ public extension APIClient.Configs {
 		get { self[\.errorLogginComponents] ?? nil }
 		set { self[\.errorLogginComponents] = newValue }
 	}
+
+	/// The headers that should be masked in logs.
+	/// - Returns: A `Set<HTTPField.Name>` containing the names of headers to be masked.
+	var logMaskedHeaders: Set<HTTPField.Name> {
+		get { self[\.logMaskedHeaders] ?? [.authorization] }
+		set { self[\.logMaskedHeaders] = newValue }
+	}
 }
 
 extension APIClient.Configs {
@@ -87,7 +103,7 @@ extension APIClient.Configs {
 
 	func logRequest(_ request: HTTPRequestComponents, uuid: UUID) {
 		if loggingComponents.contains(.onRequest), loggingComponents != .onRequest {
-			let message = loggingComponents.requestMessage(for: request, uuid: uuid, fileIDLine: fileIDLine)
+			let message = loggingComponents.requestMessage(for: request, uuid: uuid, maskedHeaders: logMaskedHeaders, fileIDLine: fileIDLine)
 			logger.log(level: logLevel, "\(message)")
 		}
 		#if canImport(Metrics)
