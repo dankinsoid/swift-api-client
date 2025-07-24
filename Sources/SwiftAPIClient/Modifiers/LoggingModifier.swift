@@ -86,7 +86,7 @@ public extension APIClient.Configs {
 	/// The headers that should be masked in logs.
 	/// - Returns: A `Set<HTTPField.Name>` containing the names of headers to be masked.
 	var logMaskedHeaders: Set<HTTPField.Name> {
-		get { self[\.logMaskedHeaders] ?? [.authorization] }
+		get { self[\.logMaskedHeaders] ?? .defaultMaskedHeaders }
 		set { self[\.logMaskedHeaders] = newValue }
 	}
 }
@@ -112,6 +112,24 @@ extension APIClient.Configs {
 		}
 		#endif
 	}
+}
+
+extension Set<HTTPField.Name> {
+
+	public static var defaultMaskedHeaders: Set<HTTPField.Name> = [
+		.authorization,
+		.authenticationInfo,
+		.proxyAuthorization,
+		.proxyAuthenticationInfo,
+		HTTPField.Name("Authentication")!,
+		HTTPField.Name("Proxy-Authentication")!,
+		HTTPField.Name("X-API-Key")!,
+		HTTPField.Name("Api-Key")!,
+		HTTPField.Name("X-Auth-Token")!,
+		.cookie,
+		.setCookie,
+		HTTPField.Name("Client-Secret")!,
+	]
 }
 
 private let defaultLogger = Logger(label: "swift-api-client")
