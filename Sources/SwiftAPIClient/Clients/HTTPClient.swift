@@ -122,8 +122,10 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
 						configs.logRequest(request, uuid: uuid)
+						configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
 						await requestWrapper.set(request)
 						let result = try await task(request, configs)
+						configs.listener.onResponseReceived(id: uuid, response: result, configs: configs)
 						await responseWrapper.set(result)
 						return result
 					}
@@ -147,17 +149,22 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 						updateHTTPMetrics(for: request, status: response?.1.status, duration: duration, successful: false)
 					}
 					#endif
-					try configs.errorHandler(
-						error,
-						configs,
-						APIErrorContext(
-							request: request,
-							response: response.flatMap { data($0.0) },
-							status: response?.1.status,
-							fileIDLine: configs.fileIDLine ?? FileIDLine()
+					do {
+						try configs.errorHandler(
+							error,
+							configs,
+							APIErrorContext(
+								request: request,
+								response: response.flatMap { data($0.0) },
+								status: response?.1.status,
+								fileIDLine: configs.fileIDLine ?? FileIDLine()
+							)
 						)
-					)
-					throw error
+						throw error
+					} catch {
+						configs.listener.onError(id: uuid, error: error, configs: configs)
+						throw error
+					}
 				}
 				let request = await requestWrapper.value
 				let duration = Date().timeIntervalSince(start)

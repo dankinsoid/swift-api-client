@@ -229,6 +229,7 @@ public extension APIClient {
 				try configs.requestValidator.validate(request, configs.with(\.requestValidator, .alwaysSuccess))
 				if !caller.logRequestByItSelf {
 					configs.logRequest(request, uuid: uuid)
+					configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
 				}
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
@@ -240,6 +241,7 @@ public extension APIClient {
 							updateTotalResponseMetrics(for: request, successful: true)
 						}
 						#endif
+						configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 						return result
 					} catch {
 						#if canImport(Metrics)
@@ -253,37 +255,49 @@ public extension APIClient {
 							response: response as? Data,
 							fileIDLine: fileIDLine
 						)
-						if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-							try configs.errorHandler(failure, configs, context)
-							throw failure
+						do {
+							if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
+								try configs.errorHandler(failure, configs, context)
+								throw failure
+							}
+							try configs.errorHandler(error, configs, context)
+							throw error
+						} catch {
+							configs.listener.onError(id: uuid, error: error, configs: configs)
+							throw error
 						}
-						try configs.errorHandler(error, configs, context)
-						throw error
 					}
 				}
 			}
 		} catch {
-			try withConfigs { configs in
-				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				let configs = configs.with(\.fileIDLine, fileIDLine)
-				if !configs._errorLoggingComponents.isEmpty {
-					let message = configs._errorLoggingComponents.errorMessage(
-						uuid: uuid,
-						error: error,
-						maskedHeaders: configs.logMaskedHeaders,
-						fileIDLine: fileIDLine
-					)
-					configs.logger.log(level: configs._errorLogLevel, "\(message)")
+			do {
+				try withConfigs { configs in
+					let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+					let configs = configs.with(\.fileIDLine, fileIDLine)
+					if !configs._errorLoggingComponents.isEmpty {
+						let message = configs._errorLoggingComponents.errorMessage(
+							uuid: uuid,
+							error: error,
+							maskedHeaders: configs.logMaskedHeaders,
+							fileIDLine: fileIDLine
+						)
+						configs.logger.log(level: configs._errorLogLevel, "\(message)")
+					}
+#if canImport(Metrics)
+					if configs.reportMetrics {
+						updateTotalErrorsMetrics(for: nil)
+					}
+#endif
+					let context = APIErrorContext(fileIDLine: fileIDLine)
+					try configs.errorHandler(error, configs, context)
 				}
-				#if canImport(Metrics)
-				if configs.reportMetrics {
-					updateTotalErrorsMetrics(for: nil)
+				throw error
+			} catch {
+				withConfigs { configs in
+					configs.listener.onError(id: uuid, error: error, configs: configs)
 				}
-				#endif
-				let context = APIErrorContext(fileIDLine: fileIDLine)
-				try configs.errorHandler(error, configs, context)
+				throw error
 			}
-			throw error
 		}
 	}
 }
