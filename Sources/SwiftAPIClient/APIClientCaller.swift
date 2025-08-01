@@ -223,7 +223,6 @@ public extension APIClient {
 					#else
 					configs.logRequest(request, uuid: uuid)
 					#endif
-					configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
 					let result = try caller.mockResult(for: mock)
 					configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 					return result
@@ -232,7 +231,6 @@ public extension APIClient {
 				try configs.requestValidator.validate(request, configs.with(\.requestValidator, .alwaysSuccess))
 				if !caller.logRequestByItSelf {
 					configs.logRequest(request, uuid: uuid)
-					configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
 				}
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in

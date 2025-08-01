@@ -111,6 +111,7 @@ extension APIClient.Configs {
 			updateTotalRequestsMetrics(for: request)
 		}
 		#endif
+		listener.onRequestStarted(id: uuid, request: request, configs: self)
 	}
 }
 

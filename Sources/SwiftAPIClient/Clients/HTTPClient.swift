@@ -122,7 +122,6 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
 						configs.logRequest(request, uuid: uuid)
-						configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
 						await requestWrapper.set(request)
 						let result = try await task(request, configs)
 						configs.listener.onResponseReceived(id: uuid, response: result, configs: configs)

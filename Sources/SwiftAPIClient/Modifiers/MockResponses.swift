@@ -103,11 +103,11 @@ private extension APIClient.Configs {
 
 	var mocks: [ObjectIdentifier: Any] {
 		get {
-			self[\.mocks] ?? [
-				ObjectIdentifier(Void.self) : (),
-				ObjectIdentifier(Data.self) : "Mock data".data(using: .utf8) ?? Data(),
-				ObjectIdentifier(String.self) : "Mock string"
-			]
+			self[\.mocks] ?? valueFor(
+				live: [:],
+				test: [:],
+				preview: [ObjectIdentifier(Void.self) : ()]
+			)
 		}
 		set {
 			self[\.mocks] = newValue
