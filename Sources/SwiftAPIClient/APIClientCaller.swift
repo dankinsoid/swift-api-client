@@ -223,7 +223,10 @@ public extension APIClient {
 					#else
 					configs.logRequest(request, uuid: uuid)
 					#endif
-					return try caller.mockResult(for: mock)
+					configs.listener.onRequestStarted(id: uuid, request: request, configs: configs)
+					let result = try caller.mockResult(for: mock)
+					configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
+					return result
 				}
 
 				try configs.requestValidator.validate(request, configs.with(\.requestValidator, .alwaysSuccess))

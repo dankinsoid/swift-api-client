@@ -102,7 +102,15 @@ public enum UsingMocksPolicy: Hashable {
 private extension APIClient.Configs {
 
 	var mocks: [ObjectIdentifier: Any] {
-		get { self[\.mocks] ?? [:] }
-		set { self[\.mocks] = newValue }
+		get {
+			self[\.mocks] ?? [
+				ObjectIdentifier(Void.self) : (),
+				ObjectIdentifier(Data.self) : "Mock data".data(using: .utf8) ?? Data(),
+				ObjectIdentifier(String.self) : "Mock string"
+			]
+		}
+		set {
+			self[\.mocks] = newValue
+		}
 	}
 }
