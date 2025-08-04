@@ -119,25 +119,25 @@ public extension LoggingComponents {
 	}
 
 	func responseMessage(
-		for response: HTTPResponse,
+		for response: HTTPResponse?,
 		uuid: UUID,
 		request: HTTPRequestComponents? = nil,
 		data: Data?,
 		duration: TimeInterval,
 		error: Error? = nil,
 		maskedHeaders: Set<HTTPField.Name>,
-				fileIDLine: FileIDLine?
+		fileIDLine: FileIDLine?
 	) -> String {
 		responseMessage(
 			uuid: uuid,
 			request: request,
-			statusCode: response.status,
+			statusCode: response?.status,
 			data: data,
-			headers: response.headerFields,
+			headers: response?.headerFields ?? [:],
 			duration: duration,
 			error: error,
 			maskedHeaders: maskedHeaders,
-						fileIDLine: fileIDLine
+			fileIDLine: fileIDLine
 		)
 	}
 

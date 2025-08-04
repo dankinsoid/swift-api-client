@@ -1,6 +1,6 @@
 import Foundation
 import Logging
-import HTTPTypesFoundation
+import HTTPTypes
 
 public extension APIClient {
 
@@ -92,26 +92,98 @@ public extension APIClient.Configs {
 }
 
 extension APIClient.Configs {
-
+	
 	var _errorLogLevel: Logger.Level {
 		errorLogLevel ?? logLevel
 	}
-
+	
 	var _errorLoggingComponents: LoggingComponents {
 		errorLogginComponents ?? loggingComponents
 	}
-
-	func logRequest(_ request: HTTPRequestComponents, uuid: UUID) {
+	
+	public func logRequestStarted(_ request: HTTPRequestComponents, uuid: UUID) {
 		if loggingComponents.contains(.onRequest), loggingComponents != .onRequest {
 			let message = loggingComponents.requestMessage(for: request, uuid: uuid, maskedHeaders: logMaskedHeaders, fileIDLine: fileIDLine)
 			logger.log(level: logLevel, "\(message)")
 		}
-		#if canImport(Metrics)
+#if canImport(Metrics)
 		if reportMetrics {
 			updateTotalRequestsMetrics(for: request)
 		}
-		#endif
+#endif
 		listener.onRequestStarted(id: uuid, request: request, configs: self)
+	}
+	
+	public func logRequestFailed(
+		_ request: HTTPRequestComponents?,
+		response: HTTPResponse?,
+		data: Data?,
+		start: Date,
+		uuid: UUID,
+		error: Error
+	) -> Error {
+		let duration = Date().timeIntervalSince(start)
+		if !_errorLoggingComponents.isEmpty {
+			let message = _errorLoggingComponents.errorMessage(
+				uuid: uuid,
+				error: error,
+				request: request,
+				duration: duration,
+				maskedHeaders: logMaskedHeaders,
+				fileIDLine: fileIDLine
+			)
+			logger.log(level: _errorLogLevel, "\(message)")
+		}
+#if canImport(Metrics)
+		if reportMetrics {
+			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: false)
+		}
+#endif
+		do {
+			try errorHandler(
+				error,
+				self,
+				APIErrorContext(
+					request: request,
+					response: data,
+					status: response?.status,
+					fileIDLine: fileIDLine ?? FileIDLine()
+				)
+			)
+			return error
+		} catch {
+			listener.onError(id: uuid, error: error, configs: self)
+			return error
+		}
+	}
+	
+	public func logRequestCompleted<T>(
+		_ request: HTTPRequestComponents,
+		response: HTTPResponse?,
+		data: Data?,
+		uuid: UUID,
+		start: Date,
+		result: T
+	) {
+		let duration = Date().timeIntervalSince(start)
+		if !loggingComponents.isEmpty {
+			let message = loggingComponents.responseMessage(
+				for: response,
+				uuid: uuid,
+				request: request,
+				data: data,
+				duration: duration,
+				maskedHeaders: logMaskedHeaders,
+				fileIDLine: fileIDLine
+			)
+			logger.log(level: logLevel, "\(message)")
+		}
+#if canImport(Metrics)
+		if reportMetrics {
+			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: true)
+		}
+#endif
+		listener.onResponseSerialized(id: uuid, response: result, configs: self)
 	}
 }
 

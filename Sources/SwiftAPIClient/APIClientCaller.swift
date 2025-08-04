@@ -3,11 +3,12 @@ import Logging
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+import HTTPTypes
 
 /// A generic structure for handling network requests and their responses.
 public struct APIClientCaller<Response, Value, Result> {
 
-	var logRequestByItSelf = false
+	public var logRequestByItSelf = false
 	private let _call: (
 		UUID,
 		HTTPRequestComponents,
@@ -116,6 +117,17 @@ public extension APIClientCaller where Result == Value {
 	}
 }
 
+extension APIClientCaller {
+
+	func mock(_ response: Response) -> APIClientCaller {
+		APIClientCaller { [_mockResult] _, _, _, serialize in
+			try _mockResult(serialize(response) {})
+		} mockResult: { [_mockResult] value in
+			try _mockResult(value)
+		}
+	}
+}
+
 public extension APIClient {
 
 	/// Asynchronously performs a network call using the provided caller and serializer.
@@ -212,93 +224,71 @@ public extension APIClient {
 		line: UInt = #line
 	) throws -> Result {
 		let uuid = UUID()
+		let start = Date()
 		do {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				let configs = configs.with(\.fileIDLine, fileIDLine)
-
+				var configs = configs.with(\.fileIDLine, fileIDLine)
+				
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
-					#if canImport(Metrics)
-					configs.with(\.reportMetrics, false).logRequest(request, uuid: uuid)
-					#else
-					configs.logRequest(request, uuid: uuid)
-					#endif
+#if canImport(Metrics)
+					configs = configs.with(\.reportMetrics, false)
+#endif
+					configs.logRequestStarted(request, uuid: uuid)
 					let result = try caller.mockResult(for: mock)
-					configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
+					configs.logRequestCompleted(request, response: nil, data: nil, uuid: uuid, start: start, result: result)
 					return result
 				}
 
 				try configs.requestValidator.validate(request, configs.with(\.requestValidator, .alwaysSuccess))
 				if !caller.logRequestByItSelf {
-					configs.logRequest(request, uuid: uuid)
+					configs.logRequestStarted(request, uuid: uuid)
 				}
 
 				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
+					let data = (response as? (Data, HTTPResponse))?.0 ?? (response as? Data)
 					do {
 						try validate()
 						let result = try serializer.serialize(response, configs)
-						#if canImport(Metrics)
-						if configs.reportMetrics {
-							updateTotalResponseMetrics(for: request, successful: true)
-						}
-						#endif
-						configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
+						configs.logRequestCompleted(
+							request,
+							response: (response as? (Data, HTTPResponse))?.1,
+							data: data,
+							uuid: uuid,
+							start: start,
+							result: result
+						)
 						return result
 					} catch {
-						#if canImport(Metrics)
-						if configs.reportMetrics {
-							updateTotalResponseMetrics(for: request, successful: false)
+						var error = error
+						if let data, let failure = configs.errorDecoder.decodeError(data, configs) {
+							error = failure
 						}
-						#endif
-
-						let context = APIErrorContext(
-							request: request,
-							response: response as? Data,
-							fileIDLine: fileIDLine
+						throw	configs.logRequestFailed(
+							request,
+							response: (response as? (Data, HTTPResponse))?.1,
+							data: data,
+							start: start,
+							uuid: uuid,
+							error: error
 						)
-						do {
-							if let data = response as? Data, let failure = configs.errorDecoder.decodeError(data, configs) {
-								try configs.errorHandler(failure, configs, context)
-								throw failure
-							}
-							try configs.errorHandler(error, configs, context)
-							throw error
-						} catch {
-							configs.listener.onError(id: uuid, error: error, configs: configs)
-							throw error
-						}
 					}
 				}
 			}
 		} catch {
-			do {
-				try withConfigs { configs in
-					let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-					let configs = configs.with(\.fileIDLine, fileIDLine)
-					if !configs._errorLoggingComponents.isEmpty {
-						let message = configs._errorLoggingComponents.errorMessage(
-							uuid: uuid,
-							error: error,
-							maskedHeaders: configs.logMaskedHeaders,
-							fileIDLine: fileIDLine
-						)
-						configs.logger.log(level: configs._errorLogLevel, "\(message)")
-					}
-#if canImport(Metrics)
-					if configs.reportMetrics {
-						updateTotalErrorsMetrics(for: nil)
-					}
-#endif
-					let context = APIErrorContext(fileIDLine: fileIDLine)
-					try configs.errorHandler(error, configs, context)
-				}
-				throw error
-			} catch {
-				withConfigs { configs in
-					configs.listener.onError(id: uuid, error: error, configs: configs)
-				}
-				throw error
+			try withConfigs { configs in
+				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
+				let configs = configs.with(\.fileIDLine, fileIDLine)
+				throw configs.logRequestFailed(
+					nil,
+					response: nil,
+					data: nil,
+					start: start,
+					uuid: uuid,
+					error: error
+				)
 			}
+			throw error
 		}
 	}
 }

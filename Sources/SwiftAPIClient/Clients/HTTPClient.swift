@@ -121,7 +121,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let requestWrapper = SendableValue(request)
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
-						configs.logRequest(request, uuid: uuid)
+						configs.logRequestStarted(request, uuid: uuid)
 						await requestWrapper.set(request)
 						let result = try await task(request, configs)
 						configs.listener.onResponseReceived(id: uuid, response: result, configs: configs)
@@ -130,92 +130,19 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					}
 				} catch {
 					let request = await requestWrapper.value
-					let response = await responseWrapper.value
-					let duration = Date().timeIntervalSince(start)
-					if !configs._errorLoggingComponents.isEmpty {
-						let message = configs._errorLoggingComponents.errorMessage(
-							uuid: uuid,
-							error: error,
-							request: request,
-							duration: duration,
-							maskedHeaders: configs.logMaskedHeaders,
-							fileIDLine: configs.fileIDLine
-						)
-						configs.logger.log(level: configs._errorLogLevel, "\(message)")
-					}
-					#if canImport(Metrics)
-					if configs.reportMetrics {
-						updateHTTPMetrics(for: request, status: response?.1.status, duration: duration, successful: false)
-					}
-					#endif
-					do {
-						try configs.errorHandler(
-							error,
-							configs,
-							APIErrorContext(
-								request: request,
-								response: response.flatMap { data($0.0) },
-								status: response?.1.status,
-								fileIDLine: configs.fileIDLine ?? FileIDLine()
-							)
-						)
-						throw error
-					} catch {
-						configs.listener.onError(id: uuid, error: error, configs: configs)
-						throw error
-					}
+					throw configs.logRequestFailed(
+						request,
+						response: nil,
+						data: nil,
+						start: start,
+						uuid: uuid,
+						error: error
+					)
 				}
-				let request = await requestWrapper.value
-				let duration = Date().timeIntervalSince(start)
-				let data = data(value)
-				do {
-					let result = try serialize((value, response)) {
-						try validate(value, response, configs)
-					}
-					let isError = response.status.kind.isError
-					let logComponents = isError ? configs._errorLoggingComponents : configs.loggingComponents
-					if !logComponents.isEmpty {
-						let message = logComponents.responseMessage(
-							for: response,
-							uuid: uuid,
-							request: request,
-							data: data,
-							duration: duration,
-							maskedHeaders: configs.logMaskedHeaders,
-							fileIDLine: configs.fileIDLine
-						)
-						configs.logger.log(
-							level: isError ? configs._errorLogLevel : configs.logLevel,
-							"\(message)"
-						)
-					}
-					#if canImport(Metrics)
-					if configs.reportMetrics {
-						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: true)
-					}
-					#endif
-					return (result, response)
-				} catch {
-					if !configs._errorLoggingComponents.isEmpty {
-						let message = configs._errorLoggingComponents.responseMessage(
-							for: response,
-							uuid: uuid,
-							request: request,
-							data: data,
-							duration: duration,
-							error: error,
-							maskedHeaders: configs.logMaskedHeaders,
-							fileIDLine: configs.fileIDLine
-						)
-						configs.logger.log(level: configs._errorLogLevel, "\(message)")
-					}
-					#if canImport(Metrics)
-					if configs.reportMetrics {
-						updateHTTPMetrics(for: request, status: response.status, duration: duration, successful: false)
-					}
-					#endif
-					throw error
+				let result = try serialize((value, response)) {
+					try validate(value, response, configs)
 				}
+				return (result, response)
 			}
 		} mockResult: { value in
 			asyncWithResponse(value)
