@@ -350,8 +350,8 @@ final class LoggingAndListenerTests: XCTestCase {
 
 		XCTAssertEqual(result, mockData)
 
-		// Verify HTTP client listener calls (HTTP client may have multiple internal request stages)
-		XCTAssertGreaterThan(mockListener.requestStartedCalls.count, 0, "Expected at least 1 request started call")
+		// Verify HTTP client listener calls
+		XCTAssertEqual(mockListener.requestStartedCalls.count, 1, "Expected exactly 1 request started call")
 		XCTAssertEqual(mockListener.responseReceivedCalls.count, 1, "Expected 1 response received call")
 		XCTAssertEqual(mockListener.responseSerializedCalls.count, 1, "Expected 1 response serialized call")
 		XCTAssertEqual(mockListener.errorCalls.count, 0, "Expected no error calls")

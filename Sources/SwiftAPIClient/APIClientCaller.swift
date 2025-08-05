@@ -65,11 +65,13 @@ public struct APIClientCaller<Response, Value, Result> {
 	/// try await client.call(.http, as: .decodable)
 	/// ```
 	public func map<T>(_ mapper: @escaping (Result) throws -> T) -> APIClientCaller<Response, Value, T> {
-		APIClientCaller<Response, Value, T> {
+		var result = APIClientCaller<Response, Value, T> {
 			try mapper(_call($0, $1, $2, $3))
 		} mockResult: {
 			try mapper(_mockResult($0))
 		}
+		result.logRequestByItSelf = logRequestByItSelf
+		return result
 	}
 
 	/// Maps the response to another type using the provided mapper.
@@ -81,13 +83,15 @@ public struct APIClientCaller<Response, Value, Result> {
 	/// try await client.call(.http, as: .decodable)
 	/// ```
 	public func mapResponse<T>(_ mapper: @escaping (Response) throws -> T) -> APIClientCaller<T, Value, Result> {
-		APIClientCaller<T, Value, Result> { id, request, configs, serialize in
+		var result = APIClientCaller<T, Value, Result> { id, request, configs, serialize in
 			try _call(id, request, configs) { response, validate in
 				try serialize(mapper(response), validate)
 			}
 		} mockResult: {
 			try _mockResult($0)
 		}
+		result.logRequestByItSelf = logRequestByItSelf
+		return result
 	}
 }
 
