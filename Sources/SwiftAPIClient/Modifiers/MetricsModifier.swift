@@ -1,4 +1,3 @@
-#if canImport(Metrics)
 import Foundation
 
 public extension APIClient {
@@ -19,4 +18,3 @@ public extension APIClient.Configs {
 		set { self[\.reportMetrics] = newValue }
 	}
 }
-#endif

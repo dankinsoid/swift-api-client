@@ -153,13 +153,13 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 }
 
 private final actor SendableValue<Value> {
-	
+
 	var value: Value
-	
+
 	init(_ value: Value) {
 		self.value = value
 	}
-	
+
 	func set(_ value: Value) {
 		self.value = value
 	}

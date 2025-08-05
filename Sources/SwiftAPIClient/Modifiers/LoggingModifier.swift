@@ -1,6 +1,6 @@
 import Foundation
-import Logging
 import HTTPTypes
+import Logging
 
 public extension APIClient {
 
@@ -91,30 +91,28 @@ public extension APIClient.Configs {
 	}
 }
 
-extension APIClient.Configs {
-	
-	var _errorLogLevel: Logger.Level {
+public extension APIClient.Configs {
+
+	internal var _errorLogLevel: Logger.Level {
 		errorLogLevel ?? logLevel
 	}
-	
-	var _errorLoggingComponents: LoggingComponents {
+
+	internal var _errorLoggingComponents: LoggingComponents {
 		errorLogginComponents ?? loggingComponents
 	}
-	
-	public func logRequestStarted(_ request: HTTPRequestComponents, uuid: UUID) {
+
+	func logRequestStarted(_ request: HTTPRequestComponents, uuid: UUID) {
 		if loggingComponents.contains(.onRequest), loggingComponents != .onRequest {
 			let message = loggingComponents.requestMessage(for: request, uuid: uuid, maskedHeaders: logMaskedHeaders, fileIDLine: fileIDLine)
 			logger.log(level: logLevel, "\(message)")
 		}
-#if canImport(Metrics)
 		if reportMetrics {
 			updateTotalRequestsMetrics(for: request)
 		}
-#endif
 		listener.onRequestStarted(id: uuid, request: request, configs: self)
 	}
-	
-	public func logRequestFailed(
+
+	func logRequestFailed(
 		_ request: HTTPRequestComponents?,
 		response: HTTPResponse?,
 		data: Data?,
@@ -134,11 +132,9 @@ extension APIClient.Configs {
 			)
 			logger.log(level: _errorLogLevel, "\(message)")
 		}
-#if canImport(Metrics)
 		if reportMetrics {
 			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: false)
 		}
-#endif
 		do {
 			try errorHandler(
 				error,
@@ -156,8 +152,8 @@ extension APIClient.Configs {
 			return error
 		}
 	}
-	
-	public func logRequestCompleted<T>(
+
+	func logRequestCompleted<T>(
 		_ request: HTTPRequestComponents,
 		response: HTTPResponse?,
 		data: Data?,
@@ -178,18 +174,16 @@ extension APIClient.Configs {
 			)
 			logger.log(level: logLevel, "\(message)")
 		}
-#if canImport(Metrics)
 		if reportMetrics {
 			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: true)
 		}
-#endif
 		listener.onResponseSerialized(id: uuid, response: result, configs: self)
 	}
 }
 
-extension Set<HTTPField.Name> {
+public extension Set<HTTPField.Name> {
 
-	public static var defaultMaskedHeaders: Set<HTTPField.Name> = [
+	static var defaultMaskedHeaders: Set<HTTPField.Name> = [
 		.authorization,
 		.authenticationInfo,
 		.proxyAuthorization,

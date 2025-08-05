@@ -92,7 +92,7 @@ public struct APIClientCaller<Response, Value, Result> {
 }
 
 public extension APIClientCaller where Result == Value {
-	
+
 	/// A caller with a mocked response.
 	static func mock(_ response: Response) -> APIClientCaller {
 		APIClientCaller { _, _, _, serialize in
@@ -109,7 +109,7 @@ public extension APIClientCaller where Result == Value {
 	) -> APIClientCaller {
 		APIClientCaller { _, request, _, serialize in
 			let response = map(request)
-			let result =  try serialize(response) {}
+			let result = try serialize(response) {}
 			return result
 		} mockResult: { value in
 			value
@@ -229,11 +229,9 @@ public extension APIClient {
 			return try withRequest { request, configs in
 				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
 				var configs = configs.with(\.fileIDLine, fileIDLine)
-				
+
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
-#if canImport(Metrics)
 					configs = configs.with(\.reportMetrics, false)
-#endif
 					configs.logRequestStarted(request, uuid: uuid)
 					let result = try caller.mockResult(for: mock)
 					configs.logRequestCompleted(request, response: nil, data: nil, uuid: uuid, start: start, result: result)
@@ -264,7 +262,7 @@ public extension APIClient {
 						if let data, let failure = configs.errorDecoder.decodeError(data, configs) {
 							error = failure
 						}
-						throw	configs.logRequestFailed(
+						throw configs.logRequestFailed(
 							request,
 							response: (response as? (Data, HTTPResponse))?.1,
 							data: data,
