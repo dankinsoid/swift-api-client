@@ -135,6 +135,7 @@ public extension APIClient.Configs {
 		if reportMetrics {
 			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: false)
 		}
+		let finalError: Error
 		do {
 			try errorHandler(
 				error,
@@ -146,11 +147,12 @@ public extension APIClient.Configs {
 					fileIDLine: fileIDLine ?? FileIDLine()
 				)
 			)
-			return error
+			finalError = error
 		} catch {
-			listener.onError(id: uuid, error: error, configs: self)
-			return error
+			finalError = error
 		}
+		listener.onError(id: uuid, error: finalError, configs: self)
+		return finalError
 	}
 
 	func logRequestCompleted<T>(

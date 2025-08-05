@@ -199,6 +199,7 @@ final class LoggingAndListenerTests: XCTestCase {
 			// Verify listener calls
 			XCTAssertEqual(mockListener.requestStartedCalls.count, 1, "Expected 1 request started call")
 			XCTAssertEqual(mockListener.responseSerializedCalls.count, 0, "Expected no response serialized calls")
+			XCTAssertEqual(mockListener.errorCalls.count, 1, "Expected 1 error call")
 
 			// In mock caller scenario, error might be handled differently
 			// The important thing is that request started was called
@@ -393,9 +394,10 @@ final class LoggingAndListenerTests: XCTestCase {
 			XCTFail("Expected timeout error to be thrown")
 		} catch {
 			// Verify HTTP error listener calls
-			XCTAssertGreaterThan(mockListener.requestStartedCalls.count, 0, "Expected at least 1 request started call")
+			XCTAssertEqual(mockListener.requestStartedCalls.count, 1, "Expected 1 request started call")
 			XCTAssertEqual(mockListener.responseReceivedCalls.count, 0, "Expected no response received calls")
 			XCTAssertEqual(mockListener.responseSerializedCalls.count, 0, "Expected no response serialized calls")
+			XCTAssertEqual(mockListener.errorCalls.count, 1, "Expected 1 error call")
 
 			// Error handling might vary - check if error call was made
 			if mockListener.errorCalls.count > 0 {
