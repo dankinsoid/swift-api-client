@@ -238,7 +238,7 @@ public extension APIClient {
 					configs = configs.with(\.reportMetrics, false)
 					configs.logRequestStarted(request, uuid: uuid)
 					let result = try caller.mockResult(for: mock)
-					configs.logRequestCompleted(request, response: nil, data: nil, uuid: uuid, start: start, result: result)
+					configs.logRequestCompleted(request, response: nil, data: nil, uuid: uuid, start: start)
 					return result
 				}
 
@@ -257,9 +257,11 @@ public extension APIClient {
 							response: (response as? (Data, HTTPResponse))?.1,
 							data: data,
 							uuid: uuid,
-							start: start,
-							result: result
+							start: start
 						)
+						if !caller.logRequestByItSelf {
+							configs.listener.onRequestCompleted(id: uuid, configs: configs)
+						}
 						return result
 					} catch {
 						var error = error

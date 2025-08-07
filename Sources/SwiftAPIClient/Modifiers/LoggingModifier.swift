@@ -151,17 +151,16 @@ public extension APIClient.Configs {
 		} catch {
 			finalError = error
 		}
-		listener.onError(id: uuid, error: finalError, configs: self)
+		listener.onRequestFailed(id: uuid, error: finalError, configs: self)
 		return finalError
 	}
 
-	func logRequestCompleted<T>(
+	func logRequestCompleted(
 		_ request: HTTPRequestComponents,
 		response: HTTPResponse?,
 		data: Data?,
 		uuid: UUID,
-		start: Date,
-		result: T
+		start: Date
 	) {
 		let duration = Date().timeIntervalSince(start)
 		if !loggingComponents.isEmpty {
@@ -179,7 +178,7 @@ public extension APIClient.Configs {
 		if reportMetrics {
 			updateHTTPMetrics(for: request, status: response?.status, duration: duration, successful: true)
 		}
-		listener.onResponseSerialized(id: uuid, response: result, configs: self)
+		listener.onRequestCompleted(id: uuid, configs: self)
 	}
 }
 

@@ -5,15 +5,17 @@ public protocol APIClientListener {
 	func onRequestStarted(id: UUID, request: HTTPRequestComponents, configs: APIClient.Configs)
 	func onResponseReceived<R>(id: UUID, response: R, configs: APIClient.Configs)
 	func onResponseSerialized<T>(id: UUID, response: T, configs: APIClient.Configs)
-	func onError(id: UUID, error: Error, configs: APIClient.Configs)
+	func onRequestFailed(id: UUID, error: Error, configs: APIClient.Configs)
+	func onRequestCompleted(id: UUID, configs: APIClient.Configs)
 }
 
-extension APIClientListener {
+public extension APIClientListener {
 	
 	func onRequestStarted(id: UUID, request: HTTPRequestComponents, configs: APIClient.Configs) {}
 	func onResponseReceived<R>(id: UUID, response: R, configs: APIClient.Configs) {}
 	func onResponseSerialized<T>(id: UUID, response: T, configs: APIClient.Configs) {}
-	func onError(id: UUID, error: Error, configs: APIClient.Configs) {}
+	func onRequestFailed(id: UUID, error: Error, configs: APIClient.Configs) {}
+	func onRequestCompleted(id: UUID, configs: APIClient.Configs) {}
 }
 
 public struct MultiplexAPIClientListener: APIClientListener {
@@ -36,8 +38,12 @@ public struct MultiplexAPIClientListener: APIClientListener {
 		listeners.forEach { $0.onResponseSerialized(id: id, response: response, configs: configs) }
 	}
 
-	public func onError(id: UUID, error: Error, configs: APIClient.Configs) {
-		listeners.forEach { $0.onError(id: id, error: error, configs: configs) }
+	public func onRequestFailed(id: UUID, error: Error, configs: APIClient.Configs) {
+		listeners.forEach { $0.onRequestFailed(id: id, error: error, configs: configs) }
+	}
+
+	public func onRequestCompleted(id: UUID, configs: APIClient.Configs) {
+		listeners.forEach { $0.onRequestCompleted(id: id, configs: configs) }
 	}
 }
 

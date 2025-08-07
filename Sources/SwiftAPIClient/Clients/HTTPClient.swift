@@ -142,6 +142,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let result = try serialize((value, response)) {
 					try validate(value, response, configs)
 				}
+				configs.listener.onRequestCompleted(id: uuid, configs: configs)
 				return (result, response)
 			}
 		} mockResult: { value in
