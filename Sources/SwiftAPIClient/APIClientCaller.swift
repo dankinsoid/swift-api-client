@@ -251,10 +251,12 @@ public extension APIClient {
 					let data = (response as? (Data, HTTPResponse))?.0 ?? (response as? Data)
 					do {
 						try validate()
-						configs.listener.onResponseReceived(id: uuid, response: response, configs: configs)
-						let result = try serializer.serialize(response, configs)
-						configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 						if !caller.logRequestByItSelf {
+							configs.listener.onResponseReceived(id: uuid, response: response, configs: configs)
+						}
+						let result = try serializer.serialize(response, configs)
+						if !caller.logRequestByItSelf {
+							configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 							configs.logRequestCompleted(
 								request,
 								response: (response as? (Data, HTTPResponse))?.1,

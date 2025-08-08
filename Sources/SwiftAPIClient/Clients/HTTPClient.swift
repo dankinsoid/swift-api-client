@@ -124,6 +124,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 						configs.logRequestStarted(request, uuid: uuid)
 						await requestWrapper.set(request)
 						let result = try await task(request, configs)
+						configs.listener.onResponseReceived(id: uuid, response: result, configs: configs)
 						await responseWrapper.set(result)
 						return result
 					}
@@ -141,6 +142,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let result = try serialize((value, response)) {
 					try validate(value, response, configs)
 				}
+				configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 				await configs.logRequestCompleted(
 					requestWrapper.value,
 					response: responseWrapper.value?.1,
