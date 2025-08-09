@@ -225,14 +225,15 @@ public extension APIClient {
 		_ caller: APIClientCaller<Response, Value, Result>,
 		as serializer: Serializer<Response, Value>,
 		fileID: String = #fileID,
-		line: UInt = #line
+		line: UInt = #line,
+		function: String = #function
 	) throws -> Result {
 		let uuid = UUID()
 		let start = Date()
 		do {
 			return try withRequest { request, configs in
-				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				var configs = configs.with(\.fileIDLine, fileIDLine)
+				let codeLocation = configs.codeLocation ?? CodeLocation(fileID: fileID, line: line, function: function)
+				var configs = configs.with(\.codeLocation, codeLocation)
 
 				if let mock = try configs.getMockIfNeeded(for: Value.self, serializer: serializer) {
 					configs = configs.with(\.reportMetrics, false)
@@ -284,8 +285,8 @@ public extension APIClient {
 			}
 		} catch {
 			try withConfigs { configs in
-				let fileIDLine = configs.fileIDLine ?? FileIDLine(fileID: fileID, line: line)
-				let configs = configs.with(\.fileIDLine, fileIDLine)
+				let codeLocation = configs.codeLocation ?? CodeLocation(fileID: fileID, line: line, function: function)
+				let configs = configs.with(\.codeLocation, codeLocation)
 				throw configs.logRequestFailed(
 					nil,
 					response: nil,

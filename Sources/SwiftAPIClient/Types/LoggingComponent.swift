@@ -69,17 +69,32 @@ public struct LoggingComponents: OptionSet {
 
 public extension LoggingComponents {
 
+	@available(*, deprecated, renamed: "requestMessage(for:uuid:maskedHeaders:codeLocation:)")
 	func requestMessage(
 		for request: HTTPRequestComponents,
 		uuid: UUID,
 		maskedHeaders: Set<HTTPField.Name>,
-		fileIDLine: FileIDLine?
+		fileIDLine: CodeLocation?
+	) -> String {
+		requestMessage(
+			for: request,
+			uuid: uuid,
+			maskedHeaders: maskedHeaders,
+			codeLocation: fileIDLine
+		)
+	}
+	
+	func requestMessage(
+		for request: HTTPRequestComponents,
+		uuid: UUID,
+		maskedHeaders: Set<HTTPField.Name>,
+		codeLocation: CodeLocation?
 	) -> String {
 		guard !isEmpty else { return "" }
 		var message = "--> 🌐"
 		var isMultiline = false
-		if contains(.location), let fileIDLine {
-			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
+		if contains(.location), let codeLocation {
+			message = "\(codeLocation.fileID)/\(codeLocation.line)\n" + message
 		}
 		if contains(.uuid) {
 			message = "[\(uuid.uuidString)]\(contains(.location) ? " " : "\n")" + message
@@ -118,6 +133,7 @@ public extension LoggingComponents {
 		return message
 	}
 
+	@available(*, deprecated, renamed: "responseMessage(for:uuid:request:data:duration:error:maskedHeaders:codeLocation:)")
 	func responseMessage(
 		for response: HTTPResponse?,
 		uuid: UUID,
@@ -126,7 +142,7 @@ public extension LoggingComponents {
 		duration: TimeInterval,
 		error: Error? = nil,
 		maskedHeaders: Set<HTTPField.Name>,
-		fileIDLine: FileIDLine?
+		fileIDLine: CodeLocation?
 	) -> String {
 		responseMessage(
 			uuid: uuid,
@@ -137,10 +153,34 @@ public extension LoggingComponents {
 			duration: duration,
 			error: error,
 			maskedHeaders: maskedHeaders,
-			fileIDLine: fileIDLine
+			codeLocation: fileIDLine
+		)
+	}
+	
+	func responseMessage(
+		for response: HTTPResponse?,
+		uuid: UUID,
+		request: HTTPRequestComponents? = nil,
+		data: Data?,
+		duration: TimeInterval,
+		error: Error? = nil,
+		maskedHeaders: Set<HTTPField.Name>,
+		codeLocation: CodeLocation?
+	) -> String {
+		responseMessage(
+			uuid: uuid,
+			request: request,
+			statusCode: response?.status,
+			data: data,
+			headers: response?.headerFields ?? [:],
+			duration: duration,
+			error: error,
+			maskedHeaders: maskedHeaders,
+			codeLocation: codeLocation
 		)
 	}
 
+	@available(*, deprecated, renamed: "responseMessage(uuid:request:statusCode:data:headers:duration:error:maskedHeaders:codeLocation:)")
 	func responseMessage(
 		uuid: UUID,
 		request: HTTPRequestComponents? = nil,
@@ -150,12 +190,36 @@ public extension LoggingComponents {
 		duration: TimeInterval? = nil,
 		error: Error? = nil,
 		maskedHeaders: Set<HTTPField.Name>,
-		fileIDLine: FileIDLine?
+		fileIDLine: CodeLocation?
+	) -> String {
+		responseMessage(
+			uuid: uuid,
+			request: request,
+			statusCode: statusCode,
+			data: data,
+			headers: headers,
+			duration: duration,
+			error: error,
+			maskedHeaders: maskedHeaders,
+			codeLocation: fileIDLine
+		)
+	}
+	
+	func responseMessage(
+		uuid: UUID,
+		request: HTTPRequestComponents? = nil,
+		statusCode: HTTPResponse.Status? = nil,
+		data: Data?,
+		headers: HTTPFields = [:],
+		duration: TimeInterval? = nil,
+		error: Error? = nil,
+		maskedHeaders: Set<HTTPField.Name>,
+		codeLocation: CodeLocation?
 	) -> String {
 		guard !isEmpty else { return "" }
 		var message = "<-- "
 		if let request {
-				message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, fileIDLine: fileIDLine) + "\n" + message
+				message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, codeLocation: codeLocation) + "\n" + message
 		} else {
 			if contains(.uuid) {
 				message = "[\(uuid.uuidString)]\n" + message
@@ -207,13 +271,32 @@ public extension LoggingComponents {
 		return message
 	}
 
+	@available(*, deprecated, renamed: "errorMessage(uuid:error:request:duration:maskedHeaders:codeLocation:)")
 	func errorMessage(
 		uuid: UUID,
 		error: Error,
 		request: HTTPRequestComponents? = nil,
 		duration: TimeInterval? = nil,
 		maskedHeaders: Set<HTTPField.Name>,
-		fileIDLine: FileIDLine? = nil
+		fileIDLine: CodeLocation?
+	) -> String {
+		errorMessage(
+			uuid: uuid,
+			error: error,
+			request: request,
+			duration: duration,
+			maskedHeaders: maskedHeaders,
+			codeLocation: fileIDLine
+		)
+	}
+	
+	func errorMessage(
+		uuid: UUID,
+		error: Error,
+		request: HTTPRequestComponents? = nil,
+		duration: TimeInterval? = nil,
+		maskedHeaders: Set<HTTPField.Name>,
+		codeLocation: CodeLocation? = nil
 	) -> String {
 		var message = contains(.uuid) && request == nil ? "[\(uuid.uuidString)] " : ""
 		if let duration, contains(.duration) {
@@ -221,9 +304,9 @@ public extension LoggingComponents {
 		}
 
 		if let request {
-			message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, fileIDLine: fileIDLine) + "\n" + message
-				} else if let fileIDLine, contains(.location) {
-			message = "\(fileIDLine.fileID)/\(fileIDLine.line)\n" + message
+			message = requestMessage(for: request, uuid: uuid, maskedHeaders: maskedHeaders, codeLocation: codeLocation) + "\n" + message
+				} else if let codeLocation, contains(.location) {
+			message = "\(codeLocation.fileID)/\(codeLocation.line)\n" + message
 		}
 		message += "❗️\(error.humanReadable)❗️"
 		return message

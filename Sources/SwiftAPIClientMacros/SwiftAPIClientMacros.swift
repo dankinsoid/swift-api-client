@@ -57,6 +57,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 		var bodyParams: ([String], [(String, String)]) = ([], [])
 		var fileIDName = "fileID"
 		var lineName = "line"
+		var functionName = "function"
 		for var param in funcDecl.signature.parameterClause.parameters {
 			let name = (param.secondName ?? param.firstName).trimmed.text
 			if param.attributes.contains("Body") || name == "body", attribute.method == ".get" {
@@ -66,6 +67,8 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 				fileIDName = name
 			} else if param.defaultValue?.value.description == "#line" {
 				lineName = name
+			} else if param.defaultValue?.value.description == "#function" {
+				functionName = name
 			} else {
 				let count = params.count
 				params += try scanParameters(name: name, type: "Query", param: &param, into: &queryParams)
@@ -78,7 +81,8 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 
 		params += [
 			"\n\(raw: fileIDName): String = #fileID,",
-			"\n\(raw: lineName): UInt = #line",
+			"\n\(raw: lineName): UInt = #line,",
+			"\n\(raw: functionName): String = #function"
 		]
 		funcDecl.signature.parameterClause.rightParen.leadingTrivia = .newline
 		funcDecl.signature.parameterClause.parameters = params
@@ -135,7 +139,7 @@ public struct SwiftAPIClientCallMacro: PeerMacro {
 			default: serializer
 			}
 		}
-		body.statements += ["    .call(.\(raw: attribute.caller), as: .\(raw: serializer), fileID: fileID, line: line)"]
+		body.statements += ["    .call(.\(raw: attribute.caller), as: .\(raw: serializer), fileID: \(raw: fileIDName), line: \(raw: lineName), function: \(raw: functionName))"]
 		funcDecl.body = body
 		result.insert(DeclSyntax(funcDecl), at: 0)
 		return result

@@ -103,7 +103,7 @@ public extension APIClient.Configs {
 
 	func logRequestStarted(_ request: HTTPRequestComponents, uuid: UUID) {
 		if loggingComponents.contains(.onRequest), loggingComponents != .onRequest {
-			let message = loggingComponents.requestMessage(for: request, uuid: uuid, maskedHeaders: logMaskedHeaders, fileIDLine: fileIDLine)
+			let message = loggingComponents.requestMessage(for: request, uuid: uuid, maskedHeaders: logMaskedHeaders, codeLocation: codeLocation)
 			logger.log(level: logLevel, "\(message)")
 		}
 		if reportMetrics {
@@ -128,7 +128,7 @@ public extension APIClient.Configs {
 				request: request,
 				duration: duration,
 				maskedHeaders: logMaskedHeaders,
-				fileIDLine: fileIDLine
+				codeLocation: codeLocation
 			)
 			logger.log(level: _errorLogLevel, "\(message)")
 		}
@@ -144,7 +144,7 @@ public extension APIClient.Configs {
 					request: request,
 					response: data,
 					status: response?.status,
-					fileIDLine: fileIDLine ?? FileIDLine()
+					codeLocation: codeLocation ?? CodeLocation()
 				)
 			)
 			finalError = error
@@ -171,7 +171,7 @@ public extension APIClient.Configs {
 				data: data,
 				duration: duration,
 				maskedHeaders: logMaskedHeaders,
-				fileIDLine: fileIDLine
+				codeLocation: codeLocation
 			)
 			logger.log(level: logLevel, "\(message)")
 		}

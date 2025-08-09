@@ -46,35 +46,70 @@ public struct APIErrorContext: Equatable {
 	public var request: HTTPRequestComponents?
 	public var response: Data?
 	public var status: HTTPResponse.Status?
-	public var fileID: String
-	public var line: UInt
-
-	public init(
-		request: HTTPRequestComponents? = nil,
-		response: Data? = nil,
-		status: HTTPResponse.Status? = nil,
-		fileID: String,
-		line: UInt
-	) {
-		self.request = request
-		self.response = response
-		self.status = status
-		self.fileID = fileID
-		self.line = line
+	public var codeLocation: CodeLocation
+	public var fileID: String {
+		get { codeLocation.fileID }
+		set { codeLocation.fileID = newValue }
+	}
+	public var line: UInt {
+		get { codeLocation.line }
+		set { codeLocation.line = newValue }
+	}
+	public var function: String {
+		get { codeLocation.function }
+		set { codeLocation.function = newValue }
+	}
+	
+	public var source: String {
+		codeLocation.source
 	}
 
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
 		status: HTTPResponse.Status? = nil,
-		fileIDLine: FileIDLine
+		fileID: String,
+		line: UInt,
+		function: String = #function
+	) {
+		self.init(
+			request: request,
+			response: response,
+			status: status,
+			codeLocation: CodeLocation(
+				fileID: fileID,
+				line: line,
+				function: function
+			)
+		)
+	}
+
+	public init(
+		request: HTTPRequestComponents? = nil,
+		response: Data? = nil,
+		status: HTTPResponse.Status? = nil,
+		codeLocation: CodeLocation
+	) {
+		self.request = request
+		self.response = response
+		self.status = status
+		self.codeLocation = codeLocation
+	}
+
+	@available(*, deprecated, message: "Use init(request:response:status:codeLocation:) instead")
+	public init(
+		request: HTTPRequestComponents? = nil,
+		response: Data? = nil,
+		status: HTTPResponse.Status? = nil,
+		fileIDLine: CodeLocation
 	) {
 		self.init(
 			request: request,
 			response: response,
 			status: status,
 			fileID: fileIDLine.fileID,
-			line: fileIDLine.line
+			line: fileIDLine.line,
+			function: fileIDLine.function
 		)
 	}
 }

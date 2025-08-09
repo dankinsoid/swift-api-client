@@ -27,12 +27,13 @@ final class CallMacroTests: XCTestCase {
 
 			func pets(
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets")
 			      .method(.get)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -53,12 +54,13 @@ final class CallMacroTests: XCTestCase {
 
 			func pets(
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets")
 			      .method(.get)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -79,11 +81,12 @@ final class CallMacroTests: XCTestCase {
 
 			func pets(
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .method(.get)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -104,12 +107,13 @@ final class CallMacroTests: XCTestCase {
 
 			func pets(id: UUID,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets", "\\(id)")
 			      .method(.get)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -148,13 +152,14 @@ final class CallMacroTests: XCTestCase {
 			func pets(
 			  body: Pet,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets")
 			      .method(.post)
 			      .body(body)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -175,12 +180,13 @@ final class CallMacroTests: XCTestCase {
 
 			func pets(
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws {
 			  try await client
 			      .path("pets")
 			      .method(.get)
-			      .call(.http, as: .void, fileID: fileID, line: line)
+			      .call(.http, as: .void, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -202,13 +208,14 @@ final class CallMacroTests: XCTestCase {
 			func updatePet(id: String,
 			  body: PetUpdateBody,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets", "\\(id)")
 			      .method(.put)
 			      .body(body)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -229,13 +236,14 @@ final class CallMacroTests: XCTestCase {
 
 			func partiallyUpdatePet(id: String, name: String,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> Pet {
 			  try await client
 			      .path("pets", "\\(id)")
 			      .method(.patch)
 			      .query(["name": name])
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -256,12 +264,13 @@ final class CallMacroTests: XCTestCase {
 
 			func deletePet(id: String,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws {
 			  try await client
 			      .path("pets", "\\(id)")
 			      .method(.delete)
-			      .call(.http, as: .void, fileID: fileID, line: line)
+			      .call(.http, as: .void, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -282,12 +291,13 @@ final class CallMacroTests: XCTestCase {
 
 			func getUser(id: String,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> GetUserResponse {
 			  try await client
 			      .path("users", "\\(id)")
 			      .method(.get)
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 
 			public struct GetUserResponse: Codable, Equatable {
@@ -319,13 +329,14 @@ final class CallMacroTests: XCTestCase {
 			  name bodyName: String,
 			  email bodyEmail: String,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> User {
 			  try await client
 			      .path("users")
 			      .method(.post)
 			      .body(["name": bodyName, "email": bodyEmail])
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -348,13 +359,14 @@ final class CallMacroTests: XCTestCase {
 			  term queryTerm: String,
 			  limit queryLimit: Int,
 			  fileID: String = #fileID,
-			  line: UInt = #line
+			  line: UInt = #line,
+			  function: String = #function
 			) async throws -> [Result] {
 			  try await client
 			      .path("search")
 			      .method(.get)
 			      .query(["term": queryTerm, "limit": queryLimit])
-			      .call(.http, as: .decodable, fileID: fileID, line: line)
+			      .call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 			}
 			""",
 			macros: macros,
@@ -379,13 +391,14 @@ final class CallMacroTests: XCTestCase {
               username: String,
               password: String,
               fileID: String = #fileID,
-              line: UInt = #line
+              line: UInt = #line,
+              function: String = #function
             ) async throws {
               try await
                   client.auth(.basic(username: username, password: password))
                   .path("login")
                   .method(.get)
-                  .call(.http, as: .void, fileID: fileID, line: line)
+                  .call(.http, as: .void, fileID: fileID, line: line, function: function)
             }
             """,
             macros: macros,

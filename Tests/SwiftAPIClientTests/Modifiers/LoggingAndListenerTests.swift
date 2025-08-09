@@ -590,7 +590,7 @@ private class MockAPIClientListener: APIClientListener {
 		responseSerializedCalls.append(ResponseSerializedCall(id: id, response: response, configs: configs))
 	}
 
-	func onError(id: UUID, error: Error, configs: APIClient.Configs) {
+	func onRequestFailed(id: UUID, error: Error, configs: APIClient.Configs) {
 		errorCalls.append(ErrorCall(id: id, error: error, configs: configs))
 	}
 }
