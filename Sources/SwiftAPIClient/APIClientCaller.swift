@@ -148,9 +148,10 @@ public extension APIClient {
 		_ caller: APIClientCaller<Response, Value, AsyncThrowingValue<Result>>,
 		as serializer: Serializer<Response, Value>,
 		fileID: String = #fileID,
-		line: UInt = #line
+		line: UInt = #line,
+		function: String = #function
 	) async throws -> Result {
-		try await call(caller, as: serializer, fileID: fileID, line: line)()
+		try await call(caller, as: serializer, fileID: fileID, line: line, function: function)()
 	}
 
 	/// Asynchronously performs a network call using the provided caller and serializer.
@@ -165,33 +166,34 @@ public extension APIClient {
 	func call<Value, Result>(
 		_ caller: APIClientCaller<Value, Value, AsyncThrowingValue<Result>>,
 		fileID: String = #fileID,
-		line: UInt = #line
+		line: UInt = #line,
+		function: String = #function
 	) async throws -> Result {
-		try await call(caller, as: .identity, fileID: fileID, line: line)()
+		try await call(caller, as: .identity, fileID: fileID, line: line, function: function)()
 	}
 
 	/// Asynchronously performs a network call using the http caller and decodable serializer.
 	/// - Returns: The result of the network call.
-	func call<Result: Decodable>(fileID: String = #fileID, line: UInt = #line) async throws -> Result {
-		try await call(.http, as: .decodable, fileID: fileID, line: line)
+	func call<Result: Decodable>(fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> Result {
+		try await call(.http, as: .decodable, fileID: fileID, line: line, function: function)
 	}
 
 	/// Asynchronously performs a network call using the http caller and decodable serializer.
 	/// - Returns: The result of the network call.
-	func callAsFunction<Result: Decodable>(fileID: String = #fileID, line: UInt = #line) async throws -> Result {
-		try await call(fileID: fileID, line: line)
+	func callAsFunction<Result: Decodable>(fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> Result {
+		try await call(fileID: fileID, line: line, function: function)
 	}
 
 	/// Asynchronously performs a network call using the http caller and void serializer.
 	/// - Returns: The result of the network call.
-	func call(fileID: String = #fileID, line: UInt = #line) async throws {
-		try await call(.http, as: .void, fileID: fileID, line: line)
+	func call(fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws {
+		try await call(.http, as: .void, fileID: fileID, line: line, function: function)
 	}
 
 	/// Asynchronously performs a network call using the http caller and void serializer.
 	/// - Returns: The result of the network call.
-	func callAsFunction(fileID: String = #fileID, line: UInt = #line) async throws {
-		try await call(fileID: fileID, line: line)
+	func callAsFunction(fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws {
+		try await call(fileID: fileID, line: line, function: function)
 	}
 
 	/// Performs a network call using the provided caller and serializer.
@@ -206,9 +208,10 @@ public extension APIClient {
 	func call<Value, Result>(
 		_ caller: APIClientCaller<Value, Value, Result>,
 		fileID: String = #fileID,
-		line: UInt = #line
+		line: UInt = #line,
+		function: String = #function
 	) throws -> Result {
-		try call(caller, as: .identity, fileID: fileID, line: line)
+		try call(caller, as: .identity, fileID: fileID, line: line, function: function)
 	}
 
 	/// Performs a network call using the provided caller and serializer.
