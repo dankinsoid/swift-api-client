@@ -17,6 +17,65 @@ public struct HTTPClient {
 	}
 }
 
+extension HTTPClient {
+
+	/// Mocks the client to always return the provided data and response.
+	/// - Parameters:
+	///   - data: The data to be returned by the mock client.
+	///   - response: The HTTP response to be returned by the mock client. Defaults to a 200 OK response.
+	/// - Returns: An instance of `HTTPClient` that always returns the specified data and response.
+	public static func mock(data: Data, response: HTTPResponse = .init(status: .ok)) -> HTTPClient {
+		HTTPClient { request, _ in
+			(data, response)
+		}
+	}
+
+	/// Mocks the client to encode and return the provided encodable object along with the specified response.
+	/// - Parameters:
+	///   - encodable: The encodable object to be encoded and returned as data. Uses the client's body encoder.
+	///   - response: The HTTP response to be returned by the mock client. Defaults to a 200 OK response.
+	/// - Returns: An instance of `HTTPClient` that encodes and returns the specified object and response.
+	/// - Tip: In order to use a specific encoder, configure the client using `.configs(\.bodyEncoder, encoder)` before applying this mock.
+	public static func mock(_ encodable: any Encodable, response: HTTPResponse = .init(status: .ok)) -> HTTPClient {
+		HTTPClient { request, configs in
+			let data = try configs.bodyEncoder.encode(encodable)
+			return (data, response)
+		}
+	}
+
+	/// Mocks the client to encode and return the provided encodable object along with the specified response status.
+	/// - Parameters:
+	///   - encodable: The encodable object to be encoded and returned as data. Uses the client's body encoder.
+	///   - status: The HTTP status to be used in the response.
+	/// - Returns: An instance of `HTTPClient` that encodes and returns the specified object and response.
+	/// - Tip: In order to use a specific encoder, configure the client using `.configs(\.bodyEncoder, encoder)` before applying this mock.
+	public static func mock(_ encodable: any Encodable, status: HTTPResponse.Status) -> HTTPClient {
+		.mock(encodable, response: .init(status: status))
+	}
+
+	/// Configures the client with specific configuration values.
+	/// - Parameters:
+	///   - keyPath: The key path to the configuration property to be modified.
+	///   - value: The new value for the specified configuration property.
+	/// - Returns: An instance of `APIClient` with updated configurations.
+	public func configs<T>(_ keyPath: WritableKeyPath<APIClient.Configs, T>, _ value: T) -> HTTPClient {
+		configs {
+			$0[keyPath: keyPath] = value
+		}
+	}
+
+	/// Configures the client with a closure that modifies its configurations.
+	/// - Parameter configs: A closure that takes `inout Configs` and modifies them.
+	/// - Returns: An instance of `APIClient` with updated configurations.
+	public func configs(_ configs: @escaping (inout APIClient.Configs) -> Void) -> HTTPClient {
+		HTTPClient { request, currentConfigs in
+			var newConfigs = currentConfigs
+			configs(&newConfigs)
+			return try await self.data(request, newConfigs)
+		}
+	}
+}
+
 public enum RequestBody: Hashable, Sendable {
 
 	case file(URL)
