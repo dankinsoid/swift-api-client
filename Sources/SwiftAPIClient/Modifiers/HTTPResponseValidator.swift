@@ -129,3 +129,12 @@ func extractStatusCodeEvenFailed<T>(_ request: () async throws -> (T, HTTPRespon
 	}
 	return (result, status)
 }
+
+func extractStatusCode(from error: Error) -> HTTPResponse.Status? {
+	if let error = error as? InvalidStatusCode {
+		return error.status
+	} else if let error = error as? APIClientError {
+		return error.context.status
+	}
+	return nil
+}

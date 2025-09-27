@@ -9,29 +9,37 @@ public extension APIClient {
 	/// Retries the request if it fails.
 	/// - Parameters:
 	///   - limit: The maximum number of retries. If `nil`, it will retry indefinitely.
-	///   - interval: The time interval to wait before the next retry. If not provided.
-	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request. If not provided, it defaults to retrying safe methods (like GET) on error status codes or network errors.
+	///   - interval: The time interval to wait before the next retry. Defaults to 0 seconds.
+	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request.
+	///    If not provided, it defaults to retrying safe methods (like GET) on error status codes or network errors.
+	///   - retryKey: A closure that takes the request and returns a key used to group retries. Requests with the same key will share retry decisions.
+	///   For example, if a rate limit error occurs for one request, all other requests with the same key (such as the same host) will be delayed. Defaults to `nil`, meaning no grouping.
 	/// - Note: Like any modifier, this is order dependent. It takes in account only error from previous modifiers but not the following ones.
 	func retry(
+		retryKey: ((HTTPRequestComponents) -> AnyHashable)? = nil,
 		when condition: RetryRequestCondition = .requestFailed,
 		limit: Int?,
-		interval: TimeInterval
+		interval: TimeInterval = 0
 	) -> APIClient {
-		retry(when: condition,limit: limit, interval: { _ in interval })
+		retry(when: condition,limit: limit, interval: { _ in interval }, retryKey: retryKey)
 	}
 	
 	/// Retries the request if it fails.
 	/// - Parameters:
 	///   - limit: The maximum number of retries. If `nil`, it will retry indefinitely.
 	///   - interval: A closure that takes the current retry count (starting from 0) and returns the time interval to wait before the next retry. If not provided, it defaults to 0 seconds.
-	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request. If not provided, it defaults to retrying safe methods (like GET) on error status codes or network errors.
+	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request.
+	///   If not provided, it defaults to retrying safe methods (like GET) on error status codes or network errors.
+	///   - retryKey: A closure that takes the request and returns a key used to group retries. Requests with the same key will share retry decisions.
+	///   For example, if a rate limit error occurs for one request, all other requests with the same key (such as the same host) will be delayed. Defaults to `nil`, meaning no grouping.
 	/// - Note: Like any modifier, this is order dependent. It takes in account only error from previous modifiers but not the following ones.
 	func retry(
 		when condition: RetryRequestCondition = .requestFailed,
 		limit: Int?,
-		interval: @escaping (Int) -> TimeInterval = { _ in 0 }
+		interval: @escaping (Int) -> TimeInterval,
+		retryKey: ((HTTPRequestComponents) -> AnyHashable)? = nil
 	) -> APIClient {
-		httpClientMiddleware(RetryMiddleware(limit: limit, interval: interval, condition: condition))
+		httpClientMiddleware(RetryMiddleware(retryKey: retryKey, limit: limit, interval: interval, condition: condition))
 	}
 }
 
@@ -82,7 +90,7 @@ public struct RetryRequestCondition {
 		}
 	}
 
-	/// A predefined `RetryRequestCondition` that retries safe HTTP methods (like GET) when the request fails due to error status codes or network errors.
+	/// A `RetryRequestCondition` that retries safe HTTP methods (like GET) when the request fails due to error status codes or network errors.
 	public static let requestFailed = RetryRequestCondition { request, result, _ in
 		guard request.method.isSafe else {
 			return false
@@ -95,19 +103,40 @@ public struct RetryRequestCondition {
 		}
 	}
 
-	/// A predefined `RetryRequestCondition` that retries the request when the response status code is `429 Too Many Requests`.
-	public static let rateLimitExceeded = RetryRequestCondition.requestFailed.and(
+	/// A `RetryRequestCondition` that retries the request when the response status code is `429 Too Many Requests`.
+	public static let rateLimitExceeded = RetryRequestCondition.requestFailed.and(.statusCodes(.tooManyRequests))
+	
+	/// A `RetryRequestCondition` that retries requests with defined HTTP methods.
+	public static func methods(_ methods: HTTPRequest.Method...) -> RetryRequestCondition {
+		Self.methods(Set(methods))
+	}
+	
+	/// A `RetryRequestCondition` that retries requests with defined HTTP methods.
+	public static func methods(_ methods: Set<HTTPRequest.Method>) -> RetryRequestCondition {
+		RetryRequestCondition { request, _, _ in
+			methods.contains(request.method)
+		}
+	}
+	
+	/// A `RetryRequestCondition` that retries when the response status code is one of the specified codes.
+	public static func statusCodes(_ codes: HTTPResponse.Status...) -> RetryRequestCondition {
+		Self.statusCodes(Set(codes))
+	}
+	
+	/// A `RetryRequestCondition` that retries when the response status code is one of the specified codes.
+	public static func statusCodes(_ codes: Set<HTTPResponse.Status>) -> RetryRequestCondition {
 		RetryRequestCondition { _, response, _ in
 			if case let .success(response) = response {
-				return response.status == .tooManyRequests
+				return codes.contains(response.status)
 			}
 			return true
 		}
-	)
+	}
 }
 
 private struct RetryMiddleware: HTTPClientMiddleware {
 
+	let retryKey: ((HTTPRequestComponents) -> AnyHashable)?
 	let limit: Int?
 	let interval: (Int) -> TimeInterval
 	let condition: RetryRequestCondition
@@ -117,7 +146,12 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 		configs: APIClient.Configs,
 		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
+		if let retryKey {
+			await waitForSynchronizedAccess(id: retryKey(request), of: Void.self)
+		}
 		var count = 0
+		var retryAfterHeader: TimeInterval = 0
+		
 		func needRetry(_ result: Result<HTTPResponse, Error>) -> Bool {
 			guard condition.shouldRetry(request: request, result: result, configs: configs) else {
 				return false
@@ -129,27 +163,38 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 		}
 
 		func retry() async throws -> (T, HTTPResponse) {
-			let interval = UInt64(interval(count) * 1_000_000_000)
-			if interval > 0 {
-				try await Task.sleep(nanoseconds: interval)
+			if count > 0 {
+				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
+				if interval > 0 {
+					if let retryKey {
+						try await withThrowingSynchronizedAccess(id: retryKey(request)) {
+							try await Task.sleep(nanoseconds: interval)
+						}
+					} else {
+						try await Task.sleep(nanoseconds: interval)
+					}
+				}
 			}
 			count += 1
+			
 			return try await next(request, configs)
 		}
 
-		let response: HTTPResponse
-		let data: T
-		do {
-			(data, response) = try await retry()
-		} catch {
-			if needRetry(.failure(error)) {
-				return try await retry()
-			}
-			throw error
+		while true {
+			do {
+			 let (data, response) = try await retry()
+				response.headerFields[.retryAfter]
+				if !needRetry(.success(response)) {
+					return (data, response)
+				}
+		 } catch {
+			 if !needRetry(.failure(error)) {
+				 throw error
+			 }
+		 }
 		}
-		if needRetry(.success(response)) {
-			return try await retry()
-		}
-		return (data, response)
+		throw ImpossibleError()
 	}
 }
+
+private struct ImpossibleError: Error {}
