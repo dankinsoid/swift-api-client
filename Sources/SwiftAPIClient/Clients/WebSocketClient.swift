@@ -4,6 +4,58 @@ import HTTPTypes
 import FoundationNetworking
 #endif
 
+public struct WebSocketPipeline<Element>: AsyncSequence {
+
+	let base: WebSocketChannel
+	let serializer: Serializer<Data, Element>
+	
+	public func makeAsyncIterator() -> AsyncThrowingCompactMapSequence<WebSocketChannel, Element>.Iterator {
+		base.compactMap(compactMap).makeAsyncIterator()
+	}
+
+	public var publisher: Publishers.TryCompactMap<Publishers.WebSocket, Element> {
+		base.publisher.tryCompactMap(compactMap)
+	}
+	
+	public func close(code: WebSocketCloseCode = .goingAway, reason: String? = nil) async throws {
+		try await base.close(code: code, reason: reason)
+	}
+	
+	public func ping(payload: Data? = nil) async throws {
+		try await base.ping(payload: payload)
+	}
+	
+	public func send(text: String) async throws {
+		try await base.send(text: text)
+	}
+	
+	public func send(data: Data) async throws {
+		try await base.send(data: data)
+	}
+
+	public func send<T>(_ value: T, as serializer: ContentSerializer<T>) async throws {
+		try await base.send(value, as: serializer)
+	}
+
+	public func send<T: Encodable>(_ value: T) async throws {
+		try await send(value, as: .encodable)
+	}
+	
+	private func compactMap(_ message: WebSocketMessage) throws -> Element? {
+		switch message {
+		case let .text(string):
+			guard let data = string.data(using: .utf8) else {
+				throw Errors.custom("Invalid UTF-8 string \(string)")
+			}
+			return try serializer.serialize(data, base.configs)
+		case let .binary(data):
+			return try serializer.serialize(data, base.configs)
+		case .control:
+			return nil
+		}
+	}
+}
+
 public final actor WebSocketChannel: AsyncSequence {
 	
 	public typealias Element = WebSocketMessage
@@ -14,26 +66,56 @@ public final actor WebSocketChannel: AsyncSequence {
 	private var buffers: [UUID: Buffer] = [:]
 	private var subscribers: [ObjectIdentifier: (WebSocketConnectionStreamItem) async -> Void] = [:]
 	private let pingPongInterval: TimeInterval?
-
+	var isFinished = false
+	nonisolated let configs: APIClient.Configs
+	
 	init(
 		pingPongInterval: TimeInterval?,
-		connect: @escaping (_ receive: @escaping @Sendable (WebSocketConnectionStreamItem) -> Void) -> WebSocketConnection
+		configs: APIClient.Configs,
+		connect: @escaping (_ receive: @escaping @Sendable (WebSocketConnectionStreamItem) -> Void) async throws -> WebSocketConnection
 	) {
 		self.pingPongInterval = pingPongInterval
+		self.configs = configs
 		self.connect = connect
 	}
 
 	public nonisolated func makeAsyncIterator() -> AsyncIterator {
 		AsyncIterator(base: self)
 	}
+	
+	public func close(code: WebSocketCloseCode = .goingAway, reason: String? = nil) async throws {
+		if !isFinished {
+			try await connection?.send(.close(code: code, reason: reason))
+		}
+	}
+	
+	public func ping(payload: Data? = nil) async throws {
+		try await connectIfNeeded().send(.ping(payload: payload))
+	}
+	
+	public func send(text: String) async throws {
+		try await connectIfNeeded().send(.text(text))
+	}
+	
+	public func send(data: Data) async throws {
+		try await connectIfNeeded().send(.binary(data))
+	}
 
+	public func send<T>(_ value: T, as serializer: ContentSerializer<T>) async throws {
+		try await connectIfNeeded().send(.binary(serializer.serialize(value, configs)))
+	}
+
+	public func send<T: Encodable>(_ value: T) async throws {
+		try await send(value, as: .encodable)
+	}
+	
 	public final class AsyncIterator: AsyncIteratorProtocol {
 		
 		let base: WebSocketChannel
 		let id = UUID()
 		
 		public func next() async throws -> WebSocketMessage? {
-			guard !Task.isCancelled else {
+			guard !Task.isCancelled, await !base.isFinished else {
 				await base.removeBuffer(for: id)
 				return nil
 			}
@@ -109,43 +191,48 @@ public final actor WebSocketChannel: AsyncSequence {
 	}
 	
 	@discardableResult
-	private func connectIfNeeded() async throws -> WebSocketConnection {
-		if connection == nil {
-			connection = try await connect { [weak self] item in
-				guard let self else { return }
-				Task {
-					for subscriber in await self.subscribers.values {
-						await subscriber(item)
+	func connectIfNeeded() async throws -> WebSocketConnection {
+		if let connection {
+			return connection
+		}
+		if isFinished {
+			throw WebSocketClosedError()
+		}
+		connection = try await connect { [weak self] item in
+			guard let self else { return }
+			Task {
+				for subscriber in await self.subscribers.values {
+					await subscriber(item)
+				}
+				switch item {
+				case let .message(webSocketMessage):
+					for buffer in await self.buffers.values {
+						await buffer.append(webSocketMessage)
 					}
-					switch item {
-					case let .message(webSocketMessage):
-						for buffer in await self.buffers.values {
-							await buffer.append(webSocketMessage)
-						}
-					case let .error(error):
-						break
-					case .closed:
-						await self.stopPingPong()
-						for buffer in await self.buffers.values {
-							await buffer.close()
-						}
+				case let .error(error):
+					break
+				case .closed:
+					await self.didFinished()
+					for buffer in await self.buffers.values {
+						await buffer.close()
 					}
 				}
 			}
-			if let pingPongInterval {
-				pingPongTask = Task { [weak self] in
-					let nanoInterval = UInt64(pingPongInterval * 1_000_000_000)
-					while !Task.isCancelled {
-						try await Task.sleep(nanoseconds: nanoInterval)
-						try? await self?.connection?.send(.ping)
-					}
+		}
+		if let pingPongInterval {
+			pingPongTask = Task { [weak self] in
+				let nanoInterval = UInt64(pingPongInterval * 1_000_000_000)
+				while !Task.isCancelled {
+					try await Task.sleep(nanoseconds: nanoInterval)
+					try? await self?.connection?.send(.ping)
 				}
 			}
 		}
 		return connection!
 	}
 
-	private func stopPingPong() {
+	private func didFinished() {
+		isFinished = true
 		pingPongTask?.cancel()
 		pingPongTask = nil
 	}
@@ -160,73 +247,94 @@ public final actor WebSocketChannel: AsyncSequence {
 	}
 }
 
+struct WebSocketClosedError: LocalizedError {
+	var errorDescription: String? { "WebSocket closed" }
+}
+
 #if canImport(Combine)
 import Combine
 
-extension WebSocketChannel: Publisher {
+extension WebSocketChannel {
 	
-	public typealias Output = WebSocketMessage
-	public typealias Failure = Error
-	
-	public nonisolated func receive<S>(subscriber: S) where S : Subscriber, Error == S.Failure, WebSocketMessage == S.Input {
-		subscriber.receive(subscription: Subscription(subscriber, base: self))
+	public nonisolated var publisher: Publishers.WebSocket {
+		Publishers.WebSocket(base: self)
 	}
-	
-	final actor Subscription<S: Subscriber>: Combine.Subscription where S.Input == WebSocketMessage, S.Failure == Error {
+}
+
+extension Publishers {
+
+	public struct WebSocket: Publisher {
 		
-		nonisolated let subscriber: S
-		nonisolated let base: WebSocketChannel
-		private var isFinished = false
+		public typealias Output = WebSocketMessage
+		public typealias Failure = Error
 		
-		init(_ subscriber: S, base: WebSocketChannel) {
-			self.subscriber = subscriber
-			self.base = base
+		let base: WebSocketChannel
+		
+		public nonisolated func receive<S>(subscriber: S) where S : Subscriber, Error == S.Failure, WebSocketMessage == S.Input {
+			subscriber.receive(subscription: Subscription(subscriber, base: base))
 		}
-	
-		nonisolated func request(_ demand: Subscribers.Demand) {
-			Task {
-				do {
-					await base.addSubscriber(id: ObjectIdentifier(self)) { [weak self] item in
-						guard let self, await !self.isFinished else { return }
-						switch item {
-						case let .message(webSocketMessage):
-							_ = subscriber.receive(webSocketMessage)
-						case let .error(error):
-							break
-						case .closed:
-							await setFinished()
-							cancel()
-							subscriber.receive(completion: .finished)
-						}
+		
+		final actor Subscription<S: Subscriber>: Combine.Subscription where S.Input == WebSocketMessage, S.Failure == Error {
+			
+			nonisolated let subscriber: S
+			nonisolated let base: WebSocketChannel
+			private var isFinished = false
+			
+			init(_ subscriber: S, base: WebSocketChannel) {
+				self.subscriber = subscriber
+				self.base = base
+			}
+			
+			nonisolated func request(_ demand: Subscribers.Demand) {
+				Task {
+					guard await !base.isFinished else {
+						subscriber.receive(completion: .finished)
+						await setFinished()
+						return
 					}
-					try await base.connectIfNeeded()
-				} catch {
-					await setFinished()
-					cancel()
-					subscriber.receive(completion: .failure(error))
+					do {
+						await base.addSubscriber(id: ObjectIdentifier(self)) { [weak self] item in
+							guard let self, await !self.isFinished else { return }
+							switch item {
+							case let .message(webSocketMessage):
+								_ = subscriber.receive(webSocketMessage)
+							case let .error(error):
+								break
+							case .closed:
+								await setFinished()
+								cancel()
+								subscriber.receive(completion: .finished)
+							}
+						}
+						try await base.connectIfNeeded()
+					} catch {
+						await setFinished()
+						cancel()
+						subscriber.receive(completion: .failure(error))
+					}
 				}
 			}
-		}
-		
-		nonisolated func cancel() {
-			let id = ObjectIdentifier(self)
-			Task { [self] in
-				await base.removeSubscriber(for: id)
-				if await !isFinished {
-					await setFinished()
-					subscriber.receive(completion: .finished)
+			
+			nonisolated func cancel() {
+				let id = ObjectIdentifier(self)
+				Task { [self] in
+					await base.removeSubscriber(for: id)
+					if await !isFinished {
+						await setFinished()
+						subscriber.receive(completion: .finished)
+					}
 				}
 			}
-		}
-		
-		private func setFinished() {
-			isFinished = true
-		}
-		
-		deinit {
-			let id = ObjectIdentifier(self)
-			Task { [base] in
-				await base.removeSubscriber(for: id)
+			
+			private func setFinished() {
+				isFinished = true
+			}
+			
+			deinit {
+				let id = ObjectIdentifier(self)
+				Task { [base] in
+					await base.removeSubscriber(for: id)
+				}
 			}
 		}
 	}
@@ -260,8 +368,6 @@ extension WebSocketClient {
 			}
 			urlRequest.url = url
 			let task = configs.urlSession.webSocketTask(with: urlRequest)
-			
-			
 			let subscription = Task {
 				while !Task.isCancelled {
 					do {
@@ -287,6 +393,7 @@ extension WebSocketClient {
 					}
 				}
 			}
+			task.resume()
 			
 			func needClose(_ error: Error) -> Bool {
 				if let error = error as NSError? {
@@ -295,7 +402,7 @@ extension WebSocketClient {
 				return false
 			}
 			
-			return	WebSocketConnection { message in
+			return WebSocketConnection { message in
 				switch message {
 				case let .binary(data):
 					try await task.send(.data(data))
