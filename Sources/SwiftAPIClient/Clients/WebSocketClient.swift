@@ -4,41 +4,95 @@ import HTTPTypes
 import FoundationNetworking
 #endif
 
+extension APIClientCaller where Result == WebSocketPipeline<Value>, Response == Data {
+
+	public static var webSocket: APIClientCaller {
+		APIClientCaller { uuid, request, configs, serialize in
+			WebSocketPipeline(
+				channel: WebSocketChannel(
+					configs: configs,
+					connect: { receive in
+						return try await configs.webSocketClient.connect(
+							request,
+							configs,
+							receive
+						)
+					}
+				),
+				serializer: Serializer { data, configs in
+					try serialize(data) {
+						// validation
+					}
+				}
+			)
+		} mockResult: { value in
+			WebSocketPipeline(
+				channel: WebSocketChannel(
+					configs: .init(),
+					connect: { receive in
+						WebSocketConnection { _ in
+							receive(.message(.binary(Data())))
+							receive(.closed)
+						}
+					}
+				),
+				serializer: Serializer { _, configs in
+					value
+				}
+			)
+		}
+	}
+}
+
 public struct WebSocketPipeline<Element>: AsyncSequence {
 
-	let base: WebSocketChannel
-	let serializer: Serializer<Data, Element>
+	public let channel: WebSocketChannel
+	public let serializer: Serializer<Data, Element>
+	
+	public init(
+		channel: WebSocketChannel,
+		serializer: Serializer<Data, Element>
+	) {
+		self.channel = channel
+		self.serializer = serializer
+	}
 	
 	public func makeAsyncIterator() -> AsyncThrowingCompactMapSequence<WebSocketChannel, Element>.Iterator {
-		base.compactMap(compactMap).makeAsyncIterator()
+		channel.compactMap(compactMap).makeAsyncIterator()
 	}
 
 	public var publisher: Publishers.TryCompactMap<Publishers.WebSocket, Element> {
-		base.publisher.tryCompactMap(compactMap)
+		channel.publisher.tryCompactMap(compactMap)
+	}
+	
+	@discardableResult
+	public func connect() async throws -> Self {
+		try await channel.connect()
+		return self
 	}
 	
 	public func close(code: WebSocketCloseCode = .goingAway, reason: String? = nil) async throws {
-		try await base.close(code: code, reason: reason)
+		try await channel.close(code: code, reason: reason)
 	}
 	
 	public func ping(payload: Data? = nil) async throws {
-		try await base.ping(payload: payload)
+		try await channel.ping(payload: payload)
 	}
 	
 	public func send(text: String) async throws {
-		try await base.send(text: text)
+		try await channel.send(text: text)
 	}
 	
 	public func send(data: Data) async throws {
-		try await base.send(data: data)
+		try await channel.send(data: data)
 	}
 
 	public func send<T>(_ value: T, as serializer: ContentSerializer<T>) async throws {
-		try await base.send(value, as: serializer)
+		try await channel.send(value, as: serializer)
 	}
 
 	public func send<T: Encodable>(_ value: T) async throws {
-		try await send(value, as: .encodable)
+		try await channel.send(value)
 	}
 	
 	private func compactMap(_ message: WebSocketMessage) throws -> Element? {
@@ -47,15 +101,54 @@ public struct WebSocketPipeline<Element>: AsyncSequence {
 			guard let data = string.data(using: .utf8) else {
 				throw Errors.custom("Invalid UTF-8 string \(string)")
 			}
-			return try serializer.serialize(data, base.configs)
+			return try serializer.serialize(data, channel.configs)
 		case let .binary(data):
-			return try serializer.serialize(data, base.configs)
+			return try serializer.serialize(data, channel.configs)
 		case .control:
 			return nil
 		}
 	}
 }
 
+extension APIClient.Configs {
+	
+	public var pingPongInterval: TimeInterval? {
+		get { self[\.pingPongInterval] }
+		set { self[\.pingPongInterval] = newValue }
+	}
+
+	public var webSocketClient: WebSocketClient {
+		get { self[\.webSocketClient] ?? .urlSession }
+		set { self[\.webSocketClient] = newValue }
+	}
+}
+
+extension APIClient {
+	
+	public func pingPongInterval(_ interval: TimeInterval?) -> APIClient {
+		configs(\.pingPongInterval, interval)
+	}
+	
+	public func webSocketProtocols(_ protocols: String...) -> APIClient {
+		webSocketProtocols(protocols)
+	}
+	
+	public func webSocketProtocols(_ protocols: [String]) -> APIClient {
+		modifyRequest { request, _ in
+			var current = request.headers[values: .secWebSocketProtocol]
+			if current.count > 1 {
+				current += protocols
+			} else {
+				current = [((current.first?.components(separatedBy: [",", " "]) ?? []) + protocols).joined(separator: ", ")]
+			}
+			request.headers[values: .secWebSocketProtocol] = current
+		}
+	}
+}
+
+// TODO: handle errors
+// TODO: retry connect on some errors
+// TODO: support middlewares
 public final actor WebSocketChannel: AsyncSequence {
 	
 	public typealias Element = WebSocketMessage
@@ -65,22 +158,25 @@ public final actor WebSocketChannel: AsyncSequence {
 	private var pingPongTask: Task<Void, Error>?
 	private var buffers: [UUID: Buffer] = [:]
 	private var subscribers: [ObjectIdentifier: (WebSocketConnectionStreamItem) async -> Void] = [:]
-	private let pingPongInterval: TimeInterval?
 	var isFinished = false
 	nonisolated let configs: APIClient.Configs
 	
 	init(
-		pingPongInterval: TimeInterval?,
 		configs: APIClient.Configs,
 		connect: @escaping (_ receive: @escaping @Sendable (WebSocketConnectionStreamItem) -> Void) async throws -> WebSocketConnection
 	) {
-		self.pingPongInterval = pingPongInterval
 		self.configs = configs
 		self.connect = connect
 	}
 
 	public nonisolated func makeAsyncIterator() -> AsyncIterator {
 		AsyncIterator(base: self)
+	}
+	
+	@discardableResult
+	public func connect() async throws -> Self {
+		try await connectIfNeeded()
+		return self
 	}
 	
 	public func close(code: WebSocketCloseCode = .goingAway, reason: String? = nil) async throws {
@@ -219,7 +315,7 @@ public final actor WebSocketChannel: AsyncSequence {
 				}
 			}
 		}
-		if let pingPongInterval {
+		if let pingPongInterval = configs.pingPongInterval {
 			pingPongTask = Task { [weak self] in
 				let nanoInterval = UInt64(pingPongInterval * 1_000_000_000)
 				while !Task.isCancelled {

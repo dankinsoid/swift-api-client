@@ -2,11 +2,7 @@ import Foundation
 
 public protocol HTTPClientMiddleware {
 
-//#if swift(>=6.0)
-//	typealias Next<T> = @Sendable (HTTPRequestComponents, APIClient.Configs) async throws(HTTPClientMiddlewareError) -> (T, HTTPResponse)
-//#else
 	typealias Next<T> = @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
-//#endif
 
 	func execute<T>(
 		request: HTTPRequestComponents,
