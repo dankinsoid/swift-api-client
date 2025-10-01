@@ -5,24 +5,72 @@ import FoundationNetworking
 import HTTPTypes
 import Logging
 
+public extension APIClient {
+
+	/// Retries the request if it fails.
+	@available(*, deprecated, message: "Use `retry()` modifier with `retryLimit(_:)` configuration instead.")
+	func retry(limit: Int?) -> APIClient {
+		httpClientMiddleware(RetryMiddleware(limit: limit))
+	}
+}
+
+private struct RetryMiddleware: HTTPClientMiddleware {
+
+	let limit: Int?
+
+	func execute<T>(
+		request: HTTPRequestComponents,
+		configs: APIClient.Configs,
+		next: @escaping Next<T>
+	) async throws -> (T, HTTPResponse) {
+		var count = 0
+		func needRetry() -> Bool {
+			if let limit {
+				return count <= limit
+			}
+			return true
+		}
+
+		func retry() async throws -> (T, HTTPResponse) {
+			count += 1
+			return try await next(request, configs)
+		}
+
+		let response: HTTPResponse
+		let data: T
+		do {
+			(data, response) = try await retry()
+		} catch {
+			if needRetry() {
+				return try await retry()
+			}
+			throw error
+		}
+		if response.status.kind.isError, needRetry() {
+			return try await retry()
+		}
+		return (data, response)
+	}
+}
+
 public extension APIClient.Configs {
 	
 	/// The condition used to determine whether a request should be retried.
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryCondition: RetryRequestCondition {
 		get { self[\.retryCondition] ?? .default }
 		set { self[\.retryCondition] = newValue }
 	}
 	
 	/// The maximum number of retries for a request. If `nil`, it will retry indefinitely.
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryLimit: Int? {
 		get { self[\.retryLimit] }
 		set { self[\.retryLimit] = newValue }
 	}
 
 	/// The interval between retries. It can be a fixed time interval or a closure that takes the current retry count and returns a time interval.
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryInterval: (Int) -> TimeInterval {
 		get { self[\.retryInterval] ?? { _ in 0 } }
 		set { self[\.retryInterval] = newValue }
@@ -34,51 +82,65 @@ public extension APIClient.Configs {
 		get { self[\.retryAfterHeaderDateFormatter] ?? defaultRetryAfterHeaderDateFormatter }
 		set { self[\.retryAfterHeaderDateFormatter] = newValue }
 	}
+	
+	/// The backoff policy used to determine how to handle global backoff scenarios, such as rate limiting.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
+	var retryBackoffPolicy: RetryBackoffPolicy {
+		get { self[\.retryBackoffPolicy] ?? .default }
+		set { self[\.retryBackoffPolicy] = newValue }
+	}
 }
 
 public extension APIClient {
 	
 	/// Sets the condition used to determine whether a request should be retried.
 	/// - Parameter condition: A closure that takes the request, the result of the request,
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	func retryCondition(_ condition: RetryRequestCondition) -> APIClient {
 		configs(\.retryCondition, condition)
 	}
 	
 	/// Sets the maximum number of retries for a request. If `nil`, it will retry indefinitely.
 	/// - Parameter limit: The maximum number of retries.
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	func retryLimit(_ limit: Int?) -> APIClient {
 		configs(\.retryLimit, limit)
 	}
 	
 	/// Sets the interval between retries. It can be a fixed time interval or a closure that takes the current retry count and returns a time interval.
 	/// - Parameter interval: A closure that takes the current retry count (starting from 0
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	func retryInterval(_ interval: @escaping (Int) -> TimeInterval) -> APIClient {
 		configs(\.retryInterval, interval)
 	}
 	
 	/// Sets a fixed interval between retries.
 	/// - Parameter interval: The time interval to wait before the next retry.
-	/// - Note: This configuration works only if you use the `retry` modifier.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
 	func retryInterval(_ interval: TimeInterval) -> APIClient {
 		retryInterval { _ in interval }
+	}
+	
+	/// Sets the date formatter used to parse the `Retry-After` header when it contains a date. By default, it uses the RFC 1123 format.
+	/// - Parameter formatter: The date formatter to use for parsing the `Retry-After`
+	func retryAfterHeaderDateFormatter(_ formatter: DateFormatter) -> APIClient {
+		configs(\.retryAfterHeaderDateFormatter, formatter)
+	}
+	
+	/// Sets the backoff policy used to determine how to handle global backoff scenarios, such as rate limiting.
+	/// - Parameter policy: The backoff policy to use.
+	func retryBackoffPolicy(_ policy: RetryBackoffPolicy) -> APIClient {
+		configs(\.retryBackoffPolicy, policy)
 	}
 }
 
 public extension APIClient {
 	
-	/// Retries the request if it fails.
-	/// - Parameters:
-	///   - retryKey: A closure that takes the request and returns a key used to group retries. Requests with the same key will share retry decisions.
-	///   For example, if a rate limit error occurs for one request, all other requests with the same key (such as the same host) will be delayed. Defaults to `nil`, meaning no grouping.
+	/// Retries the request when necessary, based on the configured retry conditions and limits.
 	/// - Note: Like any modifier, this is order dependent. It takes in account only error from previous modifiers but not the following ones.
-	/// - Tip: You can customize the retry behavior by setting the `retryCondition`, `retryLimit`, and `retryInterval` configurations. Also, there is `\.retryAfterHeaderDateFormatter` configuration to customize parsing of `Retry-After` header.
-	func retry(
-		retryKey: ((HTTPRequestComponents) -> AnyHashable)? = nil
-	) -> APIClient {
-		httpClientMiddleware(RetryMiddleware(retryKey: retryKey))
+	/// - Tip: You can customize the retry behavior by setting the `retryCondition`, `retryLimit`, `retryInterval`, and `retryBackoffPolicy` configurations.
+	func retry() -> APIClient {
+		httpClientMiddleware(retryMiddleware())
 	}
 }
 
@@ -179,14 +241,14 @@ public struct RetryRequestCondition {
 	/// This condition combines the following:
 	/// - `requestMethodIsSafe`: Ensures that only safe HTTP methods are retried.
 	/// - `requestFailed`: Retries when the request fails due to network errors.
-	/// - `retryableStatusCode`: Retries when the response status code indicates a transient failure.
+	/// - `retryStatusCode`: Retries when the response status code indicates a transient failure.
 	/// This default behavior is suitable for most scenarios where idempotent requests should be retried on failure.
 	public static var `default`: RetryRequestCondition {
 		.and(
 			.requestMethodIsSafe,
 			.or(
 				.requestFailed,
-				.retryableStatusCode
+				.retryStatusCode
 			)
 		)
 	}
@@ -207,7 +269,7 @@ public struct RetryRequestCondition {
 	}
 	
 	/// A `RetryRequestCondition` that retries the request when the response status code indicates a failure that is typically transient.
-	public static let retryableStatusCode = RetryRequestCondition.statusCodes([408, 421, 429, 500, 502, 503, 504, 509])
+	public static let retryStatusCode = RetryRequestCondition.statusCodes([408, 421, 429, 500, 502, 503, 504, 509])
 
 	/// A `RetryRequestCondition` that retries the request when the response status code is `429 Too Many Requests`.
 	public static let rateLimitExceeded = RetryRequestCondition.statusCodes(.tooManyRequests)
@@ -240,9 +302,32 @@ public struct RetryRequestCondition {
 	}
 }
 
-private struct RetryMiddleware: HTTPClientMiddleware {
+/// Backoff policy described with closures.
+public struct RetryBackoffPolicy {
+	
+	/// Hash all requests that must share the same cooldown window.
+	/// Example: host-only, or host+token, or host+bucket(path prefix).
+	let scopeHash: (_ request: HTTPRequestComponents) -> AnyHashable?
+	
+	/// Decide if the response must trigger a global backoff for the scope.
+	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+	
+	public init(
+		scopeHash: @escaping (_ request : HTTPRequestComponents) -> AnyHashable?,
+		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+	) {
+		self.isGlobalBackoff = isGlobalBackoff
+		self.scopeHash = scopeHash
+	}
 
-	let retryKey: ((HTTPRequestComponents) -> AnyHashable)?
+	public static let `default` = RetryBackoffPolicy { req in
+		req.urlComponents.host
+	} isGlobalBackoff: { _, resp in
+		Set([429, 503]).contains(resp.status.code)
+	}
+}
+
+private struct retryMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
 		request: HTTPRequestComponents,
@@ -252,10 +337,12 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 		let condition = configs.retryCondition
 		let limit = configs.retryLimit
 		let interval = configs.retryInterval
-		if let retryKey {
-			await waitForSynchronizedAccess(id: retryKey(request), of: Void.self)
+		let backoffPolicy = configs.retryBackoffPolicy
+		if let hash = backoffPolicy.scopeHash(request) {
+			await waitForSynchronizedAccess(id: hash, of: Void.self)
 		}
 		var count = 0
+		var resp: HTTPResponse?
 		var retryAfterHeader: TimeInterval = 0
 		
 		func needRetry(_ result: Result<HTTPResponse, Error>) -> Bool {
@@ -272,8 +359,8 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 			if count > 0 {
 				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
 				if interval > 0 {
-					if let retryKey {
-						try await withThrowingSynchronizedAccess(id: retryKey(request)) {
+					if let resp, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, resp) {
+						try await withThrowingSynchronizedAccess(id: hash) {
 							try await Task.sleep(nanoseconds: interval)
 						}
 					} else {
@@ -289,6 +376,7 @@ private struct RetryMiddleware: HTTPClientMiddleware {
 		while true {
 			do {
 			 let (data, response) = try await retry()
+				resp = response
 				retryAfterHeader = response.headerFields[.retryAfter].flatMap {
 					decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
 				} ?? 0
