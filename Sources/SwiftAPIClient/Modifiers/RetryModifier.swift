@@ -297,7 +297,7 @@ public struct RetryRequestCondition {
 			if case let .success(response) = response {
 				return codes.contains(response.status)
 			}
-			return true
+			return false
 		}
 	}
 }
@@ -339,7 +339,9 @@ private struct retryMiddleware: HTTPClientMiddleware {
 		let interval = configs.retryInterval
 		let backoffPolicy = configs.retryBackoffPolicy
 		if let hash = backoffPolicy.scopeHash(request) {
-			await waitForSynchronizedAccess(id: hash, of: Void.self)
+			if let interval = await waitForSynchronizedAccess(id: hash, of: UInt64.self) {
+				try await Task.sleep(nanoseconds: jitterNs(interval))
+			}
 		}
 		var count = 0
 		var resp: HTTPResponse?
@@ -350,7 +352,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 				return false
 			}
 			if let limit {
-				return count <= limit
+				return count < limit
 			}
 			return true
 		}
@@ -360,8 +362,9 @@ private struct retryMiddleware: HTTPClientMiddleware {
 				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
 				if interval > 0 {
 					if let resp, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, resp) {
-						try await withThrowingSynchronizedAccess(id: hash) {
+						_ = try await withThrowingSynchronizedAccess(id: hash) {
 							try await Task.sleep(nanoseconds: interval)
+							return interval
 						}
 					} else {
 						try await Task.sleep(nanoseconds: interval)
@@ -377,9 +380,11 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			do {
 			 let (data, response) = try await retry()
 				resp = response
-				retryAfterHeader = response.headerFields[.retryAfter].flatMap {
-					decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
-				} ?? 0
+				if [429, 503].contains(response.status.code) {
+					retryAfterHeader = response.headerFields[.retryAfter].flatMap {
+						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
+					} ?? 0
+				}
 				if !needRetry(.success(response)) {
 					return (data, response)
 				}
@@ -391,6 +396,20 @@ private struct retryMiddleware: HTTPClientMiddleware {
 		}
 		throw ImpossibleError()
 	}
+}
+
+@inline(__always)
+private func jitterNs(
+	_ base: UInt64,
+	fraction: ClosedRange<Double> = 0.1...0.2,
+	minNs: UInt64 = 5_000_000,     // 5 ms
+	maxNs: UInt64 = 1_000_000_000
+) // 1 s
+-> UInt64 {
+	guard base > 0 else { return 0 }
+	let p = Double.random(in: fraction)
+	let raw = UInt64(Double(base) * p)
+	return min(max(raw, minNs), maxNs)
 }
 
 private func decodeRetryAfterHeader(_ value: String, formatter: DateFormatter) -> TimeInterval? {
