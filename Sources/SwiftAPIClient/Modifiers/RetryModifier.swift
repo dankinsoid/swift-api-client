@@ -72,7 +72,7 @@ public extension APIClient.Configs {
 	/// The interval between retries. It can be a fixed time interval or a closure that takes the current retry count and returns a time interval.
 	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryInterval: (Int) -> TimeInterval {
-		get { self[\.retryInterval] ?? { _ in 0 } }
+		get { self[\.retryInterval] ?? { _ in 1.0 } }
 		set { self[\.retryInterval] = newValue }
 	}
 	
@@ -310,11 +310,11 @@ public struct RetryBackoffPolicy {
 	let scopeHash: (_ request: HTTPRequestComponents) -> AnyHashable?
 	
 	/// Decide if the response must trigger a global backoff for the scope.
-	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ status: HTTPResponse.Status) -> Bool
 	
 	public init(
 		scopeHash: @escaping (_ request : HTTPRequestComponents) -> AnyHashable?,
-		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ status: HTTPResponse.Status) -> Bool
 	) {
 		self.isGlobalBackoff = isGlobalBackoff
 		self.scopeHash = scopeHash
@@ -322,8 +322,8 @@ public struct RetryBackoffPolicy {
 
 	public static let `default` = RetryBackoffPolicy { req in
 		req.urlComponents.host
-	} isGlobalBackoff: { _, resp in
-		Set([429, 503]).contains(resp.status.code)
+	} isGlobalBackoff: { _, status in
+		Set([429, 503]).contains(status.code)
 	}
 }
 
@@ -344,7 +344,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			}
 		}
 		var count = 0
-		var resp: HTTPResponse?
+		var status: HTTPResponse.Status?
 		var retryAfterHeader: TimeInterval = 0
 		
 		func needRetry(_ result: Result<HTTPResponse, Error>) -> Bool {
@@ -361,7 +361,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			if count > 0 {
 				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
 				if interval > 0 {
-					if let resp, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, resp) {
+					if let status, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, status) {
 						_ = try await withThrowingSynchronizedAccess(id: hash) {
 							try await Task.sleep(nanoseconds: interval)
 							return interval
@@ -372,15 +372,17 @@ private struct retryMiddleware: HTTPClientMiddleware {
 				}
 			}
 			count += 1
-			
-			return try await next(request, configs)
+			let (result, sts) = try await extractStatusCodeEvenFailed {
+				try await next(request, configs)
+			}
+			status = sts
+			return try result.get()
 		}
 
 		while true {
 			do {
 			 let (data, response) = try await retry()
-				resp = response
-				if [429, 503].contains(response.status.code) {
+				if [429, 503].contains((status ?? response.status).code) {
 					retryAfterHeader = response.headerFields[.retryAfter].flatMap {
 						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
 					} ?? 0

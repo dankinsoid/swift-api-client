@@ -10,6 +10,7 @@ public extension APIClient {
 	///  - statusCodes: The set of status codes that indicate a rate limit exceeded. Default to `[429]`.
 	///  - methods: The set of HTTP methods to retry. If `nil`, all methods are retried. Default to `nil`.
 	///  - maxRepeatCount: The maximum number of times the request can be repeated. Default to 3.
+	@available(*, deprecated, message: "Use retry() instead")
 	func waitIfRateLimitExceeded<ID: Hashable>(
 		id: @escaping (HTTPRequestComponents) -> ID,
 		interval: TimeInterval = 30,
@@ -26,6 +27,7 @@ public extension APIClient {
 	///  - statusCodes: The set of status codes that indicate a rate limit exceeded. Default to `[429]`.
 	///  - methods: The set of HTTP methods to retry. If `nil`, all methods are retried. Default to `nil`.
 	///  - maxRepeatCount: The maximum number of times the request can be repeated. Default to 3.
+	@available(*, deprecated, message: "Use retry() instead")
 	func waitIfRateLimitExceeded(
 		interval: TimeInterval = 30,
 		statusCodes: Set<HTTPResponse.Status> = [.tooManyRequests],
