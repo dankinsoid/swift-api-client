@@ -32,7 +32,7 @@ public extension HTTPResponseValidator {
 	static func statusCode(_ codes: ClosedRange<Int>) -> Self {
 		HTTPResponseValidator { response, _, configs in
 			guard codes.contains(response.status.code) || configs.ignoreStatusCodeValidator else {
-				throw InvalidStatusCode(response.status)
+				throw InvalidStatusCode(response: response)
 			}
 		}
 	}
@@ -43,25 +43,32 @@ public extension HTTPResponseValidator {
 	static func statusCode(_ kind: HTTPResponse.Status.Kind) -> Self {
 		HTTPResponseValidator { response, _, configs in
 			guard response.status.kind == kind || configs.ignoreStatusCodeValidator else {
-				throw InvalidStatusCode(response.status)
+				throw InvalidStatusCode(response: response)
 			}
 		}
 	}
 }
 
+/// An error indicating that an HTTP response has an invalid status code.
 public struct InvalidStatusCode: Error, LocalizedError, CustomStringConvertible {
-
-    /// The invalid status code.
-    public let status: HTTPResponse.Status
-
-    public init(_ status: HTTPResponse.Status) {
-        self.status = status
-    }
-
-    public var errorDescription: String? { description }
-    public var description: String {
-        "Invalid status code: \(status.code) \(status.reasonPhrase)"
-    }
+	
+	/// The invalid status code.
+	public var status: HTTPResponse.Status { response.status }
+	public let response: HTTPResponse
+	
+	@available(*, deprecated, message: "Use init(response: HTTPResponse) instead")
+	public init(_ status: HTTPResponse.Status) {
+		self.init(response: HTTPResponse(status: status))
+	}
+	
+	public init(response: HTTPResponse) {
+		self.response = response
+	}
+	
+	public var errorDescription: String? { description }
+	public var description: String {
+		"Invalid status code: \(status.code) \(status.reasonPhrase)"
+	}
 }
 
 public extension HTTPResponseValidator {
@@ -107,19 +114,19 @@ public extension APIClient.Configs {
 	}
 }
 
-func extractStatusCodeEvenFailed<T>(_ request: () async throws -> (T, HTTPResponse)) async throws -> (Result<(T, HTTPResponse), Error>, HTTPResponse.Status) {
-	let status: HTTPResponse.Status
+func extractResponseEvenFailed<T>(_ request: () async throws -> (T, HTTPResponse)) async throws -> (Result<(T, HTTPResponse), Error>, HTTPResponse) {
+	let response: HTTPResponse
 	let result: Result<(T, HTTPResponse), Error>
 	do {
 		let value = try await request()
-		status = value.1.status
+		response = value.1
 		result = .success(value)
 	} catch let error as InvalidStatusCode {
-		status = error.status
+		response = error.response
 		result = .failure(error)
 	} catch let error as APIClientError {
-		if let code = error.context.status {
-			status = code
+		if let httpResponse = error.context.httpResponse {
+			response = httpResponse
 			result = .failure(error)
 		} else {
 			throw error
@@ -127,14 +134,10 @@ func extractStatusCodeEvenFailed<T>(_ request: () async throws -> (T, HTTPRespon
 	} catch {
 		throw error
 	}
-	return (result, status)
+	return (result, response)
 }
 
-func extractStatusCode(from error: Error) -> HTTPResponse.Status? {
-	if let error = error as? InvalidStatusCode {
-		return error.status
-	} else if let error = error as? APIClientError {
-		return error.context.status
-	}
-	return nil
+func extractStatusCodeEvenFailed<T>(_ request: () async throws -> (T, HTTPResponse)) async throws -> (Result<(T, HTTPResponse), Error>, HTTPResponse.Status) {
+	let (result, response) = try await extractResponseEvenFailed(request)
+	return (result, response.status)
 }

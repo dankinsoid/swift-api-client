@@ -45,7 +45,9 @@ public struct APIErrorContext: Equatable {
 
 	public var request: HTTPRequestComponents?
 	public var response: Data?
-	public var status: HTTPResponse.Status?
+	
+	public var httpResponse: HTTPResponse?
+	public var status: HTTPResponse.Status? { httpResponse?.status }
 	public var codeLocation: CodeLocation
 	public var fileID: String {
 		get { codeLocation.fileID }
@@ -67,6 +69,7 @@ public struct APIErrorContext: Equatable {
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
+		httpResponse: HTTPResponse? = nil,
 		status: HTTPResponse.Status? = nil,
 		fileID: String,
 		line: UInt,
@@ -75,6 +78,7 @@ public struct APIErrorContext: Equatable {
 		self.init(
 			request: request,
 			response: response,
+			httpResponse: httpResponse,
 			status: status,
 			codeLocation: CodeLocation(
 				fileID: fileID,
@@ -87,12 +91,13 @@ public struct APIErrorContext: Equatable {
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
+		httpResponse: HTTPResponse? = nil,
 		status: HTTPResponse.Status? = nil,
 		codeLocation: CodeLocation
 	) {
 		self.request = request
+		self.httpResponse = httpResponse
 		self.response = response
-		self.status = status
 		self.codeLocation = codeLocation
 	}
 
@@ -100,12 +105,14 @@ public struct APIErrorContext: Equatable {
 	public init(
 		request: HTTPRequestComponents? = nil,
 		response: Data? = nil,
+		httpResponse: HTTPResponse? = nil,
 		status: HTTPResponse.Status? = nil,
 		fileIDLine: CodeLocation
 	) {
 		self.init(
 			request: request,
 			response: response,
+			httpResponse: httpResponse,
 			status: status,
 			fileID: fileIDLine.fileID,
 			line: fileIDLine.line,

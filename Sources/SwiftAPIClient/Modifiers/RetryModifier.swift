@@ -269,7 +269,7 @@ public struct RetryRequestCondition {
 	}
 	
 	/// A `RetryRequestCondition` that retries the request when the response status code indicates a failure that is typically transient.
-	public static let retryStatusCode = RetryRequestCondition.statusCodes([408, 421, 429, 500, 502, 503, 504, 509])
+	public static let retryStatusCode = RetryRequestCondition.statusCodes(408, 421, 429, 500, 502, 503, 504, 509)
 
 	/// A `RetryRequestCondition` that retries the request when the response status code is `429 Too Many Requests`.
 	public static let rateLimitExceeded = RetryRequestCondition.statusCodes(.tooManyRequests)
@@ -344,7 +344,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			}
 		}
 		var count = 0
-		var status: HTTPResponse.Status?
+		var response: HTTPResponse?
 		var retryAfterHeader: TimeInterval = 0
 		
 		func needRetry(_ result: Result<HTTPResponse, Error>) -> Bool {
@@ -361,7 +361,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			if count > 0 {
 				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
 				if interval > 0 {
-					if let status, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, status) {
+					if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response.status) {
 						_ = try await withThrowingSynchronizedAccess(id: hash) {
 							try await Task.sleep(nanoseconds: interval)
 							return interval
@@ -372,23 +372,24 @@ private struct retryMiddleware: HTTPClientMiddleware {
 				}
 			}
 			count += 1
-			let (result, sts) = try await extractStatusCodeEvenFailed {
+			let (result, rsp) = try await extractResponseEvenFailed {
 				try await next(request, configs)
 			}
-			status = sts
+			response = rsp
 			return try result.get()
 		}
 
 		while true {
 			do {
-			 let (data, response) = try await retry()
-				if [429, 503].contains((status ?? response.status).code) {
-					retryAfterHeader = response.headerFields[.retryAfter].flatMap {
+			 let (data, httpResponse) = try await retry()
+				// 429 and 503 may include Retry-After header by RFC 7231
+				if [429, 503].contains(httpResponse.status.code) {
+					retryAfterHeader = httpResponse.headerFields[.retryAfter].flatMap {
 						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
 					} ?? 0
 				}
-				if !needRetry(.success(response)) {
-					return (data, response)
+				if !needRetry(.success(httpResponse)) {
+					return (data, httpResponse)
 				}
 		 } catch {
 			 if !needRetry(.failure(error)) {
