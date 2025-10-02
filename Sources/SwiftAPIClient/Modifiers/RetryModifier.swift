@@ -70,12 +70,17 @@ public extension APIClient.Configs {
 	}
 
 	/// The interval between retries. It can be a fixed time interval or a closure that takes the current retry count and returns a time interval.
+	/// Default to exponential backoff starting at 0.5 seconds, doubling each time, up to a maximum of 30 seconds.
 	/// - Note: This configuration works only if you use the `retry()` modifier.
-	var retryInterval: (Int) -> TimeInterval {
-		get { self[\.retryInterval] ?? { _ in 1.0 } }
+	var retryInterval: (_ attempt: Int, _ response: HTTPResponse?) -> TimeInterval {
+		get {
+			self[\.retryInterval] ?? { attempt, response in
+				min(0.5  * pow(2.0, Double(attempt)), 30.0)
+			}
+		}
 		set { self[\.retryInterval] = newValue }
 	}
-	
+
 	/// The date formatter used to parse the `Retry-After` header when it contains a date. By default, it uses the RFC 1123 format.
 	/// - Tips: `DateFormatter` creation is expensive, so if you need a custom format, create the formatter once and reuse it.
 	var retryAfterHeaderDateFormatter: DateFormatter {
@@ -83,6 +88,21 @@ public extension APIClient.Configs {
 		set { self[\.retryAfterHeaderDateFormatter] = newValue }
 	}
 	
+	/// The set of HTTP status codes that may include a `Retry-After` header. Default to `[429, 503]` due to RFC 7231.
+	/// If a response has one of these status codes and includes a `Retry-After` header,
+	/// the client will wait for the specified duration before retrying the request.
+	/// - Note: This configuration works only if you use the `retry()` modifier.
+	var retryAfterHeaderStatusCodes: Set<HTTPResponse.Status> {
+		get { self[\.retryAfterHeaderStatusCodes] ?? [.tooManyRequests, .serviceUnavailable] }
+		set { self[\.retryAfterHeaderStatusCodes] = newValue }
+	}
+	
+	/// Configuration for jitter applied to retry intervals.
+	var retryJitterConfigs: RetryJitterConfigs {
+		get { self[\.retryJitterConfigs] ?? RetryJitterConfigs() }
+		set { self[\.retryJitterConfigs] = newValue }
+	}
+
 	/// The backoff policy used to determine how to handle global backoff scenarios, such as rate limiting.
 	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryBackoffPolicy: RetryBackoffPolicy {
@@ -110,7 +130,7 @@ public extension APIClient {
 	/// Sets the interval between retries. It can be a fixed time interval or a closure that takes the current retry count and returns a time interval.
 	/// - Parameter interval: A closure that takes the current retry count (starting from 0
 	/// - Note: This configuration works only if you use the `retry()` modifier.
-	func retryInterval(_ interval: @escaping (Int) -> TimeInterval) -> APIClient {
+	func retryInterval(_ interval: @escaping (Int, HTTPResponse?) -> TimeInterval) -> APIClient {
 		configs(\.retryInterval, interval)
 	}
 	
@@ -118,7 +138,7 @@ public extension APIClient {
 	/// - Parameter interval: The time interval to wait before the next retry.
 	/// - Note: This configuration works only if you use the `retry()` modifier.
 	func retryInterval(_ interval: TimeInterval) -> APIClient {
-		retryInterval { _ in interval }
+		retryInterval { _, _ in interval }
 	}
 	
 	/// Sets the date formatter used to parse the `Retry-After` header when it contains a date. By default, it uses the RFC 1123 format.
@@ -138,7 +158,8 @@ public extension APIClient {
 	
 	/// Retries the request when necessary, based on the configured retry conditions and limits.
 	/// - Note: Like any modifier, this is order dependent. It takes in account only error from previous modifiers but not the following ones.
-	/// - Tip: You can customize the retry behavior by setting the `retryCondition`, `retryLimit`, `retryInterval`, and `retryBackoffPolicy` configurations.
+	/// - Tip: You can customize the retry behavior by setting the `retryCondition`, `retryLimit`, `retryInterval`, `retryBackoffPolicy`,
+	/// `retryAfterHeaderStatusCodes`,  `retryAfterHeaderDateFormatter` and `retryJitterConfigs` configurations.
 	func retry() -> APIClient {
 		httpClientMiddleware(retryMiddleware())
 	}
@@ -147,13 +168,13 @@ public extension APIClient {
 /// A condition that determines whether a request should be retried based on the request, the result of the request, and the client configurations.
 public struct RetryRequestCondition {
 	
-	private let condition: (HTTPRequestComponents, Result<HTTPResponse, Error>, APIClient.Configs) -> Bool
+	private let condition: (HTTPRequestComponents, HTTPResponse?, Error?, APIClient.Configs) -> Bool
 	
 	/// Initializes a new `RetryRequestCondition` with a custom condition closure.
 	/// - Parameters:
 	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request.
 	public init(
-		_ condition: @escaping (_ request: HTTPRequestComponents, _ result: Result<HTTPResponse, Error>, _ configs: APIClient.Configs) -> Bool
+		_ condition: @escaping (_ request: HTTPRequestComponents, _ result: HTTPResponse?, _ error: Error?, _ configs: APIClient.Configs) -> Bool
 	) {
 		self.condition = condition
 	}
@@ -165,19 +186,20 @@ public struct RetryRequestCondition {
 	///   - configs: The configurations of the API client.
 	public func shouldRetry(
 		request: HTTPRequestComponents,
-		result: Result<HTTPResponse, Error>,
+		response: HTTPResponse?,
+		error: Error?,
 		configs: APIClient.Configs
 	) -> Bool {
-		condition(request, result, configs)
+		condition(request, response, error, configs)
 	}
 	
 	/// Combines two `RetryRequestCondition` instances using a logical AND operation.
 	/// The resulting condition will only return `true` if both conditions return `true`.
 	/// - Parameter other: Another `RetryRequestCondition` to combine with.
 	public func and(_ other: RetryRequestCondition) -> RetryRequestCondition {
-		RetryRequestCondition { request, result, configs in
-			self.shouldRetry(request: request, result: result, configs: configs)
-			&& other.shouldRetry(request: request, result: result, configs: configs)
+		RetryRequestCondition { request, response, error, configs in
+			self.shouldRetry(request: request, response: response, error: error, configs: configs)
+			&& other.shouldRetry(request: request, response: response, error: error, configs: configs)
 		}
 	}
 	
@@ -194,9 +216,9 @@ public struct RetryRequestCondition {
 	/// - Parameter conditions: An array of `RetryRequestCondition` instances to combine.
 	/// - Returns: A new `RetryRequestCondition` that represents the combined conditions.
 	public static func and(_ conditions: [RetryRequestCondition]) -> RetryRequestCondition {
-		RetryRequestCondition { request, result, configs in
+		RetryRequestCondition { request, response, error, configs in
 			for condition in conditions {
-				if !condition.shouldRetry(request: request, result: result, configs: configs) {
+				if !condition.shouldRetry(request: request, response: response, error: error, configs: configs) {
 					return false
 				}
 			}
@@ -217,9 +239,9 @@ public struct RetryRequestCondition {
 	/// - Parameter conditions: An array of `RetryRequestCondition` instances to combine.
 	/// - Returns: A new `RetryRequestCondition` that represents the combined conditions.
 	public static func or(_ conditions: [RetryRequestCondition]) -> RetryRequestCondition {
-		RetryRequestCondition { request, result, configs in
+		RetryRequestCondition { request, response, error, configs in
 			for condition in conditions {
-				if condition.shouldRetry(request: request, result: result, configs: configs) {
+				if condition.shouldRetry(request: request, response: response, error: error, configs: configs) {
 					return true
 				}
 			}
@@ -231,9 +253,9 @@ public struct RetryRequestCondition {
 	/// The resulting condition will return `true` if either condition returns `true`.
 	/// - Parameter other: Another `RetryRequestCondition` to combine with.
 	public func or(_ other: RetryRequestCondition) -> RetryRequestCondition {
-		RetryRequestCondition { request, result, configs in
-			self.shouldRetry(request: request, result: result, configs: configs)
-			|| other.shouldRetry(request: request, result: result, configs: configs)
+		RetryRequestCondition { request, response, error, configs in
+			self.shouldRetry(request: request, response: response, error: error, configs: configs)
+			|| other.shouldRetry(request: request, response: response, error: error, configs: configs)
 		}
 	}
 
@@ -254,17 +276,17 @@ public struct RetryRequestCondition {
 	}
 
 	/// A `RetryRequestCondition` that retries safe HTTP methods (like GET) when the request fails due to error status codes or network errors.
-	public static let requestFailed = RetryRequestCondition { request, result, _ in
-		switch result {
-		case let .success(response):
+	public static let requestFailed = RetryRequestCondition { request, response, error, _ in
+		switch error {
+		case nil:
 			return false
-		case let .failure(error):
+		case let .some(error):
 			return !(error is CancellationError)
 		}
 	}
 	
 	/// A `RetryRequestCondition` that retries the request when the HTTP method is considered safe (e.g., GET, HEAD, OPTIONS).
-	public static let requestMethodIsSafe = RetryRequestCondition { request, _, _ in
+	public static let requestMethodIsSafe = RetryRequestCondition { request, _, _, _ in
 		request.method.isSafe
 	}
 	
@@ -281,7 +303,7 @@ public struct RetryRequestCondition {
 	
 	/// A `RetryRequestCondition` that retries requests with defined HTTP methods.
 	public static func methods(_ methods: Set<HTTPRequest.Method>) -> RetryRequestCondition {
-		RetryRequestCondition { request, _, _ in
+		RetryRequestCondition { request, _, _, _ in
 			methods.contains(request.method)
 		}
 	}
@@ -293,8 +315,8 @@ public struct RetryRequestCondition {
 	
 	/// A `RetryRequestCondition` that retries when the response status code is one of the specified codes.
 	public static func statusCodes(_ codes: Set<HTTPResponse.Status>) -> RetryRequestCondition {
-		RetryRequestCondition { _, response, _ in
-			if case let .success(response) = response {
+		RetryRequestCondition { _, response, _,  _ in
+			if let response {
 				return codes.contains(response.status)
 			}
 			return false
@@ -340,15 +362,15 @@ private struct retryMiddleware: HTTPClientMiddleware {
 		let backoffPolicy = configs.retryBackoffPolicy
 		if let hash = backoffPolicy.scopeHash(request) {
 			if let interval = await waitForSynchronizedAccess(id: hash, of: UInt64.self) {
-				try await Task.sleep(nanoseconds: jitterNs(interval))
+				try await Task.sleep(nanoseconds: configs.retryJitterConfigs.delay(for: interval))
 			}
 		}
 		var count = 0
 		var response: HTTPResponse?
 		var retryAfterHeader: TimeInterval = 0
 		
-		func needRetry(_ result: Result<HTTPResponse, Error>) -> Bool {
-			guard condition.shouldRetry(request: request, result: result, configs: configs) else {
+		func needRetry(_ error: Error?) -> Bool {
+			guard condition.shouldRetry(request: request, response: response, error: error, configs: configs) else {
 				return false
 			}
 			if let limit {
@@ -359,7 +381,7 @@ private struct retryMiddleware: HTTPClientMiddleware {
 
 		func retry() async throws -> (T, HTTPResponse) {
 			if count > 0 {
-				let interval = UInt64(max(retryAfterHeader, interval(count - 1)) * 1_000_000_000)
+				let interval = UInt64(max(retryAfterHeader, interval(count - 1, response)) * 1_000_000_000)
 				if interval > 0 {
 					if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response.status) {
 						_ = try await withThrowingSynchronizedAccess(id: hash) {
@@ -372,8 +394,14 @@ private struct retryMiddleware: HTTPClientMiddleware {
 				}
 			}
 			count += 1
-			let (result, rsp) = try await extractResponseEvenFailed {
-				try await next(request, configs)
+			let (result, rsp): (Result<(T, HTTPResponse), Error>, HTTPResponse)
+			do {
+				(result, rsp) = try await extractResponseEvenFailed {
+					try await next(request, configs)
+				}
+			} catch {
+				response = nil
+				throw error
 			}
 			response = rsp
 			return try result.get()
@@ -382,17 +410,18 @@ private struct retryMiddleware: HTTPClientMiddleware {
 		while true {
 			do {
 			 let (data, httpResponse) = try await retry()
-				// 429 and 503 may include Retry-After header by RFC 7231
-				if [429, 503].contains(httpResponse.status.code) {
+				if configs.retryAfterHeaderStatusCodes.contains(httpResponse.status) {
 					retryAfterHeader = httpResponse.headerFields[.retryAfter].flatMap {
 						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
 					} ?? 0
 				}
-				if !needRetry(.success(httpResponse)) {
+				if !needRetry(nil) {
 					return (data, httpResponse)
 				}
-		 } catch {
-			 if !needRetry(.failure(error)) {
+			} catch is CancellationError {
+				throw CancellationError()
+			} catch {
+			 if !needRetry(error) {
 				 throw error
 			 }
 		 }
@@ -401,18 +430,36 @@ private struct retryMiddleware: HTTPClientMiddleware {
 	}
 }
 
-@inline(__always)
-private func jitterNs(
-	_ base: UInt64,
-	fraction: ClosedRange<Double> = 0.1...0.2,
-	minNs: UInt64 = 5_000_000,     // 5 ms
-	maxNs: UInt64 = 1_000_000_000
-) // 1 s
--> UInt64 {
-	guard base > 0 else { return 0 }
-	let p = Double.random(in: fraction)
-	let raw = UInt64(Double(base) * p)
-	return min(max(raw, minNs), maxNs)
+/// Configuration for jitter applied to retry intervals.
+public struct RetryJitterConfigs: Hashable {
+	
+	/// The fraction range of the base interval to use for jitter.
+	public var fraction: ClosedRange<Double>
+	
+	/// The minimum jitter in nanoseconds.
+	public var minNs: UInt64
+	
+	/// The maximum jitter in nanoseconds.
+	public var maxNs: UInt64
+	
+	public init(
+		fraction: ClosedRange<Double> = 0.1...0.2,
+		minNs: UInt64 = 5_000_000,     // 5 ms
+		maxNs: UInt64 = 1_000_000_000  // 1 s
+	) {
+		self.fraction = fraction
+		self.minNs = minNs
+		self.maxNs = maxNs
+	}
+	
+	/// Applies jitter to the given interval.
+	@inline(__always)
+	public func delay(for interval: UInt64) -> UInt64 {
+		guard interval > 0 else { return 0 }
+		let p = Double.random(in: fraction)
+		let raw = UInt64(Double(interval) * p)
+		return min(max(raw, minNs), maxNs)
+	}
 }
 
 private func decodeRetryAfterHeader(_ value: String, formatter: DateFormatter) -> TimeInterval? {
