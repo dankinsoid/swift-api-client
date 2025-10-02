@@ -62,10 +62,10 @@ public extension APIClient.Configs {
 		set { self[\.retryCondition] = newValue }
 	}
 	
-	/// The maximum number of retries for a request. If `nil`, it will retry indefinitely.
+	/// The maximum number of retries for a request. If `nil`, it will retry indefinitely. Default to 5.
 	/// - Note: This configuration works only if you use the `retry()` modifier.
 	var retryLimit: Int? {
-		get { self[\.retryLimit] }
+		get { self[\.retryLimit] ?? 5 }
 		set { self[\.retryLimit] = newValue }
 	}
 
@@ -332,11 +332,11 @@ public struct RetryBackoffPolicy {
 	let scopeHash: (_ request: HTTPRequestComponents) -> AnyHashable?
 	
 	/// Decide if the response must trigger a global backoff for the scope.
-	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ status: HTTPResponse.Status) -> Bool
+	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
 	
 	public init(
 		scopeHash: @escaping (_ request : HTTPRequestComponents) -> AnyHashable?,
-		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ status: HTTPResponse.Status) -> Bool
+		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
 	) {
 		self.isGlobalBackoff = isGlobalBackoff
 		self.scopeHash = scopeHash
@@ -344,8 +344,8 @@ public struct RetryBackoffPolicy {
 
 	public static let `default` = RetryBackoffPolicy { req in
 		req.urlComponents.host
-	} isGlobalBackoff: { _, status in
-		Set([429, 503]).contains(status.code)
+	} isGlobalBackoff: { _, response in
+		Set([429, 503]).contains(response.status.code)
 	}
 }
 
@@ -383,7 +383,9 @@ private struct retryMiddleware: HTTPClientMiddleware {
 			if count > 0 {
 				let interval = UInt64(max(retryAfterHeader, interval(count - 1, response)) * 1_000_000_000)
 				if interval > 0 {
-					if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response.status) {
+					if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response) {
+						Logger(label: "SwiftAPIClient")
+							.trace("Backing off requests to '\(hash.base)' for \(Double(interval) / 1_000_000_000) seconds due to \(response.status) status code.")
 						_ = try await withThrowingSynchronizedAccess(id: hash) {
 							try await Task.sleep(nanoseconds: interval)
 							return interval
@@ -414,6 +416,8 @@ private struct retryMiddleware: HTTPClientMiddleware {
 					retryAfterHeader = httpResponse.headerFields[.retryAfter].flatMap {
 						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
 					} ?? 0
+				} else {
+					retryAfterHeader = 0
 				}
 				if !needRetry(nil) {
 					return (data, httpResponse)
