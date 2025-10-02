@@ -18,16 +18,19 @@ public extension APIClient {
 		/// - Parameter keyPath: A `WritableKeyPath` to the configuration property.
 		/// - Returns: The value of the configuration property if it exists, or `nil` otherwise.
 		public subscript<T>(_ keyPath: WritableKeyPath<APIClient.Configs, T>) -> T? {
-			get { values[keyPath] as? T }
-			set { values[keyPath] = newValue }
-		}
-
-		/// Provides subscript access to configuration values based on their key paths.
-		/// - Parameter keyPath: A `WritableKeyPath` to the configuration property.
-		/// - Returns: The value of the configuration property if it exists, or `nil` otherwise.
-		public subscript<T>(_ keyPath: WritableKeyPath<APIClient.Configs, T?>) -> T? {
-			get { values[keyPath] as? T }
-			set { values[keyPath] = newValue }
+			get {
+				if let value = values[keyPath] {
+					return value as? T
+				}
+				return nil
+			}
+			set {
+				if let newValue {
+					values[keyPath] = newValue
+				} else {
+					values.removeValue(forKey: keyPath)
+				}
+			}
 		}
 
 		/// Returns a new `Configs` instance with a modified configuration value.

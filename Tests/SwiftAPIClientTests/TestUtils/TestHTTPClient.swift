@@ -8,14 +8,14 @@ extension HTTPClient {
 
 	static func test() -> HTTPClient {
 		HTTPClient { request, configs in
-			try configs.testHTTPClient(request, configs)
+			try await configs.testHTTPClient(request, configs)
 		}
 	}
 }
 
 extension APIClient.Configs {
 
-	var testHTTPClient: (HTTPRequestComponents, APIClient.Configs) throws -> (Data, HTTPResponse) {
+	var testHTTPClient: (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse) {
 		get { self[\.testHTTPClient] ?? { _, _ in throw Unimplemented() } }
 		set { self[\.testHTTPClient] = newValue }
 	}
@@ -27,20 +27,20 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> Void = { _, _ in }
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) async throws -> Void = { _, _ in }
 	) async throws -> Data {
 		try await httpTest {
-			try test($0, $1)
+			try await test($0, $1)
 			return Data()
 		}
 	}
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> (Data, HTTPResponse)
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
 	) async throws -> Data {
 		try await configs(\.testHTTPClient) {
-			try test($0, $1)
+			try await test($0, $1)
 		}
 		.httpClient(.test())
 		.call(.http)
@@ -48,10 +48,10 @@ extension APIClient {
 
 	@discardableResult
 	func httpTest(
-		test: @escaping (HTTPRequestComponents, APIClient.Configs) throws -> Data
+		test: @escaping (HTTPRequestComponents, APIClient.Configs) async throws -> Data
 	) async throws -> Data {
 		try await httpTest {
-			let data = try test($0, $1)
+			let data = try await test($0, $1)
 			return (data, HTTPResponse(status: .ok))
 		}
 	}

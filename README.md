@@ -161,7 +161,7 @@ Custom callers can be created for different types of requests, such as WebSocket
 The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be customized with the `.bodyDecoder` modifier. The default `bodyDecoder` is `JSONDecoder()`.
 
 #### Some execution modifiers
-- `.retry(limit:)` for retrying a request a specified number of times.
+- `.retry()` for retrying requests with configurable conditions, limits, intervals, and automatic `Retry-After` header support.
 - `.throttle(interval:)` for throttling requests with a specified interval.
 - `.timeout(_:)` for setting an execution timeout.
 - `.waitForConnection()` for waiting for a connection before executing a request.

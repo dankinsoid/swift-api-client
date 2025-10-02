@@ -25,7 +25,7 @@ public extension APIClient.Configs {
 
 	/// The code location of the call site.
 	var codeLocation: CodeLocation? {
-		get { self[\.codeLocation] }
+		get { self[\.codeLocation] ?? nil }
 		set { self[\.codeLocation] = newValue }
 	}
 }

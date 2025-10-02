@@ -4,15 +4,40 @@ import XCTest
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+#if canImport(Darwin)
+import Darwin
+#else
+import Glibc
+#endif
 
 final class RetryModifierTests: XCTestCase {
 
 	let client = APIClient(baseURL: URL(string: "https://example.com")!)
+		.retryInterval(0)
 
-	func testRetryWithLimit() async throws {
+	// MARK: - Basic Retry Tests
+
+	func testDefaultRetryCondition() async throws {
 		var attempts = 0
+		let client = client.retry()
 
-		let client = client.retry(limit: 2, interval: 0)
+		// Should retry GET on network error
+		do {
+			try await client.httpTest { _, _ -> Void in
+				attempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(attempts, 6) // 1 initial + 5 retries (default limit)
+		}
+	}
+
+	func testRetryLimit() async throws {
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryLimit(3)
 
 		do {
 			try await client.httpTest { _, _ -> Void in
@@ -21,15 +46,16 @@ final class RetryModifierTests: XCTestCase {
 			}
 			XCTFail("Expected error")
 		} catch {
-			XCTAssertEqual(attempts, 3) // Initial attempt + 2 retries
+			XCTAssertEqual(attempts, 4) // Retries up to limit (1 initial + retries)
 		}
 	}
 
-	func testRetryWithoutLimit() async throws {
+	func testRetryLimitNil() async throws {
 		var attempts = 0
-		let maxAttempts = 5
-
-		let client = client.retry(limit: nil, interval: 0)
+		let maxAttempts = 10
+		let client = client
+			.retryLimit(nil)
+			.retry()
 
 		do {
 			try await client.httpTest { _, _ -> Data in
@@ -40,18 +66,23 @@ final class RetryModifierTests: XCTestCase {
 				return Data()
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw \(error)")
 		}
 
 		XCTAssertEqual(attempts, maxAttempts)
 	}
 
-	func testRetryInterval() async throws {
+	// MARK: - Interval Tests
+
+	func testFixedRetryInterval() async throws {
 		let startTime = Date()
 		var attempts = 0
 		let interval: TimeInterval = 0.1
 
-		let client = client.retry(limit: 2, interval: interval)
+		let client = client
+			.retry()
+			.retryLimit(2)
+			.retryInterval(interval)
 
 		do {
 			try await client.httpTest { _, _ -> Void in
@@ -61,18 +92,21 @@ final class RetryModifierTests: XCTestCase {
 			XCTFail("Expected error")
 		} catch {
 			let elapsed = Date().timeIntervalSince(startTime)
-			XCTAssertGreaterThanOrEqual(elapsed, interval * 2) // 2 retry intervals
+			XCTAssertGreaterThanOrEqual(elapsed, interval * 2)
 			XCTAssertEqual(attempts, 3)
 		}
 	}
 
-	func testRetryWithDynamicInterval() async throws {
+	func testDynamicRetryInterval() async throws {
 		let startTime = Date()
 		var attempts = 0
 
-		let client = client.retry(limit: 2, interval: { retryCount in
-			return TimeInterval(retryCount + 1) * 0.05 // 0.05, 0.1
-		})
+		let client = client
+			.retry()
+			.retryLimit(2)
+			.retryInterval { attempt, _ in
+				TimeInterval(attempt + 1) * 0.05
+			}
 
 		do {
 			try await client.httpTest { _, _ -> Void in
@@ -87,12 +121,41 @@ final class RetryModifierTests: XCTestCase {
 		}
 	}
 
-	func testRetryRequestFailedCondition() async throws {
+	func testExponentialBackoff() async throws {
 		var attempts = 0
+		var intervals: [TimeInterval] = []
 
-		let client = client.retry(when: .requestFailed, limit: 2, interval: 0)
+		let client = client
+			.retry()
+			.retryLimit(3)
+			.retryInterval { attempt, _ in
+				let interval = min(0.01 * pow(2.0, Double(attempt)), 1.0)
+				intervals.append(interval)
+				return interval
+			}
 
-		// Test with network error (should retry)
+		do {
+			try await client.httpTest { _, _ -> Void in
+				attempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(attempts, 4)
+			XCTAssertEqual(intervals, [0.01, 0.02, 0.04])
+		}
+	}
+
+	// MARK: - Retry Condition Tests
+
+	func testRequestFailedCondition() async throws {
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.requestFailed)
+			.retryLimit(2)
+
+		// Network error - should retry
 		do {
 			try await client.httpTest { _, _ -> Void in
 				attempts += 1
@@ -105,79 +168,45 @@ final class RetryModifierTests: XCTestCase {
 
 		attempts = 0
 
-		// Test with 500 error (should retry for safe methods)
+		// Successful response - should not retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
-				return (Data(), HTTPResponse(status: .internalServerError))
+				return (Data(), HTTPResponse(status: .ok))
 			}
 		} catch {
-			XCTFail("Should not throw error")
-		}
-
-		XCTAssertEqual(attempts, 3) // Should retry on error status
-	}
-
-	func testRetryStatusCodesCondition() async throws {
-		var attempts = 0
-
-		let client = client.retry(when: .statusCodes(.tooManyRequests, .internalServerError), limit: 2, interval: 0)
-
-		// Test with 429 status (should retry)
-		do {
-			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
-				attempts += 1
-				return (Data(), HTTPResponse(status: .tooManyRequests))
-			}
-		} catch {
-			XCTFail("Should not throw error")
-		}
-
-		XCTAssertEqual(attempts, 3)
-
-		attempts = 0
-
-		// Test with 404 status (should not retry)
-		do {
-			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
-				attempts += 1
-				return (Data(), HTTPResponse(status: .notFound))
-			}
-		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 1)
 	}
 
-	func testRetryMethodsCondition() async throws {
+	func testRequestMethodIsSafeCondition() async throws {
 		var getAttempts = 0
 		var postAttempts = 0
 
-		let client = client.retry(when: .methods(.get), limit: 2, interval: 0)
+		let client = client
+			.retry()
+			.retryCondition(.requestMethodIsSafe)
+			.retryLimit(2)
+			.retryInterval(0)
 
-		// Test GET request (should retry)
+		// GET (safe) - should retry
 		do {
-			try await client.httpTest { request, _ -> Data in
-				if request.method == .get {
-					getAttempts += 1
-					throw URLError(.networkConnectionLost)
-				}
-				return Data()
+			try await client.httpTest { _, _ -> Void in
+				getAttempts += 1
+				throw URLError(.networkConnectionLost)
 			}
 			XCTFail("Expected error")
 		} catch {
 			XCTAssertEqual(getAttempts, 3)
 		}
 
-		// Test POST request (should not retry)
+		// POST (unsafe) - should not retry
 		do {
-			try await client.method(.post).httpTest { request, _ -> Data in
-				if request.method == .post {
-					postAttempts += 1
-					throw URLError(.networkConnectionLost)
-				}
-				return Data()
+			try await client.method(.post).httpTest { _, _ -> Void in
+				postAttempts += 1
+				throw URLError(.networkConnectionLost)
 			}
 			XCTFail("Expected error")
 		} catch {
@@ -185,168 +214,298 @@ final class RetryModifierTests: XCTestCase {
 		}
 	}
 
-	func testRetryConditionAnd() async throws {
+	func testStatusCodesCondition() async throws {
 		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.statusCodes(.tooManyRequests, .internalServerError))
+			.retryLimit(2)
+			.retryInterval(0)
 
-		let condition = RetryRequestCondition.methods(.get).and(.statusCodes(.internalServerError))
-		let client = client.retry(when: condition, limit: 2, interval: 0)
-
-		// Test GET + 500 (should retry)
+		// 429 - should retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
-				return (Data(), HTTPResponse(status: .internalServerError))
+				return (Data(), HTTPResponse(status: .tooManyRequests))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 3)
 
 		attempts = 0
 
-		// Test GET + 404 (should not retry - wrong status)
+		// 404 - should not retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
 				return (Data(), HTTPResponse(status: .notFound))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 1)
 	}
 
-	func testRetryConditionOr() async throws {
+	func testMethodsCondition() async throws {
+		var getAttempts = 0
+		var postAttempts = 0
+
+		let client = client
+			.retry()
+			.retryCondition(.methods(.get, .put))
+			.retryLimit(2)
+			.retryInterval(0)
+
+		// GET - should retry
+		do {
+			try await client.httpTest { _, _ -> Void in
+				getAttempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(getAttempts, 3)
+		}
+
+		// POST - should not retry
+		do {
+			try await client.method(.post).httpTest { _, _ -> Void in
+				postAttempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(postAttempts, 1)
+		}
+	}
+
+	func testRateLimitExceededCondition() async throws {
 		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.rateLimitExceeded)
+			.retryLimit(2)
+			.retryInterval(0)
 
-		let condition = RetryRequestCondition.statusCodes(.tooManyRequests).or(.statusCodes(.internalServerError))
-		let client = client.retry(when: condition, limit: 2, interval: 0)
-
-		// Test 429 (should retry)
+		// 429 - should retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
 				return (Data(), HTTPResponse(status: .tooManyRequests))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 3)
 
 		attempts = 0
 
-		// Test 500 (should retry)
+		// 500 - should not retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
 				return (Data(), HTTPResponse(status: .internalServerError))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
-		XCTAssertEqual(attempts, 3)
+		XCTAssertEqual(attempts, 1)
 	}
 
-	func testRateLimitExceededCondition() async throws {
+	// MARK: - Condition Composition Tests
+
+	func testAndCondition() async throws {
 		var attempts = 0
+		let condition = RetryRequestCondition.methods(.get).and(.statusCodes(.internalServerError))
+		let client = client
+			.retry()
+			.retryCondition(condition)
+			.retryLimit(2)
+			.retryInterval(0)
 
-		let client = client.retry(when: .rateLimitExceeded, limit: 2, interval: 0)
-
-		// Test 429 with GET (should retry)
+		// GET + 500 - should retry
 		do {
 			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
-				return (Data(), HTTPResponse(status: .tooManyRequests))
+				return (Data(), HTTPResponse(status: .internalServerError))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 3)
 
 		attempts = 0
 
-		// Test 429 with POST (should not retry - unsafe method)
+		// GET + 404 - should not retry
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .notFound))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 1)
+
+		attempts = 0
+
+		// POST + 500 - should not retry
 		do {
 			try await client.method(.post).httpTest { _, _ -> (Data, HTTPResponse) in
 				attempts += 1
-				return (Data(), HTTPResponse(status: .tooManyRequests))
+				return (Data(), HTTPResponse(status: .internalServerError))
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 1)
 	}
 
-	func testRetryWithCancellationError() async throws {
+	func testOrCondition() async throws {
 		var attempts = 0
+		let condition = RetryRequestCondition.statusCodes(.tooManyRequests).or(.statusCodes(.serviceUnavailable))
+		let client = client
+			.retry()
+			.retryCondition(condition)
+			.retryLimit(2)
+			.retryInterval(0)
 
-		let client = client.retry(when: .requestFailed, limit: 2, interval: 0)
+		// 429 - should retry
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
 
-		// Test with cancellation error (should not retry)
+		XCTAssertEqual(attempts, 3)
+
+		attempts = 0
+
+		// 503 - should retry
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .serviceUnavailable))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 3)
+
+		attempts = 0
+
+		// 500 - should not retry
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .internalServerError))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 1)
+	}
+
+	func testComplexConditions() async throws {
+		var attempts = 0
+		let condition = RetryRequestCondition.and(
+			.methods(.get, .post),
+			.or(
+				.requestFailed,
+				.statusCodes(.serviceUnavailable)
+			)
+		)
+
+		let client = client
+			.retry()
+			.retryCondition(condition)
+			.retryLimit(2)
+			.retryInterval(0)
+
+		// GET + network error - should retry
+		do {
+			try await client.httpTest { _, _ -> Void in
+				attempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(attempts, 3)
+		}
+
+		attempts = 0
+
+		// POST + 503 - should retry
+		do {
+			try await client.method(.post).httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .serviceUnavailable))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 3)
+
+		attempts = 0
+
+		// DELETE + 503 - should not retry (wrong method)
+		do {
+			try await client.method(.delete).httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .serviceUnavailable))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 1)
+	}
+
+	// MARK: - Cancellation Tests
+
+	func testCancellationNotRetried() async throws {
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.requestFailed)
+			.retryLimit(3)
+			.retryInterval(0)
+
 		do {
 			try await client.httpTest { _, _ -> Void in
 				attempts += 1
 				throw CancellationError()
 			}
 			XCTFail("Expected error")
-		} catch {
+		} catch is CancellationError {
 			XCTAssertEqual(attempts, 1)
+		} catch {
+			XCTFail("Wrong error type")
 		}
 	}
 
-	func testRetryKey() async throws {
-		var hostAAttempts = 0
-		var hostBAttempts = 0
+	// MARK: - Success After Failure Tests
 
-		let client = client.retry(
-			retryKey: { request in
-				return request.url?.host ?? "unknown"
-			},
-			when: .requestFailed,
-			limit: 2,
-			interval: 0.1
-		)
-
-		// Start concurrent requests to different hosts
-		async let hostATask: Void = {
-			do {
-				try await client.url(URL(string: "https://host-a.com")!).httpTest { _, _ -> Void in
-					hostAAttempts += 1
-					throw URLError(.networkConnectionLost)
-				}
-			} catch {
-				// Expected
-			}
-		}()
-
-		async let hostBTask: Void = {
-			do {
-				try await client.url(URL(string: "https://host-b.com")!).httpTest { _, _ -> Void in
-					hostBAttempts += 1
-					throw URLError(.networkConnectionLost)
-				}
-			} catch {
-				// Expected
-			}
-		}()
-
-		_ = await (hostATask, hostBTask)
-
-		// Both should have retried independently
-		XCTAssertEqual(hostAAttempts, 3)
-		XCTAssertEqual(hostBAttempts, 3)
-	}
-
-	func testRetrySuccessAfterFailures() async throws {
+	func testSuccessAfterRetries() async throws {
 		var attempts = 0
-
-		let client = client.retry(when: .requestFailed, limit: 5, interval: 0)
+		let client = client
+			.retry()
+			.retryLimit(5)
+			.retryInterval(0)
 
 		do {
 			try await client.httpTest { _, _ -> Data in
@@ -357,53 +516,309 @@ final class RetryModifierTests: XCTestCase {
 				return Data()
 			}
 		} catch {
-			XCTFail("Should not throw error")
+			XCTFail("Should not throw")
 		}
 
 		XCTAssertEqual(attempts, 3)
 	}
 
+	func testSuccessAfterStatusCodeRetries() async throws {
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.statusCodes(.serviceUnavailable))
+			.retryLimit(5)
+			.retryInterval(0)
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				if attempts < 4 {
+					return (Data(), HTTPResponse(status: .serviceUnavailable))
+				}
+				return (Data(), HTTPResponse(status: .ok))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 4)
+	}
+
+	// MARK: - Retry-After Header Tests
+
+	func testRetryAfterHeaderSeconds() async throws {
+		let startTime = Date()
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.statusCodes(.tooManyRequests))
+			.retryLimit(1)
+			.retryInterval(0)
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				if attempts == 1 {
+					var response = HTTPResponse(status: .tooManyRequests)
+					response.headerFields[.retryAfter] = "1"
+					return (Data(), response)
+				}
+				return (Data(), HTTPResponse(status: .ok))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		let elapsed = Date().timeIntervalSince(startTime)
+		XCTAssertEqual(attempts, 2)
+		XCTAssertGreaterThanOrEqual(elapsed, 1.0)
+	}
+
+	func testRetryAfterOnlyForConfiguredStatusCodes() async throws {
+		var attempts = 0
+		let client = client
+			.retry()
+			.retryCondition(.statusCodes(.internalServerError))
+			.retryLimit(1)
+			.retryInterval(0.05)
+			.configs(\.retryAfterHeaderStatusCodes, [.tooManyRequests]) // Only 429
+
+		let startTime = Date()
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				if attempts == 1 {
+					var response = HTTPResponse(status: .internalServerError)
+					response.headerFields[.retryAfter] = "5" // Should be ignored
+					return (Data(), response)
+				}
+				return (Data(), HTTPResponse(status: .ok))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		let elapsed = Date().timeIntervalSince(startTime)
+		XCTAssertEqual(attempts, 2)
+		XCTAssertLessThan(elapsed, 1.0) // Should use regular interval, not Retry-After
+	}
+
+	// MARK: - Global Backoff Tests
+
+	func testGlobalBackoffSynchronization() async throws {
+		actor RequestTracker {
+			var request1Attempts = 0
+			var request2Attempts = 0
+			var request1Times: [Date] = []
+			var request2Times: [Date] = []
+
+			func incrementRequest1() -> Int {
+				request1Attempts += 1
+				request1Times.append(Date())
+				return request1Attempts
+			}
+
+			func incrementRequest2() {
+				request2Attempts += 1
+				request2Times.append(Date())
+			}
+
+			func getRequest1Attempts() -> Int { request1Attempts }
+			func getRequest2Attempts() -> Int { request2Attempts }
+			func getRequest1Times() -> [Date] { request1Times }
+			func getRequest2Times() -> [Date] { request2Times }
+		}
+
+		let tracker = RequestTracker()
+
+		let client = client
+			.retry()
+			.retryCondition(.statusCodes(.tooManyRequests))
+			.retryLimit(2)
+			.retryInterval(0.1)
+
+		async let task1: Void = {
+			do {
+				try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+					let attempts = await tracker.incrementRequest1()
+					if attempts == 1 {
+						return (Data(), HTTPResponse(status: .tooManyRequests))
+					}
+					return (Data(), HTTPResponse(status: .ok))
+				}
+			} catch {
+				XCTFail("Should not throw")
+			}
+		}()
+
+		// Start second request slightly after first
+		try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+
+		async let task2: Void = {
+			do {
+				try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+					await tracker.incrementRequest2()
+					return (Data(), HTTPResponse(status: .ok))
+				}
+			} catch {
+				XCTFail("Should not throw")
+			}
+		}()
+
+		_ = await (task1, task2)
+
+		let request1Attempts = await tracker.getRequest1Attempts()
+		let request2Attempts = await tracker.getRequest2Attempts()
+		XCTAssertEqual(request1Attempts, 2)
+		XCTAssertEqual(request2Attempts, 1)
+
+		// Request 2 should wait for request 1's backoff
+		let request1Times = await tracker.getRequest1Times()
+		let request2Times = await tracker.getRequest2Times()
+		if request1Times.count >= 2 && request2Times.count >= 1 {
+			let backoffEnd = request1Times[1]
+			let request2Start = request2Times[0]
+			XCTAssertGreaterThanOrEqual(request2Start, backoffEnd)
+		}
+	}
+
+	func testCustomBackoffPolicy() async throws {
+		var attempts = 0
+		let customPolicy = RetryBackoffPolicy(
+			scopeHash: { request in
+				request.urlComponents.path
+			},
+			isGlobalBackoff: { _, response in
+				response.status == .tooManyRequests
+			}
+		)
+
+		let client = client
+			.retry()
+			.retryBackoffPolicy(customPolicy)
+			.retryCondition(.statusCodes(.tooManyRequests))
+			.retryLimit(1)
+			.retryInterval(0.05)
+
+		do {
+			try await client.path("test").httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				if attempts == 1 {
+					return (Data(), HTTPResponse(status: .tooManyRequests))
+				}
+				return (Data(), HTTPResponse(status: .ok))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 2)
+	}
+
+	func testNoBackoffWhenPolicyReturnsNil() async throws {
+		var attempts = 0
+		let noScopePolicy = RetryBackoffPolicy(
+			scopeHash: { _ in nil },
+			isGlobalBackoff: { _, _ in true }
+		)
+
+		let client = client
+			.retry()
+			.retryBackoffPolicy(noScopePolicy)
+			.retryCondition(.statusCodes(.tooManyRequests))
+			.retryLimit(1)
+			.retryInterval(0)
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				if attempts == 1 {
+					return (Data(), HTTPResponse(status: .tooManyRequests))
+				}
+				return (Data(), HTTPResponse(status: .ok))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 2)
+	}
+
+	// MARK: - Custom Retry Condition Tests
+
 	func testCustomRetryCondition() async throws {
-		var retryAttempts = 0
-		var noRetryAttempts = 0
-
-		let customCondition = RetryRequestCondition { request, result, _ in
-			// Only retry if the URL path contains "retry" but not "no-retry"
-			guard let url = request.url,
-				  url.absoluteString.contains("/retry") && !url.absoluteString.contains("/no-retry") else {
+		var attempts = 0
+		let customCondition = RetryRequestCondition { request, response, error, _ in
+			// Only retry if path contains "retry"
+			guard request.urlComponents.path.contains("retry") else {
 				return false
 			}
-
-			switch result {
-			case .success:
-				return false
-			case .failure:
-				return true
-			}
+			return error != nil || response?.status.kind.isError == true
 		}
 
-		let client = client.retry(when: customCondition, limit: 2, interval: 0)
+		let client = client
+			.retry()
+			.retryCondition(customCondition)
+			.retryLimit(2)
+			.retryInterval(0)
 
-		// Test with URL containing "retry" (should retry)
+		// Path with "retry" - should retry
 		do {
-			try await client.url(URL(string: "https://example.com/retry")!).httpTest { _, _ -> Void in
-				retryAttempts += 1
+			try await client.path("api/retry/endpoint").httpTest { _, _ -> Void in
+				attempts += 1
 				throw URLError(.networkConnectionLost)
 			}
 			XCTFail("Expected error")
 		} catch {
-			XCTAssertEqual(retryAttempts, 3)
+			XCTAssertEqual(attempts, 3)
 		}
 
-		// Test with URL not containing "retry" (should not retry)
+		attempts = 0
+
+		// Path without "retry" - should not retry
 		do {
-			try await client.url(URL(string: "https://example.com/no-retry")!).httpTest { _, _ -> Void in
-				noRetryAttempts += 1
+			try await client.path("api/endpoint").httpTest { _, _ -> Void in
+				attempts += 1
 				throw URLError(.networkConnectionLost)
 			}
 			XCTFail("Expected error")
 		} catch {
-			XCTAssertEqual(noRetryAttempts, 1)
+			XCTAssertEqual(attempts, 1)
+		}
+	}
+
+	// MARK: - Jitter Tests
+
+	func testJitterConfiguration() async throws {
+		var attempts = 0
+		let jitterConfig = RetryJitterConfigs(
+			fraction: 0.0...0.0, // No jitter for predictable testing
+			minNs: 0,
+			maxNs: 0
+		)
+
+		let client = client
+			.retry()
+			.configs(\.retryJitterConfigs, jitterConfig)
+			.retryLimit(1)
+			.retryInterval(0.1)
+
+		let startTime = Date()
+
+		do {
+			try await client.httpTest { _, _ -> Void in
+				attempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			let elapsed = Date().timeIntervalSince(startTime)
+			XCTAssertEqual(attempts, 2)
+			// With no jitter, should be close to exact interval
+			XCTAssertGreaterThanOrEqual(elapsed, 0.1)
+			XCTAssertLessThan(elapsed, 0.15)
 		}
 	}
 }
