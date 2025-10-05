@@ -41,7 +41,7 @@ public extension APIClient.Configs {
 	}
 }
 
-public struct APIErrorContext: Equatable {
+public struct APIErrorContext: Equatable, Sendable {
 
 	public var request: HTTPRequestComponents?
 	public var response: Data?
@@ -164,7 +164,7 @@ public struct APIClientError: LocalizedError, CustomStringConvertible {
 		return components.joined(separator: " - ")
 	}
 
-	public enum IncludeBodyPolicy {
+	public enum IncludeBodyPolicy: Sendable {
 
 		case never
 		case always

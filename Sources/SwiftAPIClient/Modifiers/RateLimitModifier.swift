@@ -11,7 +11,7 @@ public extension APIClient {
 	///  - methods: The set of HTTP methods to retry. If `nil`, all methods are retried. Default to `nil`.
 	///  - maxRepeatCount: The maximum number of times the request can be repeated. Default to 3.
 	@available(*, deprecated, message: "Use retry() instead")
-	func waitIfRateLimitExceeded<ID: Hashable>(
+	func waitIfRateLimitExceeded<ID: Hashable & Sendable>(
 		id: @escaping (HTTPRequestComponents) -> ID,
 		interval: TimeInterval = 30,
 		statusCodes: Set<HTTPResponse.Status> = [.tooManyRequests],
@@ -44,7 +44,7 @@ public extension APIClient {
 	}
 }
 
-private struct RateLimitMiddleware<ID: Hashable>: HTTPClientMiddleware {
+private struct RateLimitMiddleware<ID: Hashable & Sendable>: HTTPClientMiddleware {
 
 	let id: (HTTPRequestComponents) -> ID
 	let interval: TimeInterval
@@ -73,7 +73,7 @@ private struct RateLimitMiddleware<ID: Hashable>: HTTPClientMiddleware {
 			count < maxCount
 		{
 			count += 1
-			try await withThrowingSynchronizedAccess(id: id) {
+			try await withThrowingSynchronizedAccess(id: id) { [interval] in
 				try await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
 			}
 			(res, status) = try await extractStatusCodeEvenFailed {

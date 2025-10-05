@@ -184,7 +184,7 @@ public extension APIClient.Configs {
 
 public extension Set<HTTPField.Name> {
 
-	static var defaultMaskedHeaders: Set<HTTPField.Name> = [
+	static let defaultMaskedHeaders: Set<HTTPField.Name> = [
 		.authorization,
 		.authenticationInfo,
 		.proxyAuthorization,

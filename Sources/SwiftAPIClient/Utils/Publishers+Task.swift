@@ -2,7 +2,7 @@
 import Combine
 import Foundation
 
-public extension Publishers {
+extension Publishers {
 
 	struct Run<Output, Failure: Error>: Publisher {
 
@@ -14,7 +14,7 @@ public extension Publishers {
 
 		public func receive<S: Subscriber>(subscriber: S) where Failure == S.Failure, Output == S.Input {
 			Publishers.Create<Output, Failure> { onOutput, onCompletion, cancellationHandler in
-				let concurrencyTask = Task {
+				let concurrencyTask = Task { [task] in
 					await task {
 						switch $0 {
 						case let .success(output):
@@ -40,7 +40,7 @@ public extension Publishers {
 	}
 }
 
-public extension Publishers.Run where Failure == Never {
+extension Publishers.Run where Failure == Never {
 
 	init(_ task: @escaping () async -> Output) {
 		self.init { send in
@@ -57,7 +57,7 @@ public extension Publishers.Run where Failure == Never {
 	}
 }
 
-public extension Publishers.Run where Failure == Error {
+extension Publishers.Run where Failure == Error {
 
 	init(_ task: @escaping (_ send: (Output) -> Void) async throws -> Void) {
 		self.init { send in

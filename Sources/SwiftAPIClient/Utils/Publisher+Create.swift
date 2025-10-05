@@ -4,9 +4,9 @@ import Foundation
 
 extension Publishers {
 
-	struct Create<Output, Failure: Error>: Publisher {
+	struct Create<Output, Failure: Error>: Publisher, Sendable {
 
-		typealias Events = (
+		typealias Events = @Sendable (
 			@escaping (Output) -> Void,
 			@escaping (Subscribers.Completion<Failure>) -> Void,
 			@escaping (@escaping () -> Void) -> Void
@@ -27,7 +27,7 @@ extension Publishers {
 		private final actor CreateSubscription<S: Subscriber>: Subscription where Failure == S.Failure, Output == S.Input {
 
 			var subscriber: S?
-			let create: Publishers.Create<Output, Failure>
+			nonisolated let create: Publishers.Create<Output, Failure>
 			private var onCancel: [() -> Void] = []
 
 			init(

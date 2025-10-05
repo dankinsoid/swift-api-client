@@ -198,7 +198,7 @@ public extension APIClient {
 	///
 	/// Built-in conditions:
 	/// - `.default` - Safe methods + (network errors OR transient status codes)
-	/// - `.requestFailed` - Any network error (except cancellations)
+	/// - `.requestFailed` - Network errors (e.g., timeouts, connection lost)
 	/// - `.requestMethodIsSafe` - Only safe methods (GET, HEAD, OPTIONS, TRACE)
 	/// - `.retryStatusCode` - Transient codes (408, 421, 429, 500, 502, 503, 504, 509)
 	/// - `.rateLimitExceeded` - 429 Too Many Requests
@@ -286,15 +286,15 @@ public extension APIClient {
 }
 
 /// A condition that determines whether a request should be retried based on the request, the result of the request, and the client configurations.
-public struct RetryRequestCondition {
+public struct RetryRequestCondition: Sendable {
 
-	private let condition: (HTTPRequestComponents, HTTPResponse?, Error?, APIClient.Configs) -> Bool
+	private let condition: @Sendable (HTTPRequestComponents, HTTPResponse?, Error?, APIClient.Configs) -> Bool
 
 	/// Initializes a new `RetryRequestCondition` with a custom condition closure.
 	/// - Parameters:
 	///   - condition: A closure that takes the request, the result of the request, and the client configs, and returns a Boolean indicating whether to retry the request.
 	public init(
-		_ condition: @escaping (_ request: HTTPRequestComponents, _ result: HTTPResponse?, _ error: Error?, _ configs: APIClient.Configs) -> Bool
+		_ condition: @escaping @Sendable (_ request: HTTPRequestComponents, _ result: HTTPResponse?, _ error: Error?, _ configs: APIClient.Configs) -> Bool
 	) {
 		self.condition = condition
 	}
@@ -445,18 +445,18 @@ public struct RetryRequestCondition {
 }
 
 /// Backoff policy described with closures.
-public struct RetryBackoffPolicy {
+public struct RetryBackoffPolicy: Sendable {
 
 	/// Hash all requests that must share the same cooldown window.
 	/// Example: host-only, or host+token, or host+bucket(path prefix).
-	let scopeHash: (_ request: HTTPRequestComponents) -> AnyHashable?
+	let scopeHash: @Sendable (_ request: HTTPRequestComponents) -> AnyHashable?
 
 	/// Decide if the response must trigger a global backoff for the scope.
-	let isGlobalBackoff: (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+	let isGlobalBackoff: @Sendable (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
 
 	public init(
-		scopeHash: @escaping (_ request: HTTPRequestComponents) -> AnyHashable?,
-		isGlobalBackoff: @escaping (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
+		scopeHash: @escaping @Sendable (_ request: HTTPRequestComponents) -> AnyHashable?,
+		isGlobalBackoff: @escaping @Sendable (_ request: HTTPRequestComponents, _ response: HTTPResponse) -> Bool
 	) {
 		self.isGlobalBackoff = isGlobalBackoff
 		self.scopeHash = scopeHash
@@ -553,7 +553,7 @@ private struct SmartRetryMiddleware: HTTPClientMiddleware {
 }
 
 /// Configuration for jitter applied to retry intervals.
-public struct RetryJitterConfigs: Hashable {
+public struct RetryJitterConfigs: Hashable, Sendable {
 
 	/// The fraction range of the base interval to use for jitter.
 	public var fraction: ClosedRange<Double>

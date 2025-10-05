@@ -32,51 +32,6 @@ public extension APIClient.Configs {
 	}
 }
 
-struct HTTPClientMiddlewareError: Error {
-
-	public let underlying: Error
-	private var values: [PartialKeyPath<Self>: Any] = [:]
-
-	public init(_ underlying: Error) {
-		self.underlying = underlying
-	}
-
-	public init(_ underlying: String) {
-		self.underlying = Errors.custom(underlying)
-	}
-
-	public subscript<T>(_ keyPath: WritableKeyPath<Self, T>) -> T? {
-		get {
-			values[keyPath] as? T
-		}
-		set {
-			values[keyPath] = newValue
-		}
-	}
-
-	public subscript<T>(_ keyPath: WritableKeyPath<Self, T?>) -> T? {
-		get {
-			values[keyPath] as? T
-		}
-		set {
-			values[keyPath] = newValue
-		}
-	}
-
-	public func with<T>(_ keyPath: WritableKeyPath<Self, T>, _ value: T) -> HTTPClientMiddlewareError {
-		var result = self
-		result[keyPath: keyPath] = value
-		return result
-	}
-}
-
-extension HTTPClientMiddlewareError {
-
-	var response: HTTPResponse? {
-		get { self[\.response] }
-		set { self[\.response] = newValue }
-	}
-}
 
 private extension APIClient.Configs {
 
@@ -106,13 +61,7 @@ private struct HTTPClientArrayMiddleware: HTTPClientMiddleware {
 
 	private func wrapNext<T>(_ next: @escaping AnyNext<T>) -> Next<T> {
 		{ request, configs in
-			do {
-				return try await next(request, configs)
-			} catch let error as HTTPClientMiddlewareError {
-				throw error
-			} catch {
-				throw HTTPClientMiddlewareError(error)
-			}
+			try await next(request, configs)
 		}
 	}
 }

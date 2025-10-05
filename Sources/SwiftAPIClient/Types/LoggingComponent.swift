@@ -5,7 +5,7 @@ import FoundationNetworking
 import HTTPTypes
 
 /// The components to be logged.
-public struct LoggingComponents: OptionSet {
+public struct LoggingComponents: OptionSet, Sendable {
 
 	public static let method = LoggingComponents(rawValue: 1 << 0)
 	public static let path = LoggingComponents(rawValue: 1 << 1)

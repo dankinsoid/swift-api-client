@@ -1,7 +1,7 @@
 import Foundation
 
 /// A service for caching and retrieving secure data.
-public protocol SecureCacheService {
+public protocol SecureCacheService: Sendable {
 
   func load(for key: SecureCacheServiceKey) async throws -> String?
   func save(_ value: String?, for key: SecureCacheServiceKey) async throws
@@ -10,7 +10,7 @@ public protocol SecureCacheService {
 
 /// A key for a secure cache service.
 public struct SecureCacheServiceKey: Hashable, ExpressibleByStringInterpolation,
-  LosslessStringConvertible, CodingKeyRepresentable, CodingKey
+  LosslessStringConvertible, CodingKeyRepresentable, CodingKey, Sendable
 {
 
   public var value: String
@@ -145,7 +145,7 @@ public final actor MockSecureCacheService: SecureCacheService {
     public let service: String?
 
     /// The default Keychain token cache service.
-    public static var `default` = KeychainCacheService()
+    public static let `default` = KeychainCacheService()
 
     public init(service: String? = nil) {
       self.service = service

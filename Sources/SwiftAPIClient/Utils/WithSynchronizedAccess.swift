@@ -12,9 +12,9 @@ import Foundation
 /// - Throws: An error if the task execution fails. This allows for explicit error handling by the caller.
 ///
 /// This function is ideal for operations that require both synchronization and error handling, such as modifying shared data where failure must be managed explicitly.
-public func withThrowingSynchronizedAccess<T, ID: Hashable>(
+public func withThrowingSynchronizedAccess<T: Sendable, ID: Hashable & Sendable>(
 	id taskIdentifier: ID,
-	task: @escaping @Sendable () async throws -> T
+	task: sending @escaping () async throws -> T
 ) async throws -> T {
 	if let cached = await Barriers.shared.getTask(for: taskIdentifier) {
 		if let task = cached as? Task<T, Error> {
@@ -51,9 +51,9 @@ public func withThrowingSynchronizedAccess<T, ID: Hashable>(
 ///
 /// Use this function for operations that require synchronization but do not need explicit error handling to be exposed to the caller, such as read-only
 /// access to shared data where the outcomes are non-critical or are managed within the tasks themselves.
-public func withSynchronizedAccess<T, ID: Hashable>(
+public func withSynchronizedAccess<T: Sendable, ID: Hashable & Sendable>(
 	id taskIdentifier: ID,
-	task: @escaping @Sendable () async -> T
+	task: sending @escaping () async -> T
 ) async -> T {
 	if let cached = await Barriers.shared.getTask(for: taskIdentifier) {
 		if let task = cached as? Task<T, Error> {
@@ -92,7 +92,7 @@ public func withSynchronizedAccess<T, ID: Hashable>(
 /// ensuring that any necessary error handling can be performed after all such tasks have completed. It is particularly useful in
 /// scenarios where tasks modify or access shared resources and need to be executed or awaited serially to prevent data corruption or race conditions.
 @discardableResult
-public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async throws -> T? {
+public func waitForThrowingSynchronizedAccess<ID: Hashable & Sendable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async throws -> T? {
 	guard let cached = await Barriers.shared.getTask(for: taskIdentifier) else {
 		return nil
 	}
@@ -119,7 +119,7 @@ public func waitForThrowingSynchronizedAccess<ID: Hashable, T>(id taskIdentifier
 /// consistency and prevent race conditions. It's ideal for scenarios where failure of the tasks is not critical to the caller
 /// or where errors are handled within the tasks themselves.
 @discardableResult
-public func waitForSynchronizedAccess<ID: Hashable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async -> T? {
+public func waitForSynchronizedAccess<ID: Hashable & Sendable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async -> T? {
 	guard let cached = await Barriers.shared.getTask(for: taskIdentifier) else {
 		return nil
 	}

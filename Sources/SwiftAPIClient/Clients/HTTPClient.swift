@@ -5,7 +5,7 @@ import FoundationNetworking
 #endif
 
 /// A struct representing an HTTP client capable of performing network requests.
-public struct HTTPClient {
+public struct HTTPClient: Sendable {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URL request and network configurations.
 	public var data: @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (Data, HTTPResponse)
@@ -36,7 +36,7 @@ extension HTTPClient {
 	///   - response: The HTTP response to be returned by the mock client. Defaults to a 200 OK response.
 	/// - Returns: An instance of `HTTPClient` that encodes and returns the specified object and response.
 	/// - Tip: In order to use a specific encoder, configure the client using `.configs(\.bodyEncoder, encoder)` before applying this mock.
-	public static func mock(_ encodable: any Encodable, response: HTTPResponse = .init(status: .ok)) -> HTTPClient {
+	public static func mock(_ encodable: any Encodable & Sendable, response: HTTPResponse = .init(status: .ok)) -> HTTPClient {
 		HTTPClient { request, configs in
 			let data = try configs.bodyEncoder.encode(encodable)
 			return (data, response)
@@ -49,7 +49,7 @@ extension HTTPClient {
 	///   - status: The HTTP status to be used in the response.
 	/// - Returns: An instance of `HTTPClient` that encodes and returns the specified object and response.
 	/// - Tip: In order to use a specific encoder, configure the client using `.configs(\.bodyEncoder, encoder)` before applying this mock.
-	public static func mock(_ encodable: any Encodable, status: HTTPResponse.Status) -> HTTPClient {
+	public static func mock(_ encodable: any Encodable & Sendable, status: HTTPResponse.Status) -> HTTPClient {
 		.mock(encodable, response: .init(status: status))
 	}
 
@@ -58,7 +58,7 @@ extension HTTPClient {
 	///   - keyPath: The key path to the configuration property to be modified.
 	///   - value: The new value for the specified configuration property.
 	/// - Returns: An instance of `APIClient` with updated configurations.
-	public func configs<T>(_ keyPath: WritableKeyPath<APIClient.Configs, T>, _ value: T) -> HTTPClient {
+	public func configs<T: Sendable>(_ keyPath: WritableKeyPath<APIClient.Configs, T>, _ value: T) -> HTTPClient {
 		configs {
 			$0[keyPath: keyPath] = value
 		}
@@ -67,7 +67,7 @@ extension HTTPClient {
 	/// Configures the client with a closure that modifies its configurations.
 	/// - Parameter configs: A closure that takes `inout Configs` and modifies them.
 	/// - Returns: An instance of `APIClient` with updated configurations.
-	public func configs(_ configs: @escaping (inout APIClient.Configs) -> Void) -> HTTPClient {
+	public func configs(_ configs: @escaping @Sendable (inout APIClient.Configs) -> Void) -> HTTPClient {
 		HTTPClient { request, currentConfigs in
 			var newConfigs = currentConfigs
 			configs(&newConfigs)
@@ -166,7 +166,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 
 extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPResponse)> {
 
-	static func http<T>(
+	static func http<T: Sendable>(
 		task: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse),
 		validate: @escaping (T, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (T) -> Data?

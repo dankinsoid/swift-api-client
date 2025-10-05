@@ -4,15 +4,15 @@ import HTTPTypes
 import FoundationNetworking
 #endif
 
-public struct HTTPDownloadClient {
+public struct HTTPDownloadClient: Sendable {
 
 	/// A closure that asynchronously retrieves data and an HTTP response for a given URL request and network configurations.
-	public var download: (HTTPRequestComponents, APIClient.Configs) async throws -> (URL, HTTPResponse)
+	public var download: @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (URL, HTTPResponse)
 
 	/// Initializes a new `HTTPDownloadClient` with a custom data retrieval closure.
 	/// - Parameter data: A closure that takes a URL request and `APIClient.Configs`, then asynchronously returns `Data` and an `HTTPURLResponse`.
 	public init(
-		_ download: @escaping (HTTPRequestComponents, APIClient.Configs) async throws -> (URL, HTTPResponse))
+		_ download: @escaping @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (URL, HTTPResponse))
 	{
 		self.download = download
 	}

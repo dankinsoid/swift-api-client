@@ -81,7 +81,7 @@ private extension URLSession {
 	}
 }
 
-private func asyncMethod<T, S: URLSessionTask>(
+private func asyncMethod<T: Sendable, S: URLSessionTask>(
 	_ method: @escaping (
 		@escaping @Sendable (T?, URLResponse?, Error?) -> Void
 	) -> S

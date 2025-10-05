@@ -90,7 +90,7 @@ private struct WaitForConnectionMiddleware: HTTPClientMiddleware {
 
 	private func wait(reachability: Reachability) async throws {
 		try await reachability.wait(
-			for: { $0 == connection || connection == nil && $0 != .unavailable },
+			for: { [connection] in $0 == connection || connection == nil && $0 != .unavailable },
 			timeout: nil,
 			fileID: fileID,
 			line: line

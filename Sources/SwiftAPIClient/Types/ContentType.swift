@@ -3,7 +3,7 @@ import Foundation
 /// Represents a MIME content type with support for type, subtype, and parameters.
 ///
 /// Example: `.application(.json)` = `application/json`
-public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStringLiteral, LosslessStringConvertible {
+public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStringLiteral, LosslessStringConvertible, Sendable {
 
 	public typealias RawValue = String
 	public typealias StringLiteralType = String
@@ -108,7 +108,7 @@ public struct ContentType: Codable, Hashable, RawRepresentable, ExpressibleByStr
 public extension ContentType {
 
 	/// Predefined application content types.
-	struct Charset: RawRepresentable, ExpressibleByStringLiteral, Hashable {
+	struct Charset: RawRepresentable, ExpressibleByStringLiteral, Hashable, Sendable {
 
 		public var rawValue: String
 
@@ -125,7 +125,7 @@ public extension ContentType {
 	}
 
 	/// Predefined application content types.
-	struct Application: RawRepresentable, ExpressibleByStringLiteral {
+	struct Application: RawRepresentable, ExpressibleByStringLiteral, Sendable {
 
 		public var rawValue: String
 
@@ -158,7 +158,7 @@ public extension ContentType {
 	}
 
 	/// Predefined text content types.
-	struct Text: RawRepresentable, ExpressibleByStringLiteral {
+	struct Text: RawRepresentable, ExpressibleByStringLiteral, Sendable {
 
 		public var rawValue: String
 
@@ -183,7 +183,7 @@ public extension ContentType {
 	}
 
 	/// Predefined multipart content types.
-	struct Multipart: RawRepresentable, ExpressibleByStringLiteral {
+	struct Multipart: RawRepresentable, ExpressibleByStringLiteral, Sendable {
 
 		public var rawValue: String
 

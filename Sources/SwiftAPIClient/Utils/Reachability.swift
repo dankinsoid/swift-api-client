@@ -3,9 +3,9 @@ import Foundation
 import SystemConfiguration
 
 /// `Reachability` can be used to monitor the network status of a device.
-public final class Reachability {
+public final class Reachability: Sendable {
 
-	public enum Connection: CustomStringConvertible {
+	public enum Connection: CustomStringConvertible, Sendable {
 
 		case unavailable, wifi, cellular
 
@@ -32,7 +32,7 @@ public final class Reachability {
 		}
 	}
 
-	private var _allowsCellularConnection = true
+	nonisolated(unsafe) private var _allowsCellularConnection = true
 
 	/// The notification center on which "reachability changed" events are being posted
 	public var notificationCenter: NotificationCenter {
@@ -48,7 +48,7 @@ public final class Reachability {
 		}
 	}
 
-	private var _notificationCenter: NotificationCenter = .default
+	nonisolated(unsafe) private var _notificationCenter: NotificationCenter = .default
 
 	/// Current connection status
 	public var connection: Connection {
@@ -64,9 +64,9 @@ public final class Reachability {
 		}
 	}
 
-	private var subscriptions: [UUID: (Connection) -> Void] = [:]
-	private var notifierRunning = false
-	private let reachabilityRef: SCNetworkReachability
+	nonisolated(unsafe) private var subscriptions: [UUID: (Connection) -> Void] = [:]
+	nonisolated(unsafe) private var notifierRunning = false
+	nonisolated(unsafe) private let reachabilityRef: SCNetworkReachability
 	private let reachabilitySerialQueue: DispatchQueue
 	private let notificationQueue: DispatchQueue?
 	private let lock = NSRecursiveLock()
@@ -87,7 +87,7 @@ public final class Reachability {
 		}
 	}
 
-	private var _flags: SCNetworkReachabilityFlags?
+	nonisolated(unsafe) private var _flags: SCNetworkReachabilityFlags?
 
 	/// Initializes a new `Reachability` instance.
 	/// - Parameters:
@@ -251,7 +251,7 @@ public extension Reachability {
 	///   - timeout: The maximum time to wait for the condition to be satisfied.
 	/// - Throws: `CancellationError` if the task is cancelled ,`ReachabilityError` if the notifier cannot be started, or `TimeoutError` if the timeout is reached.
 	func wait(
-		for condition: @escaping (Connection) -> Bool,
+		for condition: @escaping @Sendable (Connection) -> Bool,
 		timeout: TimeInterval? = nil,
 		fileID: String = #fileID,
 		line: UInt = #line

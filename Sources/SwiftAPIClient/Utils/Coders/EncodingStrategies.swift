@@ -1,9 +1,9 @@
 import Foundation
 
-public enum ArrayEncodingStrategy {
+public enum ArrayEncodingStrategy: Sendable {
 
-	case keyed((_ path: [CodingKey]) throws -> (path: [CodingKey], items: (Int) throws -> CodingKey))
-	case value((_ path: [CodingKey], _ values: [String]) throws -> String)
+	case keyed(@Sendable (_ path: [CodingKey]) throws -> (path: [CodingKey], items: (Int) throws -> CodingKey))
+	case value(@Sendable (_ path: [CodingKey], _ values: [String]) throws -> String)
 
 	/// value1,value2
 	public static var commaSeparator: Self {
@@ -11,7 +11,7 @@ public enum ArrayEncodingStrategy {
 	}
 
 	@available(*, deprecated, renamed: "value")
-	public static func custom(_ encode: @escaping (_ path: [CodingKey], _ string: [String]) throws -> String) -> Self {
+	public static func custom(_ encode: @escaping @Sendable (_ path: [CodingKey], _ string: [String]) throws -> String) -> Self {
 		.value(encode)
 	}
 
@@ -51,11 +51,11 @@ public enum ArrayEncodingStrategy {
 	}
 }
 
-public struct BoolEncodingStrategy {
+public struct BoolEncodingStrategy: Sendable {
 
-	public let encode: (Bool) -> String
+	public let encode: @Sendable (Bool) -> String
 
-	public init(_ encode: @escaping (Bool) -> String) {
+	public init(_ encode: @escaping @Sendable (Bool) -> String) {
 		self.encode = encode
 	}
 
@@ -63,10 +63,10 @@ public struct BoolEncodingStrategy {
 	public static let literal: Self = .init(\.description)
 }
 
-public enum NestedEncodingStrategy {
+public enum NestedEncodingStrategy: Sendable {
 
-	case data(encoder: (ParametersEncoderOptions) -> DataEncoder, type: ValueType)
-	case flatten(([CodingKey]) throws -> String)
+	case data(encoder: @Sendable (ParametersEncoderOptions) -> DataEncoder, type: ValueType)
+	case flatten(@Sendable ([CodingKey]) throws -> String)
 
 	public static func json(_ encoder: JSONEncoder, encode: ValueType = .objects) -> NestedEncodingStrategy {
 		.data(encoder: { _ in encoder }, type: encode)
@@ -116,7 +116,7 @@ public enum NestedEncodingStrategy {
 		return result
 	}
 
-	public enum ValueType {
+	public enum ValueType: Sendable {
 		case objects, arraysAndObjects
 	}
 }
@@ -227,7 +227,7 @@ extension JSONEncoder.KeyEncodingStrategy {
 }
 
 @available(macOS 10.12, iOS 10.0, watchOS 3.0, tvOS 10.0, *)
-private let _iso8601Formatter: ISO8601DateFormatter = {
+private nonisolated(unsafe) let _iso8601Formatter: ISO8601DateFormatter = {
 	let formatter = ISO8601DateFormatter()
 	formatter.formatOptions = .withInternetDateTime
 	return formatter

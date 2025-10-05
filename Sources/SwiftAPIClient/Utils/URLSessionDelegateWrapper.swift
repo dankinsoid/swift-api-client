@@ -4,7 +4,7 @@ import FoundationNetworking
 #endif
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
-final class SessionDelegateProxy: NSObject {
+final class SessionDelegateProxy: NSObject, Sendable {
 
 	var configs: APIClient.Configs? {
 		get {
@@ -22,7 +22,7 @@ final class SessionDelegateProxy: NSObject {
 	var originalDelegate: URLSessionDelegate? { configs?.urlSessionDelegate }
 
 	private let lock = NSRecursiveLock()
-	private var _configs: APIClient.Configs?
+	nonisolated(unsafe) private var _configs: APIClient.Configs?
 
 	override func responds(to aSelector: Selector!) -> Bool {
 		if super.responds(to: aSelector) {

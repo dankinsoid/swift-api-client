@@ -127,7 +127,7 @@ public extension APIClient.Configs {
 
 private extension APIClient {
 
-	func timeout<D>(
+	func timeout<D: Sendable>(
 		_ timeout: D,
 		seconds: @escaping @Sendable (D) -> TimeInterval,
 		sleep: @escaping @Sendable (D) async throws -> Void,
@@ -148,7 +148,7 @@ private extension APIClient {
 	}
 }
 
-private struct TimeoutMiddleware<D>: HTTPClientMiddleware {
+private struct TimeoutMiddleware<D: Sendable>: HTTPClientMiddleware {
 
 	let timeout: D
 	let seconds: TimeInterval

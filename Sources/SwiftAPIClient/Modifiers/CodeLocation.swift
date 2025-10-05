@@ -33,7 +33,7 @@ public extension APIClient.Configs {
 @available(*, deprecated, renamed: "CodeLocation")
 public typealias FileIDLine = CodeLocation
 
-public struct CodeLocation: Hashable {
+public struct CodeLocation: Hashable, Sendable {
 
 	public var fileID: String
 	public var line: UInt

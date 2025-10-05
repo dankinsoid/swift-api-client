@@ -8,7 +8,7 @@ import Foundation
 /// - Returns: The result of the operation.
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
 /// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
-public func withTimeout<T>(
+public func withTimeout<T: Sendable>(
 	_ timeout: TimeInterval?,
 	fileID: String = #fileID,
 	line: UInt = #line,
@@ -35,7 +35,7 @@ public func withTimeout<T>(
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
 /// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-public func withTimeout<T, C: Clock>(
+public func withTimeout<T: Sendable, C: Clock>(
 	_ timeout: C.Instant.Duration?,
 	tolerance: C.Instant.Duration? = nil,
 	clock: C,
@@ -63,7 +63,7 @@ public func withTimeout<T, C: Clock>(
 /// - Throws: An `TimeoutError` if the operation fails or times out or any error thrown by the operation.
 /// - Warning: This function does not guarantee that the operation will be cancelled when the timeout is reached. It depends on the operation to check for cancellation.
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)
-public func withTimeout<T>(
+public func withTimeout<T: Sendable>(
 	_ timeout: ContinuousClock.Instant.Duration?,
 	tolerance: ContinuousClock.Instant.Duration? = nil,
 	fileID: String = #fileID,
@@ -80,7 +80,7 @@ public func withTimeout<T>(
 	)
 }
 
-func withTimeout<T, D>(
+func withTimeout<T: Sendable, D>(
 	_ timeout: D?,
 	seconds: @escaping @Sendable (D) -> TimeInterval,
 	sleep: @escaping @Sendable (D) async throws -> Void,
