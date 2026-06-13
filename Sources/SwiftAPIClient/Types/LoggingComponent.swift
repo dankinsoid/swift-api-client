@@ -271,7 +271,7 @@ public extension LoggingComponents {
 		return message
 	}
 
-	@available(*, deprecated, renamed: "errorMessage(uuid:error:request:duration:maskedHeaders:codeLocation:)")
+	@available(*, deprecated, renamed: "errorMessage(uuid:error:request:statusCode:data:duration:maskedHeaders:codeLocation:)")
 	func errorMessage(
 		uuid: UUID,
 		error: Error,
@@ -289,11 +289,13 @@ public extension LoggingComponents {
 			codeLocation: fileIDLine
 		)
 	}
-	
+
 	func errorMessage(
 		uuid: UUID,
 		error: Error,
 		request: HTTPRequestComponents? = nil,
+		statusCode: HTTPResponse.Status? = nil,
+		data: Data? = nil,
 		duration: TimeInterval? = nil,
 		maskedHeaders: Set<HTTPField.Name>,
 		codeLocation: CodeLocation? = nil
@@ -308,7 +310,17 @@ public extension LoggingComponents {
 				} else if let codeLocation, contains(.location) {
 			message = "\(codeLocation.fileID)/\(codeLocation.line)\n" + message
 		}
+		if let statusCode, contains(.statusCode) {
+			message += "\(statusCode.code) \(statusCode.reasonPhrase) "
+		}
 		message += "❗️\(error.humanReadable)❗️"
+		// The response body carries the service's machine-readable error detail
+		// (e.g. Google's `error.errors[].reason`/`location`), which `humanReadable`
+		// collapses to a single generic line. Append it when the body component is
+		// enabled so 4xx/5xx failures stay attributable from logs alone.
+		if contains(.body), let data, let bodyString = String(data: data, encoding: .utf8), !bodyString.isEmpty {
+			message += "\n\(bodyString)"
+		}
 		return message
 	}
 

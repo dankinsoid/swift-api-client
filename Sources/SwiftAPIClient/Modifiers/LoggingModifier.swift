@@ -126,6 +126,8 @@ public extension APIClient.Configs {
 				uuid: uuid,
 				error: error,
 				request: request,
+				statusCode: response?.status,
+				data: data,
 				duration: duration,
 				maskedHeaders: logMaskedHeaders,
 				codeLocation: codeLocation
