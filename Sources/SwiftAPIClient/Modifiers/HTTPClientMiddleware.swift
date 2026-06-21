@@ -33,7 +33,7 @@ public extension APIClient.Configs {
 }
 
 
-private extension APIClient.Configs {
+extension APIClient.Configs {
 
 	var httpClientArrayMiddleware: HTTPClientArrayMiddleware {
 		get { self[\.httpClientArrayMiddleware] ?? HTTPClientArrayMiddleware() }
@@ -41,7 +41,7 @@ private extension APIClient.Configs {
 	}
 }
 
-private struct HTTPClientArrayMiddleware: HTTPClientMiddleware {
+struct HTTPClientArrayMiddleware: HTTPClientMiddleware {
 
 	typealias AnyNext<T> = @Sendable (HTTPRequestComponents, APIClient.Configs) async throws -> (T, HTTPResponse)
 

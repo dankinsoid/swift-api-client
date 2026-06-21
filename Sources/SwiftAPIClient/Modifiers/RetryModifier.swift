@@ -277,11 +277,111 @@ public extension APIClient {
 	///     ))
 	/// ```
 	///
+	/// **Per-Condition Rules:**
+	///
+	/// Multiple `retry` calls stack into independent rules instead of overwriting each other.
+	/// Each rule carries its own condition, limit, and interval, and keeps its own attempt counter,
+	/// so different failures can be retried with different policies:
+	/// ```swift
+	/// client
+	///     .retry()                                       // sensible defaults, as a fallback
+	///     .retry(when: .rateLimitExceeded, limit: 10)    // 429: more attempts
+	/// ```
+	/// When a request fails, the most recently added matching rule wins (last-match), so a child
+	/// client can override an inherited rule simply by adding its own. Use ``noRetry()`` to drop
+	/// all inherited rules and start over.
+	///
 	/// - Note: Order-dependent - only catches errors from previous modifiers, not following ones.
 	/// - Tip: Customize via `retryCondition`, `retryLimit`, `retryInterval`, `retryBackoffPolicy`,
 	/// `retryAfterHeaderStatusCodes`, `retryAfterHeaderDateFormatter`, and `retryJitterConfigs`.
 	func retry() -> APIClient {
-		httpClientMiddleware(SmartRetryMiddleware())
+		addRetryRule(RetryRule())
+	}
+
+	/// Adds a retry rule for a specific condition, with optional per-rule limit and interval.
+	///
+	/// Unlike ``retryCondition(_:)``/``retryLimit(_:)``, which configure the global fallback used by
+	/// rules that don't override them, this installs an additional, independently-counted rule.
+	/// Calling this is enough on its own - no separate ``retry()`` is required.
+	///
+	/// ```swift
+	/// client
+	///     .retry(when: .rateLimitExceeded, limit: 10)    // 429: respect Retry-After, up to 10
+	///     .retry(when: .requestFailed, limit: 3)         // network errors: 3 retries
+	/// ```
+	///
+	/// - Parameters:
+	///   - condition: The condition that selects this rule.
+	///   - limit: The maximum number of retries for this rule. `nil` inherits the global `retryLimit`.
+	///   - interval: The interval strategy for this rule. `nil` inherits the global `retryInterval`.
+	/// - Note: When several rules match the same failure, the most recently added one wins.
+	func retry(
+		when condition: RetryRequestCondition,
+		limit: Int? = nil,
+		interval: ((_ attempt: Int, _ response: HTTPResponse?) -> TimeInterval)? = nil
+	) -> APIClient {
+		addRetryRule(RetryRule(condition: condition, limit: limit, interval: interval))
+	}
+
+	/// Removes all retry rules, including those inherited from a parent client.
+	///
+	/// Useful for a child client that must override the inherited retry behaviour instead of merging
+	/// with it: `parent.noRetry().retry(when: ...)`.
+	func noRetry() -> APIClient {
+		configs { $0.retryRules = [] }
+	}
+
+	private func addRetryRule(_ rule: RetryRule) -> APIClient {
+		configs {
+			$0.retryRules.append(rule)
+			// Install the middleware exactly once, regardless of how many rules are added.
+			if !$0.retryMiddlewareInstalled {
+				$0.retryMiddlewareInstalled = true
+				$0.httpClientArrayMiddleware.middlewares.append(SmartRetryMiddleware())
+			}
+		}
+	}
+}
+
+/// A single retry policy: a condition plus the parameters applied when it matches.
+///
+/// `nil` fields inherit the corresponding global configuration (`retryCondition`, `retryLimit`,
+/// `retryInterval`), so a default-constructed rule behaves exactly like the legacy single-policy retry.
+// @ai-generated(guided)
+struct RetryRule {
+
+	/// The condition selecting this rule. `nil` inherits `configs.retryCondition`.
+	var condition: RetryRequestCondition?
+
+	/// The per-rule retry limit. `nil` inherits `configs.retryLimit` (which itself may be `nil` for unlimited).
+	var limit: Int?
+
+	/// The per-rule interval strategy. `nil` inherits `configs.retryInterval`.
+	var interval: ((_ attempt: Int, _ response: HTTPResponse?) -> TimeInterval)?
+
+	init(
+		condition: RetryRequestCondition? = nil,
+		limit: Int? = nil,
+		interval: ((_ attempt: Int, _ response: HTTPResponse?) -> TimeInterval)? = nil
+	) {
+		self.condition = condition
+		self.limit = limit
+		self.interval = interval
+	}
+}
+
+private extension APIClient.Configs {
+
+	/// The ordered list of retry rules. Evaluated last-to-first so later rules win on overlap.
+	var retryRules: [RetryRule] {
+		get { self[\.retryRules] ?? [] }
+		set { self[\.retryRules] = newValue }
+	}
+
+	/// Whether the retry middleware has already been added to the chain, to keep installation idempotent.
+	var retryMiddlewareInstalled: Bool {
+		get { self[\.retryMiddlewareInstalled] ?? false }
+		set { self[\.retryMiddlewareInstalled] = newValue }
 	}
 }
 
@@ -379,19 +479,25 @@ public struct RetryRequestCondition: Sendable {
 		}
 	}
 
-	/// The default `RetryRequestCondition` that retries safe HTTP methods (like GET) when the request fails due to error status codes or network errors.
-	/// This condition combines the following:
-	/// - `requestMethodIsSafe`: Ensures that only safe HTTP methods are retried.
-	/// - `requestFailed`: Retries when the request fails due to network errors.
-	/// - `retryStatusCode`: Retries when the response status code indicates a transient failure.
-	/// This default behavior is suitable for most scenarios where idempotent requests should be retried on failure.
+	/// The default `RetryRequestCondition`.
+	///
+	/// Retries when **either**:
+	/// - the method is safe (GET, HEAD, OPTIONS, TRACE) **and** the request failed due to a network error
+	///   or a transient status code (`requestFailed` or `retryStatusCode`); or
+	/// - the response is `429 Too Many Requests` or `503 Service Unavailable`, **regardless of method**.
+	///
+	/// The second branch covers the common case where the server rejected the request *before processing it*
+	/// (rate limiting / temporary unavailability), so retrying is safe even for non-idempotent methods like POST.
 	public static var `default`: RetryRequestCondition {
-		.and(
-			.requestMethodIsSafe,
-			.or(
-				.requestFailed,
-				.retryStatusCode
-			)
+		.or(
+			.and(
+				.requestMethodIsSafe,
+				.or(
+					.requestFailed,
+					.retryStatusCode
+				)
+			),
+			.statusCodes(.tooManyRequests, .serviceUnavailable)
 		)
 	}
 
@@ -476,79 +582,96 @@ private struct SmartRetryMiddleware: HTTPClientMiddleware {
 		configs: APIClient.Configs,
 		next: @escaping Next<T>
 	) async throws -> (T, HTTPResponse) {
-		let condition = configs.retryCondition
-		let limit = configs.retryLimit
-		let interval = configs.retryInterval
+		let rules = configs.retryRules
+		// `noRetry()` clears all rules; with nothing to do, behave as a transparent pass-through
+		// and don't participate in any global backoff window.
+		guard !rules.isEmpty else {
+			return try await next(request, configs)
+		}
+
 		let backoffPolicy = configs.retryBackoffPolicy
 		if let hash = backoffPolicy.scopeHash(request) {
 			if let interval = await waitForSynchronizedAccess(id: hash, of: UInt64.self) {
 				try await Task.sleep(nanoseconds: configs.retryJitterConfigs.delay(for: interval))
 			}
 		}
-		var count = 0
+
+		// Per-rule attempt counters: each rule's `limit` is enforced independently.
+		var counts = [Int](repeating: 0, count: rules.count)
 		var response: HTTPResponse?
 		var retryAfterHeader: TimeInterval = 0
 
-		func needRetry(_ error: Error?) -> Bool {
-			guard condition.shouldRetry(request: request, response: response, error: error, configs: configs) else {
-				return false
+		/// Returns the index of the rule that should govern a retry for the current outcome, or `nil` to stop.
+		/// Rules are evaluated last-to-first, so the most recently added matching rule wins. Once a rule claims
+		/// the outcome, its limit is final - we don't fall through to a more general rule.
+		func ruleForRetry(_ error: Error?) -> Int? {
+			for index in stride(from: rules.count - 1, through: 0, by: -1) {
+				let condition = rules[index].condition ?? configs.retryCondition
+				guard condition.shouldRetry(request: request, response: response, error: error, configs: configs) else {
+					continue
+				}
+				let limit = rules[index].limit ?? configs.retryLimit
+				if let limit, counts[index] >= limit {
+					return nil
+				}
+				return index
 			}
-			if let limit {
-				return count <= limit
-			}
-			return true
+			return nil
 		}
 
-		func retry() async throws -> (T, HTTPResponse) {
-			if count > 0 {
-				let interval = UInt64(max(retryAfterHeader, interval(count - 1, response)) * 1_000_000_000)
-				if interval > 0 {
-					if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response) {
-						Logger(label: "SwiftAPIClient")
-							.trace("Backing off requests to '\(hash.base)' for \(Double(interval) / 1_000_000_000) seconds due to \(response.status) status code.")
-						_ = try await withThrowingSynchronizedAccess(id: hash) {
-							try await Task.sleep(nanoseconds: interval)
-							return interval
-						}
-					} else {
-						try await Task.sleep(nanoseconds: interval)
-					}
+		func sleepBeforeRetry(rule index: Int) async throws {
+			let attempt = counts[index]
+			counts[index] += 1
+			let intervalFn = rules[index].interval ?? configs.retryInterval
+			let seconds = max(retryAfterHeader, intervalFn(attempt, response))
+			let nanoseconds = UInt64(max(0, seconds) * 1_000_000_000)
+			guard nanoseconds > 0 else { return }
+			if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response) {
+				Logger(label: "SwiftAPIClient")
+					.trace("Backing off requests to '\(hash.base)' for \(Double(nanoseconds) / 1_000_000_000) seconds due to \(response.status) status code.")
+				_ = try await withThrowingSynchronizedAccess(id: hash) {
+					try await Task.sleep(nanoseconds: nanoseconds)
+					return nanoseconds
 				}
+			} else {
+				try await Task.sleep(nanoseconds: nanoseconds)
 			}
-			count += 1
-			let (result, rsp): (Result<(T, HTTPResponse), Error>, HTTPResponse)
-			do {
-				(result, rsp) = try await extractResponseEvenFailed {
-					try await next(request, configs)
-				}
-			} catch {
-				response = nil
-				throw error
-			}
-			response = rsp
-			return try result.get()
 		}
 
 		while true {
+			let result: Result<(T, HTTPResponse), Error>
 			do {
-				let (data, httpResponse) = try await retry()
-				if configs.retryAfterHeaderStatusCodes.contains(httpResponse.status) {
-					retryAfterHeader = httpResponse.headerFields[.retryAfter].flatMap {
-						decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
-					} ?? 0
-				} else {
-					retryAfterHeader = 0
+				let (extracted, rsp) = try await extractResponseEvenFailed {
+					try await next(request, configs)
 				}
-				if !needRetry(nil) {
-					return (data, httpResponse)
-				}
+				response = rsp
+				result = extracted
 			} catch {
-				if !needRetry(error) {
+				// Network-level error: no response to inspect for conditions or Retry-After.
+				response = nil
+				result = .failure(error)
+			}
+
+			retryAfterHeader = 0
+			if let response, configs.retryAfterHeaderStatusCodes.contains(response.status) {
+				retryAfterHeader = response.headerFields[.retryAfter].flatMap {
+					decodeRetryAfterHeader($0, formatter: configs.retryAfterHeaderDateFormatter)
+				} ?? 0
+			}
+
+			switch result {
+			case let .success(value):
+				guard let index = ruleForRetry(nil) else {
+					return value
+				}
+				try await sleepBeforeRetry(rule: index)
+			case let .failure(error):
+				guard let index = ruleForRetry(error) else {
 					throw error
 				}
+				try await sleepBeforeRetry(rule: index)
 			}
 		}
-		throw ImpossibleError()
 	}
 }
 

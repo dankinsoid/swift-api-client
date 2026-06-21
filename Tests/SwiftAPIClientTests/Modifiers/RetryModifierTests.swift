@@ -786,6 +786,180 @@ final class RetryModifierTests: XCTestCase {
 
 	// MARK: - Jitter Tests
 
+	// MARK: - Per-Condition Rules Tests
+
+	func testDefaultRetriesRateLimitOnUnsafeMethod() async throws {
+		var attempts = 0
+		let client = client.retry().retryLimit(2)
+
+		// POST + 429 - default now allows rate-limit retries regardless of method
+		do {
+			try await client.method(.post).httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 3)
+	}
+
+	func testDefaultRetriesServiceUnavailableOnUnsafeMethod() async throws {
+		var attempts = 0
+		let client = client.retry().retryLimit(2)
+
+		// POST + 503 - default allows it regardless of method
+		do {
+			try await client.method(.post).httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .serviceUnavailable))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 3)
+	}
+
+	func testDefaultDoesNotRetryOtherErrorsOnUnsafeMethod() async throws {
+		var attempts = 0
+		let client = client.retry().retryLimit(2)
+
+		// POST + 500 - not a rate-limit/unavailable code, unsafe method => no retry
+		do {
+			try await client.method(.post).httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .internalServerError))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 1)
+	}
+
+	func testRetryWhenIsSelfSufficient() async throws {
+		var attempts = 0
+		// No `.retry()` call - `.retry(when:)` installs the middleware on its own.
+		let client = client
+			.retry(when: .rateLimitExceeded, limit: 3)
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 4) // 1 initial + 3 retries
+	}
+
+	func testMultipleRulesIndependentLimits() async throws {
+		var rateLimitAttempts = 0
+		var networkAttempts = 0
+		let client = client
+			.retry(when: .rateLimitExceeded, limit: 5)
+			.retry(when: .requestFailed, limit: 2)
+
+		// 429 uses its own rule (limit 5)
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				rateLimitAttempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+		XCTAssertEqual(rateLimitAttempts, 6) // 1 + 5
+
+		// network error uses the other rule (limit 2)
+		do {
+			try await client.httpTest { _, _ -> Void in
+				networkAttempts += 1
+				throw URLError(.networkConnectionLost)
+			}
+			XCTFail("Expected error")
+		} catch {
+			XCTAssertEqual(networkAttempts, 3) // 1 + 2
+		}
+	}
+
+	func testLastMatchingRuleWins() async throws {
+		var attempts = 0
+		// Two overlapping rules for the same condition; the later one must win.
+		let client = client
+			.retry(when: .rateLimitExceeded, limit: 2)
+			.retry(when: .rateLimitExceeded, limit: 5)
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 6) // last rule (limit 5) wins => 1 + 5
+	}
+
+	func testNoRetryClearsInheritedRules() async throws {
+		var attempts = 0
+		let parent = client.retry(when: .rateLimitExceeded, limit: 5)
+		let child = parent.noRetry()
+
+		do {
+			try await child.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 1) // no retries after noRetry()
+	}
+
+	func testChildOverridesInheritedRuleViaNoRetry() async throws {
+		var attempts = 0
+		let parent = client.retry(when: .rateLimitExceeded, limit: 10)
+		let child = parent.noRetry().retry(when: .rateLimitExceeded, limit: 2)
+
+		do {
+			try await child.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		XCTAssertEqual(attempts, 3) // child's limit (2) => 1 + 2
+	}
+
+	func testPerRuleInterval() async throws {
+		let startTime = Date()
+		var attempts = 0
+		let client = client
+			.retry(when: .rateLimitExceeded, limit: 2, interval: { _, _ in 0.1 })
+
+		do {
+			try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+				attempts += 1
+				return (Data(), HTTPResponse(status: .tooManyRequests))
+			}
+		} catch {
+			XCTFail("Should not throw")
+		}
+
+		let elapsed = Date().timeIntervalSince(startTime)
+		XCTAssertEqual(attempts, 3)
+		XCTAssertGreaterThanOrEqual(elapsed, 0.2) // two retries * 0.1
+	}
+
 	func testJitterConfiguration() async throws {
 		var attempts = 0
 		let jitterConfig = RetryJitterConfigs(
