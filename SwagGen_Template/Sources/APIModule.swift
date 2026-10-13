@@ -19,7 +19,7 @@ public struct {{ options.name }} {
 {% if servers %}
 extension {{ options.name }} {
 
-    public struct Server: Hashable {
+    public struct Server: Hashable, Sendable {
 
         /// URL of the server
         public var url: URL

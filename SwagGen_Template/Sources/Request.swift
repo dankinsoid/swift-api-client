@@ -5,7 +5,8 @@
 import Foundation
 import SwiftAPIClient
 
-{% set tagType %}{{ tag|swiftIdentifier }}{% endset %}
+{% set tagType %}{% if tag %}{{ tag|swiftIdentifier }}{% endif %}{% endset %}
+{% macro paramType param %}{% for enum in requestEnums %}{% if not enum.isGlobal and enum.enumName == param.type %}{{ type }}.{% endif %}{% endfor %}{{ param.optionalType }}{% endmacro %}
 {% macro pathTypeName path %}{{ path|basename|upperFirstLetter|replace:"{","By_"|replace:"}",""|swiftIdentifier:"pretty" }}{% endmacro %}
 {% if options.groupingType == "path" %}
 {% macro pathPart path %}{% if path != "/" and path != "" %}{% call pathPart path|dirname %}.{% call pathTypeName path %}{% endif %}{% endmacro %}
@@ -28,7 +29,7 @@ extension {{ options.name }} {
     **{{ method|uppercase }}** {{ path }}
     */
 		{% set funcName %}{% if options.groupingType == "path" %}{{ method|lowercase|escapeReservedKeywords }}{% elif options.groupingType == "tag" and tag %}{{ type|replace:tagType,""|lowerFirstLetter }}{% else %}{{ type|lowerFirstLetter }}{% endif %}{% endset %}
-	public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }} {{ param.value }}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> {{ successType|default:"Void" }} {
+	public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }}{% if param.name != param.value %} {{ param.value }}{% endif %}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {% call paramType param %}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {% for schema in requestSchemas %}{% if schema.type == body.type %}{{ type }}.{% endif %}{% endfor %}{{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> {% for schema in responseSchemas %}{% if schema.type == successType %}{{ type }}.{% endif %}{% endfor %}{{ successType|default:"Void" }} {
         try await client
             {% if options.groupingType != "path" %}
             .path("{{ path|replace:"{","\("|replace:"}",")" }}")

@@ -21,10 +21,7 @@ options:
   dependencies:
     - name: SwiftAPIClient
       github: dankinsoid/swift-api-client
-      version: 1.1.0
-    - name: SwiftJSON
-      github: dankinsoid/swift-json
-      version: 1.1.0
+      version: 1.77.1
 templateFiles:
   - path: Sources/APIModule.swift
     destination: "{{options.name}}/{{options.name}}.swift"
@@ -37,4 +34,4 @@ templateFiles:
   - path: Sources/Request.swift
     context: operations
     destination: "{{options.name}}/Requests{% if tag %}/{{ tag|upperCamelCase }}{% endif %}/{{ type }}.swift"
-copiedFiles: ["Models", "APIClient"]
+copiedFiles: ["APIClient"]

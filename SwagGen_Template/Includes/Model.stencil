@@ -1,4 +1,4 @@
-{% macro propertyType property %}{% if property.type == "DateTime" or property.type == "DateDay" or property.raw.format == "timestamp" %}Date{% else %}{{ property.type }}{% endif %}{% if property.optional or property.raw.nullable %}?{% endif %}{% endmacro %}
+{% macro propertyType property %}{% if property.type == "DateTime" or property.type == "DateDay" or property.raw.format == "timestamp" %}Date{% elif property.raw.format == "decimal" and property.type == "String" %}Decimal{% else %}{{ property.type }}{% endif %}{% if property.optional or property.raw.nullable %}?{% endif %}{% endmacro %}
 {% macro propertyName property %}{% if property.value|hasPrefix:"_" %}_{{ property.name }}{% else %}{{ property.name }}{% endif %}{% endmacro %}
 {% if options.excludeTypes[type] == true %}
     
@@ -15,7 +15,7 @@ public typealias {{ type }} = {{ aliasType }}
 {% elif additionalPropertiesType and allProperties.count == 0 %}
 public typealias {{ type }} = [String: {{ additionalPropertiesType }}]
 {% elif discriminatorType %}
-public enum {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }}{% else %}Codable, Equatable{% endif %} {
+public enum {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }}{% else %}Codable, Equatable{% endif %}, Sendable {
 
     {% for subType in discriminatorType.subTypes %}
     case {{ subType.name }}({{ subType.type }})
@@ -54,7 +54,7 @@ public enum {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }
 		{% endfor %}
 }
 {% else %}
-public struct {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }}{% else %}Codable, Equatable{% endif %} {
+public struct {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }}{% else %}Codable, Equatable{% endif %}, Sendable {
 
     {% for property in allProperties %}
     {% if not property.raw.deprecated %}
@@ -91,6 +91,35 @@ public struct {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol
         {% endif %}
         {% endfor %}
     }
+    {% set hasDecimal %}{% for property in allProperties %}{% if not property.raw.deprecated and property.raw.format == "decimal" and property.type == "String" %}1{% endif %}{% endfor %}{% endset %}
+    {% if hasDecimal %}
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        {% for property in allProperties %}
+        {% if not property.raw.deprecated %}
+        {% if property.raw.format == "decimal" and property.type == "String" %}
+        self.{% call propertyName property %} = try container.decodeDecimal{% if property.optional or property.raw.nullable %}IfPresent{% endif %}(forKey: .{% call propertyName property %})
+        {% else %}
+        self.{% call propertyName property %} = try container.decode{% if property.optional or property.raw.nullable %}IfPresent{% endif %}({{ property.type }}.self, forKey: .{% call propertyName property %})
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        {% for property in allProperties %}
+        {% if not property.raw.deprecated %}
+        {% if property.raw.format == "decimal" and property.type == "String" %}
+        try container.encodeDecimal{% if property.optional or property.raw.nullable %}IfPresent{% endif %}({% call propertyName property %}, forKey: .{% call propertyName property %})
+        {% else %}
+        try container.encode{% if property.optional or property.raw.nullable %}IfPresent{% endif %}({% call propertyName property %}, forKey: .{% call propertyName property %})
+        {% endif %}
+        {% endif %}
+        {% endfor %}
+    }
+    {% endif %}
     {% if additionalPropertiesType %}
 
     public subscript(key: String) -> {{ additionalPropertiesType }}? {
