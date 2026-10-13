@@ -13,7 +13,7 @@ public struct APIClientCaller<Response, Value, Result> {
 		UUID,
 		HTTPRequestComponents,
 		APIClient.Configs,
-		@escaping (Response, () throws -> Void) throws -> Value
+		@escaping (Response, RawResponse, () throws -> Void) throws -> Value
 	) throws -> Result
 	private let _mockResult: (_ value: Value) throws -> Result
 
@@ -30,8 +30,38 @@ public struct APIClientCaller<Response, Value, Result> {
 		) throws -> Result,
 		mockResult: @escaping (_ value: Value) throws -> Result
 	) {
-		_call = call
+		_call = { uuid, request, configs, serialize in
+			try call(uuid, request, configs) { response, validate in
+				try serialize(response, RawResponse(response), validate)
+			}
+		}
 		_mockResult = mockResult
+	}
+
+	private init(
+		rawCall: @escaping (
+			_ uuid: UUID,
+			_ request: HTTPRequestComponents,
+			_ configs: APIClient.Configs,
+			_ serialize: @escaping (Response, RawResponse, _ validate: () throws -> Void) throws -> Value
+		) throws -> Result,
+		mockResult: @escaping (_ value: Value) throws -> Result
+	) {
+		_call = rawCall
+		_mockResult = mockResult
+	}
+
+	/// Like `init(call:mockResult:)`, but the caller reports the raw response itself.
+	static func raw(
+		call: @escaping (
+			_ uuid: UUID,
+			_ request: HTTPRequestComponents,
+			_ configs: APIClient.Configs,
+			_ serialize: @escaping (Response, RawResponse, _ validate: () throws -> Void) throws -> Value
+		) throws -> Result,
+		mockResult: @escaping (_ value: Value) throws -> Result
+	) -> APIClientCaller {
+		APIClientCaller(rawCall: call, mockResult: mockResult)
 	}
 
 	/// Performs the network call with the provided request, configurations, and serialization closure.
@@ -45,6 +75,17 @@ public struct APIClientCaller<Response, Value, Result> {
 		request: HTTPRequestComponents,
 		configs: APIClient.Configs,
 		serialize: @escaping (Response, _ validate: () throws -> Void) throws -> Value
+	) throws -> Result {
+		try _call(uuid, request, configs) { response, _, validate in
+			try serialize(response, validate)
+		}
+	}
+
+	func call(
+		uuid: UUID,
+		request: HTTPRequestComponents,
+		configs: APIClient.Configs,
+		serialize: @escaping (Response, RawResponse, _ validate: () throws -> Void) throws -> Value
 	) throws -> Result {
 		try _call(uuid, request, configs, serialize)
 	}
@@ -65,11 +106,10 @@ public struct APIClientCaller<Response, Value, Result> {
 	/// try await client.call(.http, as: .decodable)
 	/// ```
 	public func map<T>(_ mapper: @escaping (Result) throws -> T) -> APIClientCaller<Response, Value, T> {
-		var result = APIClientCaller<Response, Value, T> {
-			try mapper(_call($0, $1, $2, $3))
-		} mockResult: {
-			try mapper(_mockResult($0))
-		}
+		var result = APIClientCaller<Response, Value, T>(
+			rawCall: { try mapper(_call($0, $1, $2, $3)) },
+			mockResult: { try mapper(_mockResult($0)) }
+		)
 		result.logRequestByItSelf = logRequestByItSelf
 		return result
 	}
@@ -83,13 +123,14 @@ public struct APIClientCaller<Response, Value, Result> {
 	/// try await client.call(.http, as: .decodable)
 	/// ```
 	public func mapResponse<T>(_ mapper: @escaping (Response) throws -> T) -> APIClientCaller<T, Value, Result> {
-		var result = APIClientCaller<T, Value, Result> { id, request, configs, serialize in
-			try _call(id, request, configs) { response, validate in
-				try serialize(mapper(response), validate)
-			}
-		} mockResult: {
-			try _mockResult($0)
-		}
+		var result = APIClientCaller<T, Value, Result>(
+			rawCall: { id, request, configs, serialize in
+				try _call(id, request, configs) { response, raw, validate in
+					try serialize(mapper(response), raw, validate)
+				}
+			},
+			mockResult: { try _mockResult($0) }
+		)
 		result.logRequestByItSelf = logRequestByItSelf
 		return result
 	}
@@ -233,6 +274,7 @@ public extension APIClient {
 	) throws -> Result {
 		let uuid = UUID()
 		let start = Date()
+		let failureReported = FailureReported()
 		do {
 			return try withRequest { request, configs in
 				let codeLocation = configs.codeLocation ?? CodeLocation(fileID: fileID, line: line, function: function)
@@ -251,8 +293,10 @@ public extension APIClient {
 					configs.logRequestStarted(request, uuid: uuid)
 				}
 
-				return try caller.call(uuid: uuid, request: request, configs: configs) { response, validate in
-					let data = (response as? (Data, HTTPResponse))?.0 ?? (response as? Data)
+				return try caller.call(uuid: uuid, request: request, configs: configs) { response, raw, validate in
+					let mapped = RawResponse(response)
+					let data = raw.data ?? mapped.data
+					let httpResponse = raw.httpResponse ?? mapped.httpResponse
 					do {
 						try validate()
 						if !caller.logRequestByItSelf {
@@ -263,7 +307,7 @@ public extension APIClient {
 							configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
 							configs.logRequestCompleted(
 								request,
-								response: (response as? (Data, HTTPResponse))?.1,
+								response: httpResponse,
 								data: data,
 								uuid: uuid,
 								start: start
@@ -275,9 +319,10 @@ public extension APIClient {
 						if let data, let failure = configs.errorDecoder.decodeError(data, configs) {
 							error = failure
 						}
+						failureReported.value = true
 						throw configs.logRequestFailed(
 							request,
-							response: (response as? (Data, HTTPResponse))?.1,
+							response: httpResponse,
 							data: data,
 							start: start,
 							uuid: uuid,
@@ -287,6 +332,8 @@ public extension APIClient {
 				}
 			}
 		} catch {
+			// A synchronous caller rethrows the error its serialize step already reported.
+			guard !failureReported.value else { throw error }
 			try withConfigs { configs in
 				let codeLocation = configs.codeLocation ?? CodeLocation(fileID: fileID, line: line, function: function)
 				let configs = configs.with(\.codeLocation, codeLocation)
@@ -302,4 +349,27 @@ public extension APIClient {
 			throw error
 		}
 	}
+}
+
+/// The transport response behind a caller's `Response`, which `mapResponse` may strip.
+struct RawResponse {
+
+	var data: Data?
+	var httpResponse: HTTPResponse?
+
+	init(data: Data?, httpResponse: HTTPResponse?) {
+		self.data = data
+		self.httpResponse = httpResponse
+	}
+
+	init(_ response: Any) {
+		let pair = response as? (Data, HTTPResponse)
+		data = pair?.0 ?? response as? Data
+		httpResponse = pair?.1
+	}
+}
+
+private final class FailureReported {
+
+	var value = false
 }

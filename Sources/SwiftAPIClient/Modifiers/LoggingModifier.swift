@@ -145,7 +145,7 @@ public extension APIClient.Configs {
 				APIErrorContext(
 					request: request,
 					response: data,
-					status: response?.status,
+					httpResponse: response,
 					codeLocation: codeLocation ?? CodeLocation()
 				)
 			)

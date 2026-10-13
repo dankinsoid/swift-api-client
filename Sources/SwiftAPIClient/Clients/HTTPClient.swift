@@ -171,7 +171,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 		validate: @escaping (T, HTTPResponse, APIClient.Configs) throws -> Void,
 		data: @escaping (T) -> Data?
 	) -> APIClientCaller where Response == (T, HTTPResponse) {
-		var result = APIClientCaller { uuid, request, configs, serialize in
+		var result = APIClientCaller.raw(call: { uuid, request, configs, serialize in
 			{
 				let value: T
 				let response: HTTPResponse
@@ -198,7 +198,7 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 						error: error
 					)
 				}
-				let result = try serialize((value, response)) {
+				let result = try serialize((value, response), RawResponse(data: data(value), httpResponse: response)) {
 					try validate(value, response, configs)
 				}
 				configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)
@@ -211,9 +211,9 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				)
 				return (result, response)
 			}
-		} mockResult: { value in
+		}, mockResult: { value in
 			asyncWithResponse(value)
-		}
+		})
 		result.logRequestByItSelf = true
 		return result
 	}

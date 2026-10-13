@@ -11,12 +11,14 @@ public extension APIClient {
 			let current = configs.errorHandler
 			configs.errorHandler = { failure, configs, context in
 				let (first, second) = insertingBeforeExisting ? (handler, current) : (current, handler)
+				// Returning keeps the incoming error; throwing replaces it for the next handler and the caller.
 				do {
 					try first(failure, configs, context)
 				} catch {
 					try second(error, configs, context)
 					throw error
 				}
+				try second(failure, configs, context)
 			}
 		}
 	}
@@ -47,7 +49,8 @@ public struct APIErrorContext: Equatable, Sendable {
 	public var response: Data?
 	
 	public var httpResponse: HTTPResponse?
-	public var status: HTTPResponse.Status? { httpResponse?.status }
+	public var status: HTTPResponse.Status? { explicitStatus ?? httpResponse?.status }
+	private var explicitStatus: HTTPResponse.Status?
 	public var codeLocation: CodeLocation
 	public var fileID: String {
 		get { codeLocation.fileID }
@@ -98,6 +101,7 @@ public struct APIErrorContext: Equatable, Sendable {
 		self.request = request
 		self.httpResponse = httpResponse
 		self.response = response
+		explicitStatus = status
 		self.codeLocation = codeLocation
 	}
 
