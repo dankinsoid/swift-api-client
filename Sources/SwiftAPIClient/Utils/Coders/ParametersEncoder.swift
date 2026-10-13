@@ -202,6 +202,10 @@ final class ParametersEncoder: Encoder {
 
 	@discardableResult
 	func encode(_ value: Encodable) throws -> ParametersValue {
+		// The type checks below must see the wrapped value, not the wrapper.
+		if let wrapper = value as? AnyEncodable {
+			return try encode(wrapper.value)
+		}
 		let isArrayEncoder = IsArrayEncoder(codingPath: codingPath)
 		try? value.encode(to: isArrayEncoder)
 		let isArray = isArrayEncoder.isArray ?? false

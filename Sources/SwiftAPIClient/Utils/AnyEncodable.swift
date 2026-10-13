@@ -9,6 +9,8 @@ struct AnyEncodable: Encodable {
 	}
 
 	func encode(to encoder: Encoder) throws {
-		try value.encode(to: encoder)
+		// Encoders special-case types like Date and Decimal only when handed the value itself.
+		var container = encoder.singleValueContainer()
+		try container.encode(value)
 	}
 }

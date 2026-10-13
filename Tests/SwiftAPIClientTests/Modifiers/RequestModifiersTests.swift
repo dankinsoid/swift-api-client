@@ -64,6 +64,37 @@ final class RequestModifiersTests: XCTestCase {
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?page=some%20parameter%20%E2%9D%A4%EF%B8%8F")
 	}
 
+	func testQueryDictionaryEncodesSpecialValuesAsScalars() throws {
+		let modifiedClient = client
+			.queryEncoder(.urlQuery(dateEncodingStrategy: .iso8601))
+			.query([
+				"decimal": Decimal(string: "4.5"),
+				"date": Date(timeIntervalSince1970: 0),
+				"url": URL(string: "https://example.com/a"),
+				"data": Data([1, 2, 3]),
+			])
+
+		try XCTAssertEqual(
+			modifiedClient.request().url?.absoluteString,
+			"https://example.com?data=AQID&date=1970-01-01T00%3A00%3A00Z&decimal=4.5&url=https%3A//example.com/a"
+		)
+	}
+
+	func testBodyDictionaryHonorsJSONEncoderStrategies() throws {
+		let modifiedClient = client
+			.bodyEncoder(.json(outputFormatting: .sortedKeys, dateEncodingStrategy: .iso8601))
+			.body(["date": Date(timeIntervalSince1970: 0), "decimal": Decimal(string: "4.5")])
+
+		let body = try modifiedClient.request().body?.data
+		XCTAssertEqual(body.map { String(decoding: $0, as: UTF8.self) }, #"{"date":"1970-01-01T00:00:00Z","decimal":4.5}"#)
+	}
+
+	func testSingleQueryDecimal() throws {
+		let modifiedClient = client.query("rating_min", Decimal(string: "4.5"))
+
+		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "https://example.com?rating_min=4.5")
+	}
+
 	func testBaseURLSetting() throws {
 		let modifiedClient = client.query("test", "value").baseURL(URL(string: "http://test.net")!)
 		try XCTAssertEqual(modifiedClient.request().url?.absoluteString, "http://test.net?test=value")
