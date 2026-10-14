@@ -193,6 +193,8 @@ The `.auth` configuration is an `AuthModifier` instance with several built-in `A
 #### Token refresher
 The `.tokenRefresher(...)` modifier can be used to specify a token refresher closure, which is called when a request returns a 401 status code. The refresher closure receives the cached refresh token, the client, and the response, and returns a new token, which is then used for the request. `.refreshToken` also sets the `.auth` configuration.
 
+It is safe for backends that rotate refresh tokens and revoke the session when one is reused: refreshes of the same token run one at a time, and a request rejected with a token that another refresh has already replaced is retried with the new token instead of refreshing again. A request rejected after the cached tokens were cleared or replaced by a new sign-in is not retried. Tokens are read and written as one set with `SecureCacheService.loadTokens()`, `saveTokens(_:)` and `saveTokens(_:replacingAccessToken:)`; override them to store the set atomically. Error handlers get the access token a failed request was sent with as `APIErrorContext.accessToken`, e.g. to end the session only when the rejected token is still the current one.
+
 ### Mocking
 Built-in tools for mocking requests include:
 - `.mock(_:)` modifier to specify a mocked response for a request.

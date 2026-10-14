@@ -6,6 +6,37 @@ public protocol SecureCacheService: Sendable {
   func load(for key: SecureCacheServiceKey) async throws -> String?
   func save(_ value: String?, for key: SecureCacheServiceKey) async throws
   func clear() async throws
+
+  /// Loads the tokens stored under `.accessToken`, `.refreshToken` and `.expiryDate` as one set.
+  /// Returns `nil` when there is no access token.
+  func loadTokens() async throws -> CachedTokens?
+
+  /// Replaces the tokens stored under `.accessToken`, `.refreshToken` and `.expiryDate`; `nil` fields are removed.
+  ///
+  /// The default implementation writes key by key, access token last.
+  /// Override it to write the set atomically when the storage allows it.
+  func saveTokens(_ tokens: CachedTokens) async throws
+
+  /// Saves `tokens` refreshed from `accessToken` if it is still the cached access token.
+  /// Returns `false` without saving otherwise: a sign-out or another sign-in during the refresh wins.
+  ///
+  /// The default implementation compares and saves in two steps.
+  /// Override it to do both atomically, so a concurrent sign-out cannot be overwritten.
+  func saveTokens(_ tokens: CachedTokens, replacingAccessToken accessToken: String) async throws -> Bool
+}
+
+/// The tokens `TokenRefresherMiddleware` authorizes requests with.
+public struct CachedTokens: Hashable, Sendable {
+
+  public var accessToken: String
+  public var refreshToken: String?
+  public var expiryDate: Date?
+
+  public init(accessToken: String, refreshToken: String? = nil, expiryDate: Date? = nil) {
+    self.accessToken = accessToken
+    self.refreshToken = refreshToken
+    self.expiryDate = expiryDate
+  }
 }
 
 /// A key for a secure cache service.
@@ -57,6 +88,27 @@ extension SecureCacheService where Self == MockSecureCacheService {
 }
 
 extension SecureCacheService {
+
+  public func loadTokens() async throws -> CachedTokens? {
+    // Access token first: `saveTokens` writes it last, so the refresh token read next is never older.
+    guard let accessToken: String = try await load(for: .accessToken) else { return nil }
+    let refreshToken: String? = try await load(for: .refreshToken)
+    let expiryDate: Date? = try await load(for: .expiryDate)
+    return CachedTokens(accessToken: accessToken, refreshToken: refreshToken, expiryDate: expiryDate)
+  }
+
+  public func saveTokens(_ tokens: CachedTokens) async throws {
+    // A crash between writes leaves the old access token with the new refresh token, which still refreshes.
+    try await save(tokens.refreshToken, for: .refreshToken)
+    try await save(tokens.expiryDate, for: .expiryDate)
+    try await save(tokens.accessToken, for: .accessToken)
+  }
+
+  public func saveTokens(_ tokens: CachedTokens, replacingAccessToken accessToken: String) async throws -> Bool {
+    guard try await load(for: .accessToken) == accessToken else { return false }
+    try await saveTokens(tokens)
+    return true
+  }
 
   public func save(_ date: Date?, for key: SecureCacheServiceKey) async throws {
     try await save(date.map(DateFormatter.secureCacheService.string), for: key)
@@ -112,6 +164,31 @@ public final actor MockSecureCacheService: SecureCacheService {
 
   public func clear() async throws {
     values.removeAll()
+  }
+
+  public func loadTokens() async throws -> CachedTokens? {
+    guard let accessToken = values[.accessToken] else { return nil }
+    return CachedTokens(
+      accessToken: accessToken,
+      refreshToken: values[.refreshToken],
+      expiryDate: values[.expiryDate].flatMap(DateFormatter.secureCacheService.date)
+    )
+  }
+
+  public func saveTokens(_ tokens: CachedTokens) async throws {
+    store(tokens)
+  }
+
+  public func saveTokens(_ tokens: CachedTokens, replacingAccessToken accessToken: String) async throws -> Bool {
+    guard values[.accessToken] == accessToken else { return false }
+    store(tokens)
+    return true
+  }
+
+  private func store(_ tokens: CachedTokens) {
+    values[.accessToken] = tokens.accessToken
+    values[.refreshToken] = tokens.refreshToken
+    values[.expiryDate] = tokens.expiryDate.map(DateFormatter.secureCacheService.string)
   }
 }
 

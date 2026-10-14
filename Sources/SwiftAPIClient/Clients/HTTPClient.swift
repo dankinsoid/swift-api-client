@@ -178,10 +178,12 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 				let start = Date()
 				let responseWrapper = SendableValue<(T, HTTPResponse)?>(nil)
 				let requestWrapper = SendableValue(request)
+				let accessTokenWrapper = SendableValue<String?>(nil)
 				do {
 					(value, response) = try await configs.httpClientMiddleware.execute(request: request, configs: configs) { request, configs in
 						configs.logRequestStarted(request, uuid: uuid)
 						await requestWrapper.set(request)
+						await accessTokenWrapper.set(configs.tokenRefresherAccessToken)
 						let result = try await task(request, configs)
 						configs.listener.onResponseReceived(id: uuid, response: result, configs: configs)
 						await responseWrapper.set(result)
@@ -189,16 +191,18 @@ extension APIClientCaller where Result == AsyncThrowingValue<(Value, HTTPRespons
 					}
 				} catch {
 					let request = await requestWrapper.value
-					throw configs.logRequestFailed(
+					throw await configs.logRequestFailed(
 						request,
 						response: nil,
 						data: nil,
 						start: start,
 						uuid: uuid,
-						error: error
+						error: error,
+						accessToken: accessTokenWrapper.value
 					)
 				}
-				let result = try serialize((value, response), RawResponse(data: data(value), httpResponse: response)) {
+				let accessToken = await accessTokenWrapper.value
+				let result = try serialize((value, response), RawResponse(data: data(value), httpResponse: response, accessToken: accessToken)) {
 					try validate(value, response, configs)
 				}
 				configs.listener.onResponseSerialized(id: uuid, response: result, configs: configs)

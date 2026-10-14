@@ -326,7 +326,8 @@ public extension APIClient {
 							data: data,
 							start: start,
 							uuid: uuid,
-							error: error
+							error: error,
+							accessToken: raw.accessToken
 						)
 					}
 				}
@@ -356,10 +357,12 @@ struct RawResponse {
 
 	var data: Data?
 	var httpResponse: HTTPResponse?
+	var accessToken: String?
 
-	init(data: Data?, httpResponse: HTTPResponse?) {
+	init(data: Data?, httpResponse: HTTPResponse?, accessToken: String? = nil) {
 		self.data = data
 		self.httpResponse = httpResponse
+		self.accessToken = accessToken
 	}
 
 	init(_ response: Any) {

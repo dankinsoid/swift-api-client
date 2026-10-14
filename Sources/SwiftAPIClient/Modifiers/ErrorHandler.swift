@@ -49,6 +49,8 @@ public struct APIErrorContext: Equatable, Sendable {
 	public var response: Data?
 	
 	public var httpResponse: HTTPResponse?
+	/// The access token `TokenRefresherMiddleware` authorized the failed attempt with; `nil` without one.
+	public var accessToken: String?
 	public var status: HTTPResponse.Status? { explicitStatus ?? httpResponse?.status }
 	private var explicitStatus: HTTPResponse.Status?
 	public var codeLocation: CodeLocation

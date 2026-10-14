@@ -118,7 +118,8 @@ public extension APIClient.Configs {
 		data: Data?,
 		start: Date,
 		uuid: UUID,
-		error: Error
+		error: Error,
+		accessToken: String? = nil
 	) -> Error {
 		let duration = Date().timeIntervalSince(start)
 		if !_errorLoggingComponents.isEmpty {
@@ -139,16 +140,14 @@ public extension APIClient.Configs {
 		}
 		let finalError: Error
 		do {
-			try errorHandler(
-				error,
-				self,
-				APIErrorContext(
-					request: request,
-					response: data,
-					httpResponse: response,
-					codeLocation: codeLocation ?? CodeLocation()
-				)
+			var context = APIErrorContext(
+				request: request,
+				response: data,
+				httpResponse: response,
+				codeLocation: codeLocation ?? CodeLocation()
 			)
+			context.accessToken = accessToken
+			try errorHandler(error, self, context)
 			finalError = error
 		} catch {
 			finalError = error
