@@ -167,6 +167,7 @@ The `.decodable` serializer uses the `.bodyDecoder` configuration, which can be 
 - `.waitForConnection()` for waiting for a connection before executing a request.
 - `.backgroundTask()` for executing a request in the background task.
 - `.retryIfFailedInBackground()` for retrying a request if it fails in the background.
+- `.urlSession(configuration:)` for the `URLSessionConfiguration` of the underlying session, e.g. `.ephemeral` or one without a `urlCache`. Each configuration instance gets its own session, so set it on a long-lived client.
 
 ### Encoding and Decoding
 There are several built-in configurations for encoding and decoding:
