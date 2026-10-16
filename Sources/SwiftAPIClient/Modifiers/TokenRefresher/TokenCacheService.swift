@@ -193,6 +193,7 @@ public final actor MockSecureCacheService: SecureCacheService {
 }
 
 #if canImport(Security)
+  import CommonCrypto
   import Security
   #if canImport(UIKit)
     import UIKit
@@ -208,139 +209,347 @@ public final actor MockSecureCacheService: SecureCacheService {
     /// Creates a Keychain token cache service with the given account and service.
     /// - Parameters:
     ///  - service: The service name.
+    ///  - accessibility: When the stored values can be read. Defaults to `.afterFirstUnlock`.
     ///
     /// `service` is used to differentiate between items stored in the Keychain.
     public static func keychain(
-      service: String? = nil
+      service: String? = nil,
+      accessibility: KeychainCacheService.Accessibility = .afterFirstUnlock
     ) -> KeychainCacheService {
-      KeychainCacheService(service: service)
+      KeychainCacheService(service: service, accessibility: accessibility)
     }
   }
 
+  /// Stores values as Keychain generic passwords, one item per key.
+  ///
+  /// `saveTokens` stores the token set as one item and replaces it atomically;
+  /// `saveTokens(_:replacingAccessToken:)` compares and replaces in a single Keychain update.
+  /// Tokens saved per key by earlier versions are still read, and moved to the set on the next save.
   public struct KeychainCacheService: SecureCacheService {
 
+    /// A `kSecAttrAccessible` value: when the stored values can be read.
+    public struct Accessibility: Hashable, Sendable {
+
+      public let rawValue: String
+
+      public init(_ value: CFString) {
+        rawValue = value as String
+      }
+
+      public static let afterFirstUnlock = Accessibility(kSecAttrAccessibleAfterFirstUnlock)
+      public static let afterFirstUnlockThisDeviceOnly = Accessibility(kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
+      public static let whenUnlocked = Accessibility(kSecAttrAccessibleWhenUnlocked)
+      public static let whenUnlockedThisDeviceOnly = Accessibility(kSecAttrAccessibleWhenUnlockedThisDeviceOnly)
+      public static let whenPasscodeSetThisDeviceOnly = Accessibility(kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly)
+    }
+
     public let service: String?
+
+    /// Applied when a value is written; values are read regardless of the accessibility they were written with.
+    public let accessibility: Accessibility
 
     /// The default Keychain token cache service.
     public static let `default` = KeychainCacheService()
 
-    public init(service: String? = nil) {
+    public init(service: String? = nil, accessibility: Accessibility = .afterFirstUnlock) {
       self.service = service
+      self.accessibility = accessibility
     }
 
     public func load(for key: SecureCacheServiceKey) throws -> String? {
-      let (_, item, status) = loadStatus(for: key)
-      return try load(item: item, status: status)
+      if let field = StoredTokens.field(for: key) {
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(readQuery(account: Self.tokensAccount) as CFDictionary, &item)
+        if let stored = try decodeTokens(data(from: item, status: status)) {
+          return stored[keyPath: field]
+        }
+      }
+      var item: CFTypeRef?
+      let status = SecItemCopyMatching(readQuery(account: key.value) as CFDictionary, &item)
+      return try string(from: data(from: item, status: status))
     }
 
     public func load(for key: SecureCacheServiceKey) async throws -> String? {
-
-      var (query, item, status) = loadStatus(for: key)
-
-      // Check the result
-
-      if status == errSecInteractionNotAllowed {
-        try await waitForProtectedDataAvailable()
-        item = nil
-        status = SecItemCopyMatching(query as CFDictionary, &item)
+      if let field = StoredTokens.field(for: key), let stored = try await loadStoredTokens() {
+        return stored[keyPath: field]
       }
-
-      return try load(item: item, status: status)
+      return try await string(from: read(account: key.value))
     }
 
     public func save(_ value: String?, for key: SecureCacheServiceKey) async throws {
-      // Create a query for saving the token
-      var query: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrAccount as String: key.value,
-      ]
-      configureAccess(query: &query)
-
-      if let service {
-        query[kSecAttrService as String] = service
+      if let field = StoredTokens.field(for: key), var stored = try await loadStoredTokens() {
+        stored[keyPath: field] = value
+        _ = try await store(stored)
+        return
       }
-
-      // Try to delete the old value if it exists
-      SecItemDelete(query as CFDictionary)
-
-      if let value {
-        query[kSecValueData as String] = value.data(using: .utf8)
-        // Add the new token to the Keychain
-        var status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecInteractionNotAllowed {
-          try await waitForProtectedDataAvailable()
-          status = SecItemAdd(query as CFDictionary, nil)
-        }
-        // Check the result
-        guard status == noErr || status == errSecSuccess else {
-          throw Errors.custom("Failed to save the value to the Keychain. Status: \(status)")
-        }
-      }
+      try await write(value.map { Data($0.utf8) }, account: key.value)
     }
 
     public func clear() async throws {
+      // Token items are removed whatever accessibility they were written with: clearing signs out.
+      try await deleteLegacyTokens()
+      try await delete(account: Self.tokensAccount)
+
       var query: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccessible as String: accessibility.rawValue,
       ]
       configureAccess(query: &query)
 
-      if let service {
-        query[kSecAttrService as String] = service
+      let status = try await performWhenProtectedDataAvailable {
+        SecItemDelete(query as CFDictionary)
       }
-
-      var status = SecItemDelete(query as CFDictionary)
-      if status == errSecInteractionNotAllowed {
-        try await waitForProtectedDataAvailable()
-        status = SecItemDelete(query as CFDictionary)
-      }
-
-      guard status == noErr || status == errSecSuccess else {
+      guard status == errSecSuccess || status == errSecItemNotFound else {
         throw Errors.custom("Failed to clear the Keychain cache. Status: \(status)")
       }
     }
 
-    private func loadStatus(for key: SecureCacheServiceKey) -> ([String: Any], CFTypeRef?, OSStatus)
-    {
-      // Create a query for retrieving the value
-      var query: [String: Any] = [
-        kSecClass as String: kSecClassGenericPassword,
-        kSecAttrAccount as String: key.value,
-        kSecReturnData as String: kCFBooleanTrue!,
-        kSecMatchLimit as String: kSecMatchLimitOne,
-      ]
-      configureAccess(query: &query)
-      if let service {
-        query[kSecAttrService as String] = service
+    public func loadTokens() async throws -> CachedTokens? {
+      if let stored = try await loadStoredTokens() {
+        return stored.cachedTokens
       }
-
-      var item: CFTypeRef?
-      let status = SecItemCopyMatching(query as CFDictionary, &item)
-      return (query, item, status)
+      return try await loadLegacyTokens()
     }
 
-    private func load(item: CFTypeRef?, status: OSStatus) throws -> String? {
-      guard let data = item as? Data else {
-        if [errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain]
-          .contains(status)
-        {
-          return nil
-        } else {
-          throw Errors.custom("Failed to load the value from the Keychain. Status: \(status)")
+    public func saveTokens(_ tokens: CachedTokens) async throws {
+      _ = try await store(StoredTokens(tokens))
+    }
+
+    public func saveTokens(_ tokens: CachedTokens, replacingAccessToken accessToken: String) async throws -> Bool {
+      if try await store(StoredTokens(tokens), replacingAccessToken: accessToken) {
+        return true
+      }
+      // Tokens saved per key by an earlier version: compare and move them to the set in two steps, once.
+      guard
+        try await loadStoredTokens() == nil,
+        try await string(from: read(account: SecureCacheServiceKey.accessToken.value)) == accessToken
+      else {
+        return false
+      }
+      return try await store(StoredTokens(tokens), addingOnly: true)
+    }
+
+    // MARK: - Token set
+
+    private static let tokensAccount = "SwiftAPIClient.tokens"
+
+    private struct StoredTokens: Codable, Equatable {
+
+      var accessToken: String?
+      var refreshToken: String?
+      var expiryDate: String?
+
+      init(_ tokens: CachedTokens) {
+        accessToken = tokens.accessToken
+        refreshToken = tokens.refreshToken
+        expiryDate = tokens.expiryDate.map(DateFormatter.secureCacheService.string)
+      }
+
+      var cachedTokens: CachedTokens? {
+        accessToken.map {
+          CachedTokens(
+            accessToken: $0,
+            refreshToken: refreshToken,
+            expiryDate: expiryDate.flatMap(DateFormatter.secureCacheService.date)
+          )
         }
       }
 
+      var isEmpty: Bool {
+        accessToken == nil && refreshToken == nil && expiryDate == nil
+      }
+
+      static func field(for key: SecureCacheServiceKey) -> WritableKeyPath<StoredTokens, String?>? {
+        switch key {
+        case .accessToken: return \.accessToken
+        case .refreshToken: return \.refreshToken
+        case .expiryDate: return \.expiryDate
+        default: return nil
+        }
+      }
+    }
+
+    private func loadStoredTokens() async throws -> StoredTokens? {
+      try await decodeTokens(read(account: Self.tokensAccount))
+    }
+
+    private func decodeTokens(_ data: Data?) throws -> StoredTokens? {
+      guard let data else { return nil }
+      return try JSONDecoder().decode(StoredTokens.self, from: data)
+    }
+
+    /// Writes the set as one item and removes the per-key token items it supersedes.
+    /// - Parameters:
+    ///   - accessToken: Write only if the stored set holds this access token.
+    ///   - addingOnly: Write only if there is no stored set.
+    /// - Returns: `false` if a condition was not met and nothing was written.
+    private func store(
+      _ tokens: StoredTokens,
+      replacingAccessToken accessToken: String? = nil,
+      addingOnly: Bool = false
+    ) async throws -> Bool {
+      if tokens.isEmpty, accessToken == nil, !addingOnly {
+        // Per-key items go first: once the set is gone, they would be read as current tokens.
+        try await deleteLegacyTokens()
+        try await delete(account: Self.tokensAccount)
+        return true
+      }
+
+      let attributes: [String: Any] = [
+        kSecValueData as String: try JSONEncoder().encode(tokens),
+        // Lets `replacingAccessToken` compare inside the Keychain update.
+        kSecAttrGeneric as String: Self.fingerprint(tokens.accessToken),
+        kSecAttrAccessible as String: accessibility.rawValue,
+      ]
+      var query = readQuery(account: Self.tokensAccount, returningData: false)
+      if let accessToken {
+        query[kSecAttrGeneric as String] = Self.fingerprint(accessToken)
+      }
+
+      // A second round covers another writer adding the set between our update and add.
+      for _ in 0 ..< 2 {
+        if !addingOnly {
+          let status = try await performWhenProtectedDataAvailable {
+            SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+          }
+          if status == errSecSuccess {
+            try await deleteLegacyTokens()
+            return true
+          }
+          guard status == errSecItemNotFound else {
+            throw Errors.custom("Failed to save the tokens to the Keychain. Status: \(status)")
+          }
+          if accessToken != nil {
+            return false
+          }
+        }
+
+        let item = query.merging(attributes) { _, new in new }
+        let status = try await performWhenProtectedDataAvailable {
+          SecItemAdd(item as CFDictionary, nil)
+        }
+        if status == errSecSuccess {
+          try await deleteLegacyTokens()
+          return true
+        }
+        guard status == errSecDuplicateItem else {
+          throw Errors.custom("Failed to save the tokens to the Keychain. Status: \(status)")
+        }
+        if addingOnly {
+          return false
+        }
+      }
+      throw Errors.custom("Failed to save the tokens to the Keychain. Status: \(errSecDuplicateItem)")
+    }
+
+    private func loadLegacyTokens() async throws -> CachedTokens? {
+      // Access token first: earlier versions wrote it last.
+      guard let accessToken = try await string(from: read(account: SecureCacheServiceKey.accessToken.value)) else {
+        return nil
+      }
+      let refreshToken = try await string(from: read(account: SecureCacheServiceKey.refreshToken.value))
+      let expiryDate = try await string(from: read(account: SecureCacheServiceKey.expiryDate.value))
+      return CachedTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        expiryDate: expiryDate.flatMap(DateFormatter.secureCacheService.date)
+      )
+    }
+
+    private func deleteLegacyTokens() async throws {
+      for key in [SecureCacheServiceKey.accessToken, .refreshToken, .expiryDate] {
+        try await delete(account: key.value)
+      }
+    }
+
+    private static func fingerprint(_ accessToken: String?) -> Data {
+      guard let accessToken else { return Data() }
+      let bytes = Array(accessToken.utf8)
+      var digest = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+      CC_SHA256(bytes, CC_LONG(bytes.count), &digest)
+      return Data(digest)
+    }
+
+    // MARK: - Items
+
+    private func read(account: String) async throws -> Data? {
+      let query = readQuery(account: account)
+      var item: CFTypeRef?
+      let status = try await performWhenProtectedDataAvailable {
+        SecItemCopyMatching(query as CFDictionary, &item)
+      }
+      return try data(from: item, status: status)
+    }
+
+    private func write(_ value: Data?, account: String) async throws {
+      try await delete(account: account)
+      guard let value else { return }
+      var item = readQuery(account: account, returningData: false)
+      item[kSecValueData as String] = value
+      item[kSecAttrAccessible as String] = accessibility.rawValue
+      let status = try await performWhenProtectedDataAvailable {
+        SecItemAdd(item as CFDictionary, nil)
+      }
+      guard status == errSecSuccess else {
+        throw Errors.custom("Failed to save the value to the Keychain. Status: \(status)")
+      }
+    }
+
+    private func delete(account: String) async throws {
+      let query = readQuery(account: account, returningData: false)
+      let status = try await performWhenProtectedDataAvailable {
+        SecItemDelete(query as CFDictionary)
+      }
+      guard status == errSecSuccess || status == errSecItemNotFound else {
+        throw Errors.custom("Failed to delete the value from the Keychain. Status: \(status)")
+      }
+    }
+
+    private func readQuery(account: String, returningData: Bool = true) -> [String: Any] {
+      var query: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrAccount as String: account,
+      ]
+      if returningData {
+        query[kSecReturnData as String] = kCFBooleanTrue!
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+      }
+      configureAccess(query: &query)
+      return query
+    }
+
+    private func data(from item: CFTypeRef?, status: OSStatus) throws -> Data? {
+      if let data = item as? Data {
+        return data
+      }
+      if [errSecItemNotFound, errSecNoSuchAttr, errSecNoSuchClass, errSecNoDefaultKeychain].contains(status) {
+        return nil
+      }
+      throw Errors.custom("Failed to load the value from the Keychain. Status: \(status)")
+    }
+
+    private func string(from data: Data?) throws -> String? {
+      guard let data else { return nil }
       guard let value = String(data: data, encoding: .utf8) else {
         throw Errors.custom("Failed to convert the data to a string.")
       }
-
       return value
     }
 
     private func configureAccess(query: inout [String: Any]) {
-      query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+      if let service {
+        query[kSecAttrService as String] = service
+      }
       #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
       #endif
+    }
+
+    private func performWhenProtectedDataAvailable(_ operation: () -> OSStatus) async throws -> OSStatus {
+      let status = operation()
+      guard status == errSecInteractionNotAllowed else { return status }
+      try await waitForProtectedDataAvailable()
+      return operation()
     }
 
     private func waitForProtectedDataAvailable() async throws {
