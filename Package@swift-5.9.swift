@@ -14,6 +14,8 @@ var package = Package(
   ],
   products: [
     .library(name: "SwiftAPIClient", targets: ["SwiftAPIClient"]),
+    // Without the macros, so swift-syntax is not built.
+    .library(name: "SwiftAPIClientCore", targets: ["SwiftAPIClientCore"]),
   ],
   dependencies: [
     .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -23,18 +25,24 @@ var package = Package(
   ],
   targets: [
     .target(
-      name: "SwiftAPIClient",
+      name: "SwiftAPIClientCore",
       dependencies: [
-        .target(name: "SwiftAPIClientMacros"),
         .product(name: "Logging", package: "swift-log"),
         .product(name: "HTTPTypes", package: "swift-http-types"),
         .product(name: "HTTPTypesFoundation", package: "swift-http-types"),
-				.product(name: "Metrics", package: "swift-metrics")
+        .product(name: "Metrics", package: "swift-metrics")
+      ]
+    ),
+    .target(
+      name: "SwiftAPIClient",
+      dependencies: [
+        .target(name: "SwiftAPIClientCore"),
+        .target(name: "SwiftAPIClientMacros"),
       ]
     ),
     .testTarget(
       name: "SwiftAPIClientTests",
-      dependencies: [.target(name: "SwiftAPIClient")]
+      dependencies: [.target(name: "SwiftAPIClient"), .target(name: "SwiftAPIClientCore")]
     ),
     .macro(
       name: "SwiftAPIClientMacros",

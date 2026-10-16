@@ -1,6 +1,7 @@
 #if swift(>=5.9)
 import Foundation
 import HTTPTypes
+import SwiftAPIClientCore
 
 /// A macro that generates an HTTP call to the API client.
 ///

@@ -5,18 +5,18 @@ public struct URLQueryEncoder: QueryEncoder, ParametersEncoderOptions {
 	public typealias Output = [URLQueryItem]
 	public var dateEncodingStrategy: JSONEncoder.DateEncodingStrategy
 	public var dataEncodingStrategy: JSONEncoder.DataEncodingStrategy
-	public var arrayEncodingStrategy: SwiftAPIClient.ArrayEncodingStrategy
-	public var nestedEncodingStrategy: SwiftAPIClient.NestedEncodingStrategy
+	public var arrayEncodingStrategy: SwiftAPIClientCore.ArrayEncodingStrategy
+	public var nestedEncodingStrategy: SwiftAPIClientCore.NestedEncodingStrategy
 	public var keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy
-	public var boolEncodingStrategy: SwiftAPIClient.BoolEncodingStrategy
+	public var boolEncodingStrategy: SwiftAPIClientCore.BoolEncodingStrategy
 
 	public init(
 		dateEncodingStrategy: JSONEncoder.DateEncodingStrategy = .deferredToDate,
 		dataEncodingStrategy: JSONEncoder.DataEncodingStrategy = .base64,
 		keyEncodingStrategy: JSONEncoder.KeyEncodingStrategy = .useDefaultKeys,
-		arrayEncodingStrategy: SwiftAPIClient.ArrayEncodingStrategy = .commaSeparator,
-		nestedEncodingStrategy: SwiftAPIClient.NestedEncodingStrategy = .brackets,
-		boolEncodingStrategy: SwiftAPIClient.BoolEncodingStrategy = .literal
+		arrayEncodingStrategy: SwiftAPIClientCore.ArrayEncodingStrategy = .commaSeparator,
+		nestedEncodingStrategy: SwiftAPIClientCore.NestedEncodingStrategy = .brackets,
+		boolEncodingStrategy: SwiftAPIClientCore.BoolEncodingStrategy = .literal
 	) {
 		self.dateEncodingStrategy = dateEncodingStrategy
 		self.dataEncodingStrategy = dataEncodingStrategy
@@ -73,9 +73,9 @@ public struct URLQueryEncoder: QueryEncoder, ParametersEncoderOptions {
 	}
 
 	@available(*, deprecated, renamed: "SwiftAPIClient.ArrayEncodingStrategy")
-	public typealias ArrayEncodingStrategy = SwiftAPIClient.ArrayEncodingStrategy
+	public typealias ArrayEncodingStrategy = SwiftAPIClientCore.ArrayEncodingStrategy
 	@available(*, deprecated, renamed: "SwiftAPIClient.NestedEncodingStrategy")
-	public typealias NestedEncodingStrategy = SwiftAPIClient.NestedEncodingStrategy
+	public typealias NestedEncodingStrategy = SwiftAPIClientCore.NestedEncodingStrategy
 	@available(*, deprecated, renamed: "SwiftAPIClient.BoolEncodingStrategy")
-	public typealias BoolEncodingStrategy = SwiftAPIClient.BoolEncodingStrategy
+	public typealias BoolEncodingStrategy = SwiftAPIClientCore.BoolEncodingStrategy
 }

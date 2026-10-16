@@ -1,6 +1,6 @@
 import HTTPTypes
 import Logging
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 import XCTest
 
 final class LoggingAndListenerTests: XCTestCase {

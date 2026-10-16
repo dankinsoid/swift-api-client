@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 
 class URLComponentBuilderTests: XCTestCase {
 

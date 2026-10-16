@@ -1,7 +1,7 @@
 #if canImport(Security)
 import Foundation
 import Security
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 import XCTest
 
 final class KeychainCacheServiceTests: XCTestCase {

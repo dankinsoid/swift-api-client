@@ -324,7 +324,7 @@ struct Pet {
   }
 }
 ```
-Macros are not necessary for using `swift-api-client`; they are just syntax sugar.
+Macros are not necessary for using `swift-api-client`; they are just syntax sugar. They come with the `SwiftAPIClient` product; `SwiftAPIClientCore` has everything else.
 
 Sure, here is a concise section for your README that demonstrates the most convenient methods provided by your extensions:
 
@@ -372,6 +372,8 @@ let package = Package(
 ```ruby
 $ swift build
 ```
+
+The `SwiftAPIClient` product includes the macros, which build swift-syntax. If you don't use the macros, depend on the `SwiftAPIClientCore` product and `import SwiftAPIClientCore` instead: same API without the macros, and swift-syntax is not built.
 
 ## Author
 

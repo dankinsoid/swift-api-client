@@ -1,5 +1,5 @@
 import Foundation
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 import XCTest
 
 @available(macOS 13.0, iOS 16.0, watchOS 9.0, tvOS 16.0, *)

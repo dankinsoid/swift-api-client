@@ -32,7 +32,7 @@ public extension ContentEncoder where Self == MultipartFormDataEncoder {
 public struct MultipartFormDataEncoder: ContentEncoder {
 
 	/// The content type associated with this encoder, which is `multipart/form-data`.
-	public var contentType: SwiftAPIClient.ContentType {
+	public var contentType: SwiftAPIClientCore.ContentType {
 		.multipart(.formData, boundary: boundary)
 	}
 

@@ -13,6 +13,7 @@ var package = Package(
 	],
 	products: [
 		.library(name: "SwiftAPIClient", targets: ["SwiftAPIClient"]),
+		.library(name: "SwiftAPIClientCore", targets: ["SwiftAPIClientCore"]),
 	],
 	dependencies: [
 		.package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -21,7 +22,7 @@ var package = Package(
 	],
 	targets: [
 		.target(
-			name: "SwiftAPIClient",
+			name: "SwiftAPIClientCore",
 			dependencies: [
 				.product(name: "Logging", package: "swift-log"),
 				.product(name: "HTTPTypes", package: "swift-http-types"),
@@ -29,9 +30,13 @@ var package = Package(
 				.product(name: "Metrics", package: "swift-metrics")
 			]
 		),
+		.target(
+			name: "SwiftAPIClient",
+			dependencies: [.target(name: "SwiftAPIClientCore")]
+		),
 		.testTarget(
 			name: "SwiftAPIClientTests",
-			dependencies: [.target(name: "SwiftAPIClient")]
+			dependencies: [.target(name: "SwiftAPIClient"), .target(name: "SwiftAPIClientCore")]
 		),
 	]
 )

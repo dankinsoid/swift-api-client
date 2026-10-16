@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 
 final class CURLTests: XCTestCase {
 

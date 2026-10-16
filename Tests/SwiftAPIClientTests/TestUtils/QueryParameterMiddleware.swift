@@ -1,5 +1,5 @@
 import Foundation
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 
 /// Test middleware that adds missing query parameters to requests.
 struct QueryParameterMiddleware: HTTPClientMiddleware {

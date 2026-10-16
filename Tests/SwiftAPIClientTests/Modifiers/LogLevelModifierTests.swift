@@ -1,6 +1,6 @@
 import Foundation
 import Logging
-@testable import SwiftAPIClient
+@testable import SwiftAPIClientCore
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
