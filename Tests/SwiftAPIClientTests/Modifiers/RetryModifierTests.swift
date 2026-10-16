@@ -679,6 +679,73 @@ final class RetryModifierTests: XCTestCase {
 		}
 	}
 
+	func testSimultaneousRateLimitedRequestsShareBackoffWithoutCancellingEachOther() async throws {
+		actor RequestAttempts {
+			var counts: [Int: Int] = [:]
+			func next(_ request: Int) -> Int {
+				counts[request, default: 0] += 1
+				return counts[request, default: 0]
+			}
+		}
+
+		for round in 0 ..< 10 {
+			let attempts = RequestAttempts()
+			let client = APIClient(baseURL: URL(string: "https://backoff-\(round).example.com")!)
+				.retry()
+				.retryCondition(.statusCodes(.tooManyRequests))
+				.retryLimit(2)
+				.retryInterval(0.02)
+				.configs(\.retryJitterConfigs, .off)
+
+			try await withThrowingTaskGroup(of: Void.self) { group in
+				for request in 0 ..< 10 {
+					group.addTask {
+						try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+							let attempt = await attempts.next(request)
+							return (Data(), HTTPResponse(status: attempt == 1 ? .tooManyRequests : .ok))
+						}
+					}
+				}
+				do {
+					try await group.waitForAll()
+				} catch {
+					XCTFail("Round \(round): \(error)")
+				}
+			}
+		}
+	}
+
+	func testCancellingOneRateLimitedRequestDoesNotCancelAnothersBackoff() async throws {
+		for round in 0 ..< 20 {
+			let client = APIClient(baseURL: URL(string: "https://cancel-backoff-\(round).example.com")!)
+				.retry()
+				.retryCondition(.statusCodes(.tooManyRequests))
+				.retryLimit(1)
+				.retryInterval(0.05)
+				.configs(\.retryJitterConfigs, .off)
+
+			@Sendable func request() async throws {
+				let attempts = Attempts()
+				try await client.httpTest { _, _ -> (Data, HTTPResponse) in
+					let attempt = await attempts.next()
+					return (Data(), HTTPResponse(status: attempt == 1 ? .tooManyRequests : .ok))
+				}
+			}
+
+			let cancelled = Task { try await request() }
+			let kept = Task { try await request() }
+			try await Task.sleep(nanoseconds: 10_000_000)
+			cancelled.cancel()
+
+			do {
+				try await kept.value
+			} catch {
+				XCTFail("Round \(round): \(error)")
+			}
+			_ = try? await cancelled.value
+		}
+	}
+
 	func testCustomBackoffPolicy() async throws {
 		var attempts = 0
 		let customPolicy = RetryBackoffPolicy(
@@ -989,5 +1056,15 @@ final class RetryModifierTests: XCTestCase {
 			XCTAssertGreaterThanOrEqual(elapsed, 0.1)
 			XCTAssertLessThan(elapsed, 0.15)
 		}
+	}
+}
+
+private actor Attempts {
+
+	private var count = 0
+
+	func next() -> Int {
+		count += 1
+		return count
 	}
 }

@@ -575,6 +575,13 @@ public struct RetryBackoffPolicy: Sendable {
 	}
 }
 
+// Keeps backoff waits apart from other synchronized accesses keyed by the same host.
+// @unchecked: `hash` comes from a `@Sendable` scope hash closure.
+private struct RetryBackoffScope: Hashable, @unchecked Sendable {
+
+	let hash: AnyHashable
+}
+
 private struct SmartRetryMiddleware: HTTPClientMiddleware {
 
 	func execute<T>(
@@ -591,7 +598,7 @@ private struct SmartRetryMiddleware: HTTPClientMiddleware {
 
 		let backoffPolicy = configs.retryBackoffPolicy
 		if let hash = backoffPolicy.scopeHash(request) {
-			if let interval = await waitForSynchronizedAccess(id: hash, of: UInt64.self) {
+			if let interval = await waitForSynchronizedAccess(id: RetryBackoffScope(hash: hash), of: UInt64.self) {
 				try await Task.sleep(nanoseconds: configs.retryJitterConfigs.delay(for: interval))
 			}
 		}
@@ -629,7 +636,7 @@ private struct SmartRetryMiddleware: HTTPClientMiddleware {
 			if let response, let hash = backoffPolicy.scopeHash(request), backoffPolicy.isGlobalBackoff(request, response) {
 				Logger(label: "SwiftAPIClient")
 					.trace("Backing off requests to '\(hash.base)' for \(Double(nanoseconds) / 1_000_000_000) seconds due to \(response.status) status code.")
-				_ = try await withThrowingSynchronizedAccess(id: hash) {
+				_ = try await withThrowingSynchronizedAccess(id: RetryBackoffScope(hash: hash)) {
 					try await Task.sleep(nanoseconds: nanoseconds)
 					return nanoseconds
 				}

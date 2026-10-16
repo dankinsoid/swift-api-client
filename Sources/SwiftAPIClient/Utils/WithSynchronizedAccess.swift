@@ -16,26 +16,20 @@ public func withThrowingSynchronizedAccess<T: Sendable, ID: Hashable & Sendable>
 	id taskIdentifier: ID,
 	task: sending @escaping () async throws -> T
 ) async throws -> T {
-	if let cached = await Barriers.shared.retain(taskIdentifier) {
-		do {
-			let result = try await awaitSharedTask(id: taskIdentifier, cached: cached, as: T.self)
-			await Barriers.shared.release(taskIdentifier)
-			return result
-		} catch {
-			await Barriers.shared.release(taskIdentifier)
-			throw error
-		}
-	}
-	let task = Task(operation: task)
-	await Barriers.shared.register(taskIdentifier, task: task)
+	let operation = UncheckedSendableBox(task)
+	let lease = await Barriers.shared.join(taskIdentifier) { try await operation.value() }
+	let result: Any
 	do {
-		let result = try await awaitSharedTask(id: taskIdentifier, cached: task, as: T.self)
-		await Barriers.shared.release(taskIdentifier)
-		return result
+		result = try await lease.task.wait()
 	} catch {
-		await Barriers.shared.release(taskIdentifier)
+		await Barriers.shared.release(lease)
 		throw error
 	}
+	await Barriers.shared.release(lease)
+	guard let typed = result as? T else {
+		throw UnexpectedSharedTaskTypeError()
+	}
+	return typed
 }
 
 /// Executes a given task with synchronization based on a unique identifier, ensuring serialized access to potentially shared resources.
@@ -56,19 +50,17 @@ public func withSynchronizedAccess<T: Sendable, ID: Hashable & Sendable>(
 	id taskIdentifier: ID,
 	task: sending @escaping () async -> T
 ) async -> T {
-	if let cached = await Barriers.shared.retain(taskIdentifier) {
-		defer { Task { await Barriers.shared.release(taskIdentifier) } }
-		if let result = try? await awaitCachedTask(cached, as: T.self) {
-			return result
+	let operation = UncheckedSendableBox(task)
+	while true {
+		let lease = await Barriers.shared.join(taskIdentifier) { await operation.value() }
+		// Not cancellable: the caller needs a value, and leaving early would cancel the operation for other callers.
+		let result = await lease.task.outcome()
+		await Barriers.shared.release(lease)
+		if case let .success(value) = result, let typed = value as? T {
+			return typed
 		}
-		// Fall through and run a fresh local task — non-throwing API can't surface the error.
+		// Joined another caller's operation that failed or returned another type; it has finished, so join again.
 	}
-	let task = Task(operation: task)
-	await Barriers.shared.register(taskIdentifier, task: task)
-	let result = await task.value
-	await Barriers.shared.markFinished(taskIdentifier)
-	await Barriers.shared.release(taskIdentifier)
-	return result
 }
 
 /// Waits for the completion of all synchronized accesses associated with a specific identifier before proceeding.
@@ -90,17 +82,21 @@ public func withSynchronizedAccess<T: Sendable, ID: Hashable & Sendable>(
 /// scenarios where tasks modify or access shared resources and need to be executed or awaited serially to prevent data corruption or race conditions.
 @discardableResult
 public func waitForThrowingSynchronizedAccess<ID: Hashable & Sendable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async throws -> T? {
-	guard let cached = await Barriers.shared.retain(taskIdentifier) else {
+	guard let lease = await Barriers.shared.retain(taskIdentifier) else {
 		return nil
 	}
+	let result: Any
 	do {
-		let result = try await awaitCachedTask(cached, as: T.self)
-		await Barriers.shared.release(taskIdentifier)
-		return result
+		result = try await lease.task.wait()
 	} catch {
-		await Barriers.shared.release(taskIdentifier)
+		await Barriers.shared.release(lease)
 		throw error
 	}
+	await Barriers.shared.release(lease)
+	guard let typed = result as? T else {
+		throw UnexpectedSharedTaskTypeError()
+	}
+	return typed
 }
 
 /// Waits for the completion of all synchronized accesses associated with a specific identifier before proceeding.
@@ -120,34 +116,12 @@ public func waitForThrowingSynchronizedAccess<ID: Hashable & Sendable, T>(id tas
 /// or where errors are handled within the tasks themselves.
 @discardableResult
 public func waitForSynchronizedAccess<ID: Hashable & Sendable, T>(id taskIdentifier: ID, of type: T.Type = T.self) async -> T? {
-	guard let cached = await Barriers.shared.retain(taskIdentifier) else {
+	guard let lease = await Barriers.shared.retain(taskIdentifier) else {
 		return nil
 	}
-	defer { Task { await Barriers.shared.release(taskIdentifier) } }
-	return try? await awaitCachedTask(cached, as: T.self)
-}
-
-/// Awaits a shared task registered under `id`, honoring the caller's cancellation locally
-/// (without disturbing other waiters), and — if the body completes successfully — synchronously
-/// marks the entry as finished so the originator's `release` won't try to cancel an
-/// already-completed task.
-///
-/// On a thrown error (including caller-side `CancellationError` from `awaitRespectingCancellation`)
-/// we deliberately *do not* mark the entry finished: a real operation error is a genuine
-/// completion (the next `release` cancelling already-finished task is a harmless no-op),
-/// while local caller cancellation must leave `finished == false` so `release` can still
-/// cancel the shared task if this was the last reference.
-private func awaitSharedTask<T, ID: Hashable>(
-	id: ID,
-	cached: AnyTask,
-	as type: T.Type = T.self
-) async throws -> T {
-	let value = try await cached.wait()
-	await Barriers.shared.markFinished(id)
-	guard let typed = value as? T else {
-		throw UnexpectedSharedTaskTypeError()
-	}
-	return typed
+	let result = try? await lease.task.wait()
+	await Barriers.shared.release(lease)
+	return result as? T
 }
 
 /// Awaits the value of a shared unstructured `Task` while honoring the *caller's* cancellation
@@ -217,7 +191,10 @@ private final actor ContinuationBox<T> {
 
 private protocol AnyTask: Sendable {
 
+	/// The task's value; throws `CancellationError` as soon as the caller is cancelled.
 	func wait() async throws -> Any
+
+	func outcome() async -> Result<Any, Error>
 }
 
 extension Task: AnyTask {
@@ -225,76 +202,92 @@ extension Task: AnyTask {
 	func wait() async throws -> Any {
 		try await awaitRespectingCancellation(self) as Any
 	}
-}
 
-/// Awaits a previously-registered shared task, respecting the caller's cancellation.
-/// Bridges from the type-erased `AnyTask` back to the concrete result type.
-private func awaitCachedTask<T>(_ cached: AnyTask, as: T.Type) async throws -> T {
-	let value = try await cached.wait()
-	guard let typed = value as? T else {
-		throw UnexpectedSharedTaskTypeError()
+	func outcome() async -> Result<Any, Error> {
+		await result.map { $0 as Any }.mapError { $0 as Error }
 	}
-	return typed
 }
 
 private struct UnexpectedSharedTaskTypeError: Error {}
+
+// @unchecked: the closure is called once, by the single task that `Barriers.join` starts with it.
+private struct UncheckedSendableBox<Value>: @unchecked Sendable {
+
+	let value: Value
+
+	init(_ value: Value) {
+		self.value = value
+	}
+}
 
 private final actor Barriers {
 
 	static let shared = Barriers()
 
+	// @unchecked: `key` wraps a `Hashable & Sendable` identifier.
+	struct Lease: @unchecked Sendable {
+		let key: AnyHashable
+		let entryID: UInt64
+		let task: AnyTask
+	}
+
 	private struct Entry {
+		let id: UInt64
 		let task: AnyTask
 		let cancel: @Sendable () -> Void
 		var refcount: Int
-		var finished: Bool
+		var isCancelled: Bool
 	}
 
+	/// An entry stays here from its task's start until the task finishes, so a caller arriving later starts anew.
 	private var entries: [AnyHashable: Entry] = [:]
+	private var lastID: UInt64 = 0
 
 	private init() {}
 
-	/// Joins an already-registered shared task for `key`, bumping its refcount.
-	/// Returns `nil` if no entry exists — the caller should `register` a new one.
-	func retain(_ key: AnyHashable) -> AnyTask? {
-		guard var entry = entries[key] else { return nil }
+	/// Joins the running operation for `key`, or starts `operation` if there is none.
+	func join<T: Sendable>(_ key: AnyHashable, operation: @escaping @Sendable () async throws -> T) -> Lease {
+		if let lease = retain(key) {
+			return lease
+		}
+		// A cancelled operation may still be running; serialize after it.
+		let predecessor = entries[key]?.task
+		lastID += 1
+		let id = lastID
+		let task = Task<T, Error> {
+			defer { finish(key, id) }
+			if let predecessor {
+				_ = await predecessor.outcome()
+				try Task.checkCancellation()
+			}
+			return try await operation()
+		}
+		entries[key] = Entry(id: id, task: task, cancel: { task.cancel() }, refcount: 1, isCancelled: false)
+		return Lease(key: key, entryID: id, task: task)
+	}
+
+	/// Joins the running operation for `key`; `nil` if there is none.
+	func retain(_ key: AnyHashable) -> Lease? {
+		guard var entry = entries[key], !entry.isCancelled else { return nil }
 		entry.refcount += 1
 		entries[key] = entry
-		return entry.task
+		return Lease(key: key, entryID: entry.id, task: entry.task)
 	}
 
-	/// Registers a freshly created shared task. The originating caller starts at refcount 1.
-	func register<T, E: Error>(_ key: AnyHashable, task: Task<T, E>) {
-		entries[key] = Entry(
-			task: task,
-			cancel: { task.cancel() },
-			refcount: 1,
-			finished: false
-		)
-	}
-
-	/// Marks the shared task as finished naturally — subsequent `release` calls won't
-	/// `cancel()` it, since there's nothing left to cancel.
-	func markFinished(_ key: AnyHashable) {
-		guard var entry = entries[key] else { return }
-		entry.finished = true
-		entries[key] = entry
-	}
-
-	/// Releases one reference. When the last reference disappears the entry is dropped;
-	/// if the shared task hasn't finished yet, it's also cancelled so an orphaned operation
-	/// (e.g. a long sleep) doesn't keep running once nobody is waiting for its result.
-	func release(_ key: AnyHashable) {
-		guard var entry = entries[key] else { return }
+	/// Cancels the operation when its last caller leaves before it finishes.
+	func release(_ lease: Lease) {
+		guard var entry = entries[lease.key], entry.id == lease.entryID else { return }
 		entry.refcount -= 1
-		if entry.refcount <= 0 {
-			let wasFinished = entry.finished
+		if entry.refcount == 0 {
+			entry.isCancelled = true
+			entry.cancel()
+		}
+		entries[lease.key] = entry
+	}
+
+	private func finish(_ key: AnyHashable, _ id: UInt64) {
+		if entries[key]?.id == id {
 			entries[key] = nil
-			if !wasFinished {
-				entry.cancel()
-			}
-		} else {
-			entries[key] = entry
 		}
 	}
 }

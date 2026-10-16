@@ -183,7 +183,7 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		guard let requestToken, let url = request.url else {
 			throw TokenNotFound(name: "accessToken")
 		}
-		return try await withThrowingSynchronizedAccess(id: url.host) { [tokenCacheService] in
+		return try await withThrowingSynchronizedAccess(id: TokenRequestScope(host: url.host)) { [tokenCacheService] in
 			let (accessToken, refreshToken, expiryDate) = try await requestToken(configs)
 			let tokens = CachedTokens(accessToken: accessToken, refreshToken: refreshToken, expiryDate: expiryDate)
 			try await tokenCacheService.saveTokens(tokens)
@@ -248,6 +248,12 @@ public struct TokenRefresherMiddleware: HTTPClientMiddleware {
 		}
 		return .unrecoverable
 	}
+}
+
+// Keeps token requests apart from other synchronized accesses keyed by the same host.
+private struct TokenRequestScope: Hashable, Sendable {
+
+	let host: String?
 }
 
 private enum Renewal {
