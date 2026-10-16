@@ -282,7 +282,7 @@ print(configs.intValue) // 3
 
 ## Macros
 `swift-api-client` provides a set of macros for easier API declarations.
-- `API` macro that generates an API client struct.
+- `APIRoot` macro that generates an API client struct (formerly `API`).
 - `Path` macro that generates an API client scope for the path.
 - `Cal(_ method:)`, `GET`, `POST`, `PUT`, etc macros for declaring API methods.
 Example:

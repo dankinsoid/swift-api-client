@@ -6,13 +6,22 @@ import XCTest
 final class APIMacroTests: XCTestCase {
 
 	private let macros: [String: Macro.Type] = [
+		"APIRoot": SwiftAPIClientPathMacro.self,
 		"API": SwiftAPIClientPathMacro.self,
 	]
 
-	func testExpansionAPI() {
+	func testExpansionAPIRoot() {
+		assertRootExpansion(attribute: "APIRoot")
+	}
+
+	func testExpansionDeprecatedAPI() {
+		assertRootExpansion(attribute: "API")
+	}
+
+	private func assertRootExpansion(attribute: String, line: UInt = #line) {
 		assertMacroExpansion(
 			"""
-			@API
+			@\(attribute)
 			struct Pets {
 			}
 			""",
@@ -34,14 +43,15 @@ final class APIMacroTests: XCTestCase {
 			}
 			""",
 			macros: macros,
-			indentationWidth: .spaces(2)
+			indentationWidth: .spaces(2),
+			line: line
 		)
 	}
 
 	func testExpansionAPIWithInit() {
 		assertMacroExpansion(
 			"""
-			@API
+			@APIRoot
 			struct Pets {
 			  init(client: APIClient) {
 			    self.client = client

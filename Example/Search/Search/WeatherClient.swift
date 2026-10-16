@@ -1,7 +1,7 @@
 import Foundation
 import SwiftAPIClient
 
-@API
+@APIRoot
 struct WeatherClient {
 
 	init() {

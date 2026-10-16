@@ -1,7 +1,7 @@
 import Foundation
 import SwiftAPIClient
 
-@API
+@APIRoot
 public struct PetStore {
 
 	// MARK: - BaseURL

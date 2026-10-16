@@ -8,7 +8,7 @@ import HTTPTypes
 ///   - method: The HTTP method to be used for the request.
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -18,7 +18,7 @@ import HTTPTypes
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -52,7 +52,7 @@ public macro Call(
 /// - Parameters:
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -62,7 +62,7 @@ public macro Call(
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -93,7 +93,7 @@ public macro GET(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacr
 /// - Parameters:
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -103,7 +103,7 @@ public macro GET(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacr
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -134,7 +134,7 @@ public macro POST(_ path: String...) = #externalMacro(module: "SwiftAPIClientMac
 /// - Parameters:
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -144,7 +144,7 @@ public macro POST(_ path: String...) = #externalMacro(module: "SwiftAPIClientMac
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -175,7 +175,7 @@ public macro PUT(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacr
 /// - Parameters:
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -185,7 +185,7 @@ public macro PUT(_ path: String...) = #externalMacro(module: "SwiftAPIClientMacr
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -216,7 +216,7 @@ public macro DELETE(_ path: String...) = #externalMacro(module: "SwiftAPIClientM
 /// - Parameters:
 ///   - path: The path components to be appended to the base URL. If omitted, the path will be equal to the function name. You can include arguments in the path using the following syntax: `{argument}` or, if you want to specify the type, `{argument:Int}`.
 ///
-/// Must be used with a function within a struct attributed with `@API` or `@Path` macro.
+/// Must be used with a function within a struct attributed with `@APIRoot` or `@Path` macro.
 ///
 /// The function must have an empty body `{}` and return either a `Decodable` type, tuple, `String`, `Data`, or `Void`.
 ///
@@ -226,7 +226,7 @@ public macro DELETE(_ path: String...) = #externalMacro(module: "SwiftAPIClientM
 ///
 /// Examples:
 /// ```swift
-/// @API
+/// @APIRoot
 /// struct API {
 ///
 ///   /// GET /pets
@@ -288,6 +288,13 @@ public macro Path(_ path: String...) = #externalMacro(module: "SwiftAPIClientMac
 /// Macro that generates an API client struct.
 /// The struct can contain functions with `Call`, `GET`, `POST`, `PUT`, `PATCH`, and `DELETE` macros, as well as structs with the `Path` macro.
 /// If you specify a custom init, you must initialize the `client` property.
+@attached(memberAttribute)
+@attached(member, names: arbitrary)
+@attached(extension, conformances: APIClientScope)
+public macro APIRoot() = #externalMacro(module: "SwiftAPIClientMacros", type: "SwiftAPIClientPathMacro")
+
+/// Renamed: `API` is a common module name, and `API.X` would resolve to this macro.
+@available(*, deprecated, renamed: "APIRoot")
 @attached(memberAttribute)
 @attached(member, names: arbitrary)
 @attached(extension, conformances: APIClientScope)
