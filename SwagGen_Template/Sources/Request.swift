@@ -28,8 +28,8 @@ extension {{ options.name }} {
     {% endif %}
     **{{ method|uppercase }}** {{ path }}
     */
-		{% set funcName %}{% if options.groupingType == "path" %}{{ method|lowercase|escapeReservedKeywords }}{% elif options.groupingType == "tag" and tag %}{{ type|replace:tagType,""|lowerFirstLetter }}{% else %}{{ type|lowerFirstLetter }}{% endif %}{% endset %}
-	public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }}{% if param.name != param.value %} {{ param.value }}{% endif %}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {% call paramType param %}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {% for schema in requestSchemas %}{% if schema.type == body.type %}{{ type }}.{% endif %}{% endfor %}{{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> {% for schema in responseSchemas %}{% if schema.type == successType %}{{ type }}.{% endif %}{% endfor %}{{ successType|default:"Void" }} {
+    {% set funcName %}{% if options.groupingType == "path" %}{{ method|lowercase|escapeReservedKeywords }}{% elif options.groupingType == "tag" and tag %}{{ type|replace:tagType,""|lowerFirstLetter }}{% else %}{{ type|lowerFirstLetter }}{% endif %}{% endset %}
+    public func {{ funcName }}({% if options.groupingType != "path" %}{% for param in pathParams %}{{ param.name }}{% if param.name != param.value %} {{ param.value }}{% endif %}: {{ param.type }}, {% endfor %}{% endif %}{% for param in queryParams %}{{ param.name }}: {% call paramType param %}{% ifnot param.required %} = nil{% endif %}, {% endfor %}{% for param in headerParams %}{% if options.excludeHeaders[param.value] != true %}{{ param.name }}: {{ param.optionalType }}{% ifnot param.required %} = nil{% endif %}, {% endif %}{% endfor %}{% if body %}{{ body.name }}: {% for schema in requestSchemas %}{% if schema.type == body.type %}{{ type }}.{% endif %}{% endfor %}{{ body.optionalType }}{% ifnot body.required %} = nil{% endif %}, {% endif %}fileID: String = #fileID, line: UInt = #line, function: String = #function) async throws -> {% for schema in responseSchemas %}{% if schema.type == successType %}{{ type }}.{% endif %}{% endfor %}{{ successType|default:"Void" }} {
         try await client
             {% if options.groupingType != "path" %}
             .path("{{ path|replace:"{","\("|replace:"}",")" }}")
@@ -44,9 +44,9 @@ extension {{ options.name }} {
             {% endif %}
             {% if headerParams %}
             {% for param in headerParams %}
-						{% if options.excludeHeaders[param.value] != true %}
+            {% if options.excludeHeaders[param.value] != true %}
             .header(HTTPField.Name("{{ param.value }}")!, {{ param.encodedValue }})
-						{% endif %}
+            {% endif %}
             {% endfor %}
             {% endif %}
             .auth(enabled: {% if securityRequirements %}true{% else %}false{% endif %})
@@ -58,7 +58,7 @@ extension {{ options.name }} {
                 as: .{% if successType == "String" %}string{% elif successType == "Data" or successType == "File" %}identity{% elif successType %}decodable{% else %}void{% endif %},
                 fileID: fileID,
                 line: line,
-								function: function
+                function: function
             )
     }
 
@@ -72,7 +72,7 @@ extension {{ options.name }} {
         {% endfor %}
         {% for schema in requestSchemas %}
 
-        {% filter indent:12 %}{% include "Includes/Model.stencil" schema %}{% endfilter %}
+        {% filter indent:8 %}{% include "Includes/Model.stencil" schema %}{% endfilter %}
         {% endfor %}
        
         {% for schema in responseSchemas %}

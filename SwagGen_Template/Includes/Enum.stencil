@@ -15,7 +15,7 @@ public enum {{ enumName }}: {{ type }}, Codable, Equatable, Sendable, CaseIterab
     }
     {% endif %}
 
-		{% if type == "String" %}
-		public var description: String { rawValue }
-		{% endif %}
+    {% if type == "String" %}
+    public var description: String { rawValue }
+    {% endif %}
 }

@@ -44,14 +44,14 @@ public enum {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }
         }
     }
     
-		{% for subType in discriminatorType.subTypes %}
-		public var {{ subType.name }}: {{ subType.type }}? {
-			if case .{{ subType.name }}(let value) = self {
-				return value
-			}
-			return nil
-		}
-		{% endfor %}
+    {% for subType in discriminatorType.subTypes %}
+    public var {{ subType.name }}: {{ subType.type }}? {
+        if case .{{ subType.name }}(let value) = self {
+            return value
+        }
+        return nil
+    }
+    {% endfor %}
 }
 {% else %}
 public struct {{ type }}: {% if options.modelProtocol %}{{ options.modelProtocol }}{% else %}Codable, Equatable{% endif %}, Sendable {
